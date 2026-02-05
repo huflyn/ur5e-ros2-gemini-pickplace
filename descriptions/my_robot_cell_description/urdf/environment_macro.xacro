@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:macro name="environment" params="parent">
+
+    <!-- Parameters -->
+    <!-- Table Parameters -->
+    <xacro:property name="table_x" value="1"/>
+    <xacro:property name="table_y"  value="0.65"/>
+    <xacro:property name="table_z" value="1.15"/>
+    <!-- Wall Parameters -->
+    <xacro:property name="wall_x" value="0.1"/>
+    <xacro:property name="wall_y" value="2.0"/>
+    <xacro:property name="wall_z" value="2.0"/>
+    <!-- Robot Mount Parameters -->
+    <xacro:property name="robot_mount_x" value="0.24"/>
+    <xacro:property name="robot_mount_y" value="0.335"/>
+    <!-- /Parameters -->
+
+    <!-- World to Table -->
+    <joint name="world_to_table" type="fixed">
+      <parent link="${parent}"/>
+      <child link="table"/>
+      <origin xyz="0 0 ${table_z}" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Table -->
+    <link name="table">
+      <visual>
+        <geometry>
+          <box size="${table_x} ${table_y} ${table_z}"/>
+        </geometry>
+        <material name="table_color">
+          <color rgba="0.5 0.5 0.5 1"/>
+        </material>
+        <origin xyz="${table_x / 2} ${table_y / 2} ${-table_z / 2}" rpy="0 0 0"/>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="${table_x} ${table_y} ${table_z}"/>
+        </geometry>
+        <origin xyz="${table_x / 2} ${table_y / 2} ${-table_z / 2}" rpy="0 0 0"/>
+      </collision>
+    </link>
+
+    <!-- Table to Wall -->
+    <joint name="table_to_wall" type="fixed">
+      <parent link="table"/>
+      <child link="wall"/>
+      <origin xyz="0 ${table_y / 2} ${-table_z}" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Wall -->
+    <link name="wall">
+      <visual>
+        <geometry>
+           <box size="${wall_x} ${wall_y} ${wall_z}"/> </geometry>
+        <material name="wall_color">
+          <color rgba="0.8 0.8 0.8 1"/>
+        </material>
+        <origin xyz="${-wall_x / 2} 0 ${wall_z / 2}" rpy="0 0 0"/>
+      </visual>
+      <collision>
+        <geometry>
+           <box size="${wall_x} ${wall_y} ${wall_z}"/>
+        </geometry>
+        <origin xyz="${-wall_x / 2} 0 ${wall_z / 2}" rpy="0 0 0"/>
+      </collision>
+    </link>
+
+    <!-- Table to Robot Mount (with robot_mount dummy link) -->
+    <link name="robot_mount"/>
+    <joint name="base_to_robot_mount" type="fixed">
+      <parent link="table"/>
+      <child link="robot_mount"/>
+      <origin xyz="${robot_mount_x} ${robot_mount_y} 0" rpy="0 0 0"/>
+    </joint>
+
+  </xacro:macro>
+</robot>

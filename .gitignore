@@ -1,0 +1,12 @@
+# Python caching
+**/__pycache__/
+**/*.py[cod]
+
+# VS Code settings
+.vscode/
+
+# OS specific
+.DS_Store
+
+# Temporary ignore
+moveit_node.txt
