@@ -2,38 +2,31 @@
 
 ![ROS2](https://img.shields.io/badge/ROS_2-Humble-349eeb.svg) ![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04-e95420.svg)
 
-- [Using Google Gemini Robotics-ER 1.5 (Gemini API) with Universal Robots UR5e in ROS2 Humble](#using-google-gemini-robotics-er-15-gemini-api-with-universal-robots-ur5e-in-ros2-humble)
-  - [I) Prerequisites](#i-prerequisites)
-  - [II) Environment Setup](#ii-environment-setup)
-    - [Note: Shell Environment](#note-shell-environment)
-    - [Important: Locale ``en_US.UTF-8``](#important-locale-en_usutf-8)
-  - [III) Install Software (Framework/Tool/Package/etc.)](#iii-install-software-frameworktoolpackageetc)
-    - [1. Universal Robots Client Library (Docs, GitHub)](#1-universal-robots-client-library-docs-github)
-    - [2. Universal Robots ROS2 Driver (Docs, GitHub)](#2-universal-robots-ros2-driver-docs-github)
-    - [3. ros2\_control (Docs 1, Docs 2)](#3-ros2_control-docs-1-docs-2)
-    - [4. ros2\_controllers (Docs 1, Docs 2)](#4-ros2_controllers-docs-1-docs-2)
-    - [5. Software from packages.ros.org (Docs)](#5-software-from-packagesrosorg-docs)
-      - [1. Setup your sources.list](#1-setup-your-sourceslist)
-      - [2. Setup your keys](#2-setup-your-keys)
-    - [Intel Realsense](#intel-realsense)
-      - [6. RealSense™ SDK 2.0](#6-realsense-sdk-20)
-      - [6. ROS Wrapper for RealSense(TM) Cameras (GitHub)](#6-ros-wrapper-for-realsensetm-cameras-github)
-    - [7. Google GenAI SDK (Docs)](#7-google-genai-sdk-docs)
-  - [IV) Gemini API](#iv-gemini-api)
-    - [Create Gemini API Key (Docs)](#create-gemini-api-key-docs)
-    - [Google GenAI SDK Installation (Docs)](#google-genai-sdk-installation-docs)
-    - [Setting the API key as an environment variable (Docs)](#setting-the-api-key-as-an-environment-variable-docs)
-    - [Keep your API key secure (Docs)](#keep-your-api-key-secure-docs)
-    - [Make your first request (Docs)](#make-your-first-request-docs)
-  - [V) URDF/XACRO Files](#v-urdfxacro-files)
-    - [Packages Overview](#packages-overview)
-      - [`my_robot_cell_description`](#my_robot_cell_description)
-      - [`epick_description`](#epick_description)
-      - [`pisoftgrip_description`](#pisoftgrip_description)
-    - [Folder Structure](#folder-structure)
-  - [X) Documentation and References](#x-documentation-and-references)
+- [I) Prerequisites](#i-prerequisites)
+- [II) Environment Setup](#ii-environment-setup)
+  - [Note: Shell Environment](#note-shell-environment)
+  - [Important: Locale ``en_US.UTF-8``](#important-locale-en_usutf-8)
+- [III) Install Software (Framework/Tool/Package/etc.)](#iii-install-software-frameworktoolpackageetc)
+  - [1. ros2\_control (Docs)](#1-ros2_control-docs)
+  - [2. Universal Robots ROS2 Driver (Docs, GitHub)](#2-universal-robots-ros2-driver-docs-github)
+  - [3. Realsense ROS Wrapper (Docs, GitHub)](#3-realsense-ros-wrapper-docs-github)
+  - [4. Google Gen AI SDK (Docs)](#4-google-gen-ai-sdk-docs)
+- [IV) Gemini API](#iv-gemini-api)
+  - [Create Gemini API Key (Docs)](#create-gemini-api-key-docs)
+  - [Google GenAI SDK Installation (Docs)](#google-genai-sdk-installation-docs)
+  - [Setting the API key as an environment variable (Docs)](#setting-the-api-key-as-an-environment-variable-docs)
+  - [Keep your API key secure (Docs)](#keep-your-api-key-secure-docs)
+  - [Make your first request (Docs)](#make-your-first-request-docs)
+- [V) URDF/XACRO Files](#v-urdfxacro-files)
+  - [Packages Overview](#packages-overview)
+    - [`my_robot_cell_description`](#my_robot_cell_description)
+    - [`epick_description`](#epick_description)
+    - [`pisoftgrip_description`](#pisoftgrip_description)
+  - [Folder Structure](#folder-structure)
+- [X) Documentation and References](#x-documentation-and-references)
 
 ---
+
 
 ## I) Prerequisites
 
@@ -48,7 +41,9 @@ Ensure you have the following installed before proceeding:
 
 ---
 
+
 ## II) Environment Setup
+
 
 ### <span style="color: dodgerblue;">Note:</span> Shell Environment
 
@@ -62,6 +57,7 @@ Check your current shell by running:
 ```bash
 echo $0
 ```
+
 
 ### <span style="color: purple;">Important:</span> Locale ``en_US.UTF-8``
 
@@ -106,69 +102,86 @@ LC_ALL=en_US.UTF-8
 
 ---
 
+
 ## III) Install Software (Framework/Tool/Package/etc.)
 
-### 1. Universal Robots Client Library ([Docs](https://docs.universal-robots.com/Universal_Robots_ROS_Documentation/index.html), [GitHub](https://github.com/UniversalRobots/Universal_Robots_Client_Library))
+
+### 1. ros2_control ([Docs](https://control.ros.org/humble/index.html#))
+
+The ros2_control is a framework for real-time control of robots using ROS 2.
 
 ```bash
-sudo apt install ros-humble-ur-client-library
+sudo apt install ros-humble-ros2-control ros-humble-ros2-controllers
 ```
 
-### 2. Universal Robots ROS2 Driver ([Docs](https://docs.universal-robots.com/Universal_Robots_ROS_Documentation/index.html), [GitHub](https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver))
+
+### 2. Universal Robots ROS2 Driver ([Docs](https://docs.universal-robots.com/Universal_Robots_ROS_Documentation/index.html), [GitHub](https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver/tree/humble))
+
+The ROS 2 driver packages for Universal Robots manipulators to control a Universal Robots arm from an external application using ROS 2 (ur_robot_driver).
 
 ```bash
 sudo apt install ros-humble-ur
 ```
 
-### 3. ros2_control ([Docs 1](https://control.ros.org/humble/doc/getting_started/getting_started.html), [Docs 2](https://control.ros.org/humble/doc/ros2_control/doc/index.html))
 
-```bash
-sudo apt install ros-humble-ros2-control
-```
+### 3. Realsense ROS Wrapper ([Docs](https://dev.realsenseai.com/docs/docs-get-started), [GitHub](https://github.com/realsenseai/realsense-ros))
 
-### 4. ros2_controllers ([Docs 1](https://control.ros.org/humble/doc/getting_started/getting_started.html), [Docs 2](https://control.ros.org/humble/doc/ros2_controllers/doc/controllers_index.html))
+ROS Wrapper for RealSense(TM) Cameras
 
-```bash
-sudo apt install ros-humble-ros2-controllers
-```
+**1. Install latest RealSense™ SDK 2.0**
+Option 1: Install librealsense2 debian package from RealSense servers
+- [Linux Debian Installation Guide](https://github.com/realsenseai/librealsense/blob/master/doc/distribution_linux.md#installing-the-packages)
+  - In this case treat yourself as a developer: make sure to follow the instructions to also install librealsense2-dev and librealsense2-dkms packages
 
-### 5. Software from packages.ros.org ([Docs](https://wiki.ros.org/Installation/Ubuntu/Sources))
 
-#### 1. Setup your sources.list
+Option 2: Install librealsense2 (without graphical tools and examples) debian package from ROS servers (Foxy EOL distro is not supported by this option):
+  
+1. Configure your Ubuntu repositories ([Docs](https://wiki.ros.org/Installation/Ubuntu/Sources))
+   
+   - Setup your sources.list to accept software from packages.ros.org.
+   ```bash
+   sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+   ```
+   - Setup your keys
 
-Setup your computer to accept software from packages.ros.org.
+   ```bash
+   sudo apt install curl # if you haven't already installed curl
+   curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+   ```
 
-```bash
-sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-```
+2. Install all realsense ROS packages
 
-#### 2. Setup your keys
+    ```bash
+    sudo apt install ros-humble-librealsense2*
+    ```
 
-```bash
-sudo apt install curl # if you haven't already installed curl
-curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
-```
+**2. Install ROS Wrapper for RealSense™ cameras**
 
-### Intel Realsense
+Option 1: Install debian package from ROS servers (Foxy EOL distro is not supported by this option):
 
-#### 6. RealSense™ SDK 2.0
+1. Configure your Ubuntu repositories ([Docs](https://wiki.ros.org/Installation/Ubuntu/Sources))
+   - Already done in previous step for librealsense2 packages (Option 2), so you can skip this step if you followed the previous instructions
+ 
+2.  Install all realsense ROS packages
+    ```bash
+    sudo apt install ros-humble-librealsense2*
+    ```
 
-#### 6. ROS Wrapper for RealSense(TM) Cameras ([GitHub](https://github.com/realsenseai/realsense-ros/tree/ros2-masterS))
+Option 2: Install from source
+- See [instructions](https://github.com/realsenseai/realsense-ros?tab=readme-ov-file#option-2-install-from-source) in the GitHub repository.
 
-Install librealsense2 (without graphical tools and examples) debian package from ROS servers
+### 4. Google Gen AI SDK ([Docs](https://ai.google.dev/gemini-api/docs/quickstart))
 
-```bash
-sudo apt install ros-humble-librealsense2*
-```
+Google Gen AI Python SDK provides an interface for developers to integrate Google's generative models into their Python applications
 
-### 7. Google GenAI SDK ([Docs](https://ai.google.dev/gemini-api/docs/quickstart))
+Using Python 3.9+, install the google-genai package using the following pip command:
 
 ```bash
 pip install -q -U google-genai
-echo 'export GEMINI_API_KEY=<YOUR_API_KEY_HERE>' >> ~/.bashrc
 ```
 
 ---
+
 
 ## IV) Gemini API
 
