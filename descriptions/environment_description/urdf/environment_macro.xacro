@@ -2,7 +2,7 @@
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
   <xacro:macro name="environment" params="parent">
-
+    
     <!-- Parameters -->
     <!-- Table Parameters -->
     <xacro:property name="table_x" value="1"/>
@@ -17,8 +17,8 @@
     <xacro:property name="robot_mount_y" value="0.335"/>
     <!-- /Parameters -->
 
-    <!-- World to Table -->
-    <joint name="world_to_table" type="fixed">
+    <!-- Table to World -->
+    <joint name="table_to_world" type="fixed">
       <parent link="${parent}"/>
       <child link="table"/>
       <origin xyz="0 0 ${table_z}" rpy="0 0 0"/>
