@@ -54,6 +54,20 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
+        d415_bottom_screw_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        d415_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        d415_usb_plug_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         epick_base_link:
           Alpha: 1
           Show Axes: false
@@ -64,6 +78,11 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
         pisoftgrip_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        pisoftgrip_tcp:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -154,11 +173,19 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
+        d415_bottom_screw_frame:
+          Value: true
+        d415_link:
+          Value: true
+        d415_usb_plug_link:
+          Value: true
         epick_base_link:
           Value: true
         epick_end_effector:
           Value: true
         pisoftgrip_link:
+          Value: true
+        pisoftgrip_tcp:
           Value: true
         robot_mount:
           Value: true
@@ -192,7 +219,7 @@ Visualization Manager:
           Value: true
         world:
           Value: true
-      Marker Scale: 1
+      Marker Scale: 0.10000000149011612
       Name: TF
       Show Arrows: true
       Show Axes: true
@@ -201,6 +228,10 @@ Visualization Manager:
         world:
           table:
             robot_mount:
+              d415_bottom_screw_frame:
+                d415_link:
+                  d415_usb_plug_link:
+                    {}
               ur5e_base_link:
                 ur5e_base:
                   {}
@@ -216,7 +247,8 @@ Visualization Manager:
                                   epick_base_link:
                                     epick_end_effector:
                                       pisoftgrip_link:
-                                        {}
+                                        pisoftgrip_tcp:
+                                          {}
                               ur5e_ft_frame:
                                 {}
             wall:
@@ -238,25 +270,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 2.837498188018799
+      Distance: 0.23879875242710114
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.665999710559845
-        Y: 0.05488637462258339
-        Z: 0.1689201444387436
+        X: 0.7156752943992615
+        Y: 0.40516674518585205
+        Z: 0.04683776944875717
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6199997067451477
+      Pitch: 0.10979759693145752
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.5250073075294495
+      Yaw: 0.04001108929514885
     Saved: ~
 Window Geometry:
   Displays:

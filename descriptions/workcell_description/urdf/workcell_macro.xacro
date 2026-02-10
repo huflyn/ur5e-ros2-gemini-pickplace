@@ -4,6 +4,7 @@
   <xacro:include filename="$(find epick_gripper_description)/urdf/robotiq_epick_model_macro.xacro"/>
   <xacro:include filename="$(find pisoftgrip_description)/urdf/pisoftgrip_macro.xacro"/>
   <xacro:include filename="$(find environment_description)/urdf/environment_macro.xacro"/>
+  <xacro:include filename="$(find realsense2_description)/urdf/_d415.urdf.xacro"/>
 
 
   <xacro:macro name="workcell" params="
@@ -14,6 +15,9 @@
     kinematics_parameters_file
     physical_parameters_file
     visual_parameters_file
+    use_nominal_extrinsics
+    add_plug
+    use_mesh
     ">
 
     <!-- Environment -->
@@ -53,6 +57,16 @@
 
     <!-- Piab PiSoftGripper -->
     <xacro:pisoftgrip prefix=""/>
+
+    <!-- Realsense D415 -->
+    <xacro:sensor_d415
+        name="d415"
+        parent="robot_mount"
+        use_nominal_extrinsics="${use_nominal_extrinsics}"
+        add_plug="${add_plug}"
+        use_mesh="${use_mesh}">
+      <origin xyz="0.3 0 0.15" rpy="0 0 0"/>
+    </xacro:sensor_d415>
 
 
   </xacro:macro>
