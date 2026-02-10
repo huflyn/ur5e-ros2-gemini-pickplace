@@ -9,7 +9,6 @@
             <mass value="0.055"/>
             <inertia ixx="9.6794e-05" ixy="0.0" ixz="0.0" iyy="9.6794e-05" iyz="0.0" izz="3.8672e-05"/>
         </inertial>
-
         <visual>
             <geometry>
                 <mesh filename="package://pisoftgrip_description/meshes/pisoftgrip.stl" />
@@ -18,12 +17,19 @@
                 <color rgba="0 0 1 1"/>
             </material>
         </visual>
-
         <collision>
             <geometry>
                 <mesh filename="package://pisoftgrip_description/meshes/pisoftgrip_simplified_605_faces.stl" />
             </geometry>
         </collision>
+    </link>
+
+    <joint name="${prefix}pisoftgrip_tcp_joint" type="fixed">
+        <parent link="${prefix}pisoftgrip_link"/>
+        <child link="${prefix}pisoftgrip_tcp"/>
+        <origin xyz="0 0 -0.06" rpy="0 0 0"/> 
+    </joint>
+    <link name="${prefix}pisoftgrip_tcp">
     </link>
 
     </xacro:macro>
