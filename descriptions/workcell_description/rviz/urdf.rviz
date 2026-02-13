@@ -6,7 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /RobotModel1
-        - /TF1
+        - /TF1/Frames1
         - /TF1/Tree1
       Splitter Ratio: 0.5
     Tree Height: 398
@@ -77,6 +77,10 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+        pisoftgrip_flansch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
         pisoftgrip_link:
           Alpha: 1
           Show Axes: false
@@ -86,7 +90,6 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         robot_mount:
           Alpha: 1
           Show Axes: false
@@ -183,6 +186,8 @@ Visualization Manager:
           Value: true
         epick_end_effector:
           Value: true
+        pisoftgrip_flansch:
+          Value: true
         pisoftgrip_link:
           Value: true
         pisoftgrip_tcp:
@@ -219,9 +224,9 @@ Visualization Manager:
           Value: true
         world:
           Value: true
-      Marker Scale: 0.10000000149011612
+      Marker Scale: 0.20000000298023224
       Name: TF
-      Show Arrows: true
+      Show Arrows: false
       Show Axes: true
       Show Names: false
       Tree:
@@ -246,7 +251,9 @@ Visualization Manager:
                                 ur5e_tool0:
                                   epick_base_link:
                                     epick_end_effector:
-                                      pisoftgrip_link:
+                                      pisoftgrip_flansch:
+                                        pisoftgrip_link:
+                                          {}
                                         pisoftgrip_tcp:
                                           {}
                               ur5e_ft_frame:
@@ -255,14 +262,23 @@ Visualization Manager:
               {}
       Update Interval: 0
       Value: true
+    - Class: rviz_default_plugins/Axes
+      Enabled: true
+      Length: 1
+      Name: Axes
+      Radius: 0.10000000149011612
+      Reference Frame: <Fixed Frame>
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: ur5e_base_link
+    Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:
     - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
   Transformation:
     Current:
       Class: rviz_default_plugins/TF
@@ -270,25 +286,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 0.23879875242710114
+      Distance: 3.871696710586548
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.7156752943992615
-        Y: 0.40516674518585205
-        Z: 0.04683776944875717
+        X: 0.9360190033912659
+        Y: 0.7403596639633179
+        Z: 1.1664459705352783
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.10979759693145752
+      Pitch: 0.41479891538619995
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.04001108929514885
+      Yaw: 1.1618690490722656
     Saved: ~
 Window Geometry:
   Displays:

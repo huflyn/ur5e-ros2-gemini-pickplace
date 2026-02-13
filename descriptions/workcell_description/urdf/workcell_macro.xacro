@@ -51,8 +51,8 @@
     <!-- Robotiq Epick to Piab PiSoftGripper -->
     <joint name="epick_to_pisoftgrip" type="fixed">
       <parent link="epick_end_effector"/>
-      <child link="pisoftgrip_link"/>
-      <origin xyz="0 0 0" rpy="0 3.14159265359 0" />
+      <child link="pisoftgrip_flansch"/>
+      <origin xyz="0 0 0" rpy="0 0 0" />
     </joint>
 
     <!-- Piab PiSoftGripper -->
@@ -65,7 +65,7 @@
         use_nominal_extrinsics="${use_nominal_extrinsics}"
         add_plug="${add_plug}"
         use_mesh="${use_mesh}">
-      <origin xyz="0.3 0 0.15" rpy="0 0 0"/>
+      <origin xyz="0.30 0 0.11" rpy="0 0 0"/>
     </xacro:sensor_d415>
 
 

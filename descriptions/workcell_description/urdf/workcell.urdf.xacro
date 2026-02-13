@@ -11,7 +11,7 @@
   <!-- Arguments for the Realsense D415 -->
   <xacro:arg name="use_nominal_extrinsics" default="false" />
   <xacro:arg name="add_plug" default="true" />
-  <xacro:arg name="use_mesh" default="false" />
+  <xacro:arg name="use_mesh" default="true" />
 
   <!-- World Link (represents the origin of the world coordinate frame) -->
   <link name="world"/>

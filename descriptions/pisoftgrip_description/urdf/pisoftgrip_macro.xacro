@@ -3,6 +3,13 @@
 
     <xacro:macro name="pisoftgrip" params="prefix">
 
+    <link name="${prefix}pisoftgrip_flansch"/>
+    <joint name="${prefix}pisoftgrip_link_to_flansch" type="fixed">
+        <parent link="${prefix}pisoftgrip_flansch"/>
+        <child link="${prefix}pisoftgrip_link"/>
+        <origin xyz="0 0 0.018" rpy="0 0 0"/> 
+    </joint>
+
     <link name="${prefix}pisoftgrip_link">
         <inertial>
             <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -10,6 +17,7 @@
             <inertia ixx="9.6794e-05" ixy="0.0" ixz="0.0" iyy="9.6794e-05" iyz="0.0" izz="3.8672e-05"/>
         </inertial>
         <visual>
+            <origin xyz="0 0 0" rpy="0 3.141592653589 0"/>
             <geometry>
                 <mesh filename="package://pisoftgrip_description/meshes/pisoftgrip.stl" />
             </geometry>
@@ -18,19 +26,20 @@
             </material>
         </visual>
         <collision>
+            <origin xyz="0 0 0" rpy="0 3.141592653589 0"/>
             <geometry>
                 <mesh filename="package://pisoftgrip_description/meshes/pisoftgrip_simplified_605_faces.stl" />
             </geometry>
         </collision>
     </link>
 
+    <link name="${prefix}pisoftgrip_tcp"/>
     <joint name="${prefix}pisoftgrip_tcp_joint" type="fixed">
-        <parent link="${prefix}pisoftgrip_link"/>
+        <parent link="${prefix}pisoftgrip_flansch"/>
         <child link="${prefix}pisoftgrip_tcp"/>
-        <origin xyz="0 0 -0.06" rpy="0 0 0"/> 
+        <origin xyz="0 0 0.08" rpy="0 0 0"/> 
     </joint>
-    <link name="${prefix}pisoftgrip_tcp">
-    </link>
+
 
     </xacro:macro>
 </robot>
