@@ -18,6 +18,7 @@
     <group name="hand">
         <link name="epick_base_link"/>
         <link name="epick_end_effector"/>
+        <link name="pisoftgrip_flansch"/>
         <link name="pisoftgrip_link"/>
         <link name="pisoftgrip_tcp"/>
     </group>
@@ -25,9 +26,17 @@
     <group_state name="home" group="ur_arm">
         <joint name="ur5e_elbow_joint" value="1.571"/>
         <joint name="ur5e_shoulder_lift_joint" value="-1.571"/>
-        <joint name="ur5e_shoulder_pan_joint" value="0"/>
+        <joint name="ur5e_shoulder_pan_joint" value="1.571"/>
         <joint name="ur5e_wrist_1_joint" value="-1.571"/>
         <joint name="ur5e_wrist_2_joint" value="-1.571"/>
+        <joint name="ur5e_wrist_3_joint" value="0"/>
+    </group_state>
+    <group_state name="up" group="ur_arm">
+        <joint name="ur5e_elbow_joint" value="0"/>
+        <joint name="ur5e_shoulder_lift_joint" value="-1.571"/>
+        <joint name="ur5e_shoulder_pan_joint" value="0"/>
+        <joint name="ur5e_wrist_1_joint" value="0"/>
+        <joint name="ur5e_wrist_2_joint" value="0"/>
         <joint name="ur5e_wrist_3_joint" value="0"/>
     </group_state>
     <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
@@ -38,7 +47,6 @@
     <disable_collisions link1="d415_link" link2="ur5e_base_link_inertia" reason="Adjacent"/>
     <disable_collisions link1="d415_link" link2="ur5e_shoulder_link" reason="Never"/>
     <disable_collisions link1="d415_link" link2="wall" reason="Never"/>
-    <disable_collisions link1="d415_usb_plug_link" link2="pisoftgrip_link" reason="Never"/>
     <disable_collisions link1="d415_usb_plug_link" link2="table" reason="Never"/>
     <disable_collisions link1="d415_usb_plug_link" link2="ur5e_base_link_inertia" reason="Never"/>
     <disable_collisions link1="d415_usb_plug_link" link2="ur5e_shoulder_link" reason="Never"/>
