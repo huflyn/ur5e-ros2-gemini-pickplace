@@ -11,7 +11,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
 
-    description_package = FindPackageShare("workcell_control")
+    """ description_package = FindPackageShare("workcell_control")
     description_file = PathJoinSubstitution(
         [description_package, "urdf", "workcell_control.urdf.xacro"]
     )
@@ -24,7 +24,7 @@ def generate_launch_description():
         name="rviz2",
         output="screen",
         arguments=["-d", rvizconfig_file],
-    )
+    ) """
         
     # declare arguments
     declared_arguments = []
@@ -49,7 +49,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "robot_ip",
-            default_value="0.0.0.0",  # put your robot's IP address here
+            default_value="192.168.1.3",  # put your robot's IP address here
             description="IP address by which the robot can be reached.",
         )
     )
@@ -163,4 +163,4 @@ def generate_launch_description():
         }.items(),
     )
 
-    return LaunchDescription(declared_arguments + [base_launch] + [rviz_node])
+    return LaunchDescription(declared_arguments + [base_launch])
