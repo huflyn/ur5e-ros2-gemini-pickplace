@@ -9,15 +9,15 @@
   <!--We need to specify the arguments used for parametrizing our description-->
   <xacro:arg name="ur_type" default="ur5e"/>
   <xacro:arg name="joint_limits_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/joint_limits.yaml"/>
-  <xacro:arg name="kinematics_parameters_file" default="$(find workcell_description)/config/my_robot_calibration.yaml"/>
+  <xacro:arg name="kinematics_parameters_file" default="$(find workcell_control)/config/my_robot_calibration.yaml"/>
   <xacro:arg name="physical_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/physical_parameters.yaml"/>
   <xacro:arg name="visual_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/visual_parameters.yaml"/>
   <!-- Arguments for the Realsense D415 -->
   <xacro:arg name="use_nominal_extrinsics" default="false" />
-  <xacro:arg name="add_plug" default="true" />
+  <xacro:arg name="add_plug" default="false" />
   <xacro:arg name="use_mesh" default="false" />
 
-  <xacro:arg name="robot_ip" default="0.0.0.0"/>
+  <xacro:arg name="robot_ip" default="192.168.1.3"/>
   <xacro:arg name="headless_mode" default="false" />
   <xacro:arg name="ur_script_filename" default="$(find ur_client_library)/resources/external_control.urscript"/>
   <xacro:arg name="ur_output_recipe_filename" default="$(find ur_robot_driver)/resources/rtde_output_recipe.txt"/>
