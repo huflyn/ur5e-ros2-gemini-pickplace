@@ -14,7 +14,22 @@ def generate_launch_description():
     rvizconfig_file = PathJoinSubstitution([description_package, "rviz", "urdf.rviz"])
 
     robot_description = ParameterValue(
-        Command(["xacro ", description_file, " ", "ur_type:=", "ur5e"]), value_type=str
+        Command([
+            "xacro ", description_file,
+            " ur_type:=ur5e",
+            " use_nominal_extrinsics:=true",  # ← Hier explizit setzen!
+            " add_plug:=true",
+            " use_mesh:=true"
+        ]), 
+        value_type=str
+    )
+
+    realsense_node = Node(
+        package='realsense2_camera',
+        executable='realsense2_camera_node',
+        name='d415',  # ← Ändert Prefix von 'camera' zu 'd415'
+        namespace='',
+        parameters=[{'camera_name': 'd415'}]
     )
 
     robot_state_publisher_node = Node(
@@ -37,5 +52,5 @@ def generate_launch_description():
     )
 
     return LaunchDescription(
-        [joint_state_publisher_gui_node, robot_state_publisher_node, rviz_node]
+        [joint_state_publisher_gui_node, robot_state_publisher_node, realsense_node, rviz_node]
     )
