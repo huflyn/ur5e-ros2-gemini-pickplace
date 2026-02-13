@@ -1,6 +1,5 @@
 from launch import LaunchDescription
 from launch.substitutions import Command, PathJoinSubstitution
-
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
@@ -8,18 +7,13 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     description_package = FindPackageShare("workcell_description")
-    description_file = PathJoinSubstitution(
-        [description_package, "urdf", "workcell.urdf.xacro"]
-    )
+    description_file = PathJoinSubstitution([description_package, "urdf", "workcell.urdf.xacro"])
     rvizconfig_file = PathJoinSubstitution([description_package, "rviz", "urdf.rviz"])
 
     robot_description = ParameterValue(
         Command([
             "xacro ", description_file,
             " ur_type:=ur5e",
-            " use_nominal_extrinsics:=true",  # ← Hier explizit setzen!
-            " add_plug:=true",
-            " use_mesh:=true"
         ]), 
         value_type=str
     )
@@ -27,7 +21,7 @@ def generate_launch_description():
     realsense_node = Node(
         package='realsense2_camera',
         executable='realsense2_camera_node',
-        name='d415',  # ← Ändert Prefix von 'camera' zu 'd415'
+        name='d415',
         namespace='',
         parameters=[{'camera_name': 'd415'}]
     )
