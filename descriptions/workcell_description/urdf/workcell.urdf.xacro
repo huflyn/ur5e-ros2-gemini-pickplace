@@ -9,7 +9,7 @@
   <xacro:arg name="physical_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/physical_parameters.yaml"/>
   <xacro:arg name="visual_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/visual_parameters.yaml"/>
   <!-- Arguments for the Realsense D415 -->
-  <xacro:arg name="use_nominal_extrinsics" default="false" />
+  <xacro:arg name="use_nominal_extrinsics" default="true" />
   <xacro:arg name="add_plug" default="true" />
   <xacro:arg name="use_mesh" default="true" />
 
