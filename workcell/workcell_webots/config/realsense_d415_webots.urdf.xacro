@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<robot name="realsense" xmlns:xacro="http://ros.org/wiki/xacro">
+  <!-- D415 macro aus dem offiziellen realsense2_description -->
+  <xacro:include filename="$(find realsense2_description)/urdf/_d415.urdf.xacro"/>
+
+  <!-- Root -->
+  <link name="world"/>
+
+  <!-- Kamera-Model -->
+  <xacro:sensor_d415
+    name="d415"
+    parent="world"
+    use_nominal_extrinsics="true"
+    add_plug="true"
+    use_mesh="true">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:sensor_d415>
+
+  <!-- Webots device mapping -->
+  <webots>
+    <device reference="realsense_rgb" type="Camera">
+      <ros>
+        <topicName>/camera/color/image_raw</topicName>
+        <alwaysOn>true</alwaysOn>
+      </ros>
+    </device>
+    <device reference="realsense_depth" type="RangeFinder">
+      <ros>
+        <topicName>/camera/depth/image_rect_raw</topicName>
+        <alwaysOn>true</alwaysOn>
+      </ros>
+    </device>
+  </webots>
+</robot>

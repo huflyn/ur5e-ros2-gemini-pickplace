@@ -1,0 +1,136 @@
+#VRML_SIM R2023b utf8
+# license: Apache License 2.0
+# Model of the Intel Realsense D415 RGBD camera
+# keywords: sensor/range-finder, sensor/camera
+# template language: javascript
+#
+# --- Technical Specifications (D415) ---
+# RGB FOV:     69 deg (H) x 42 deg (V) -> ~1.204 rad
+# Depth FOV:   65 deg (H) x 40 deg (V) -> ~1.134 rad
+# RGB Res:     Up to 1920x1080
+# Depth Res:   Up to 1280x720
+# Min Range:   0.3 m
+# Max Range:   ~10 m
+# Mass:        ~72 g (0.072 kg)
+# ---------------------------------------
+
+PROTO IntelRealSenseD415 [
+  field SFVec3f    translation     0 0 0
+  field SFRotation rotation        0 0 1 0
+  field SFString   name            "IntelRealSenseD415"
+  field SFBool     locked          FALSE
+  field SFBool     supervisor      FALSE
+  
+  field SFString   controller      "<generic>"
+  field MFString   controllerArgs  []
+
+  field SFString{"1080p", "720p", "VGA"} resolution "720p"
+
+  field SFFloat minRange 0.3
+  field SFFloat maxRange 10.0
+  
+  field SFNode focus NULL
+  field SFNode recognition Recognition{}
+  field SFNode physics Physics {
+    density -1
+    mass 0.072
+    centerOfMass [0 0 0]
+  }
+]
+{
+  %<
+    const cameraName = fields.name.value;
+    const resMode = fields.resolution.value;
+    
+    var rgbWidth = 1280;
+    var rgbHeight = 720;
+    var depthWidth = 1280;
+    var depthHeight = 720;
+    
+    const rgbFOV = 1.204;
+    const depthFOV = 1.134;
+
+    if (resMode === "1080p") {
+      rgbWidth = 1920;
+      rgbHeight = 1080;
+      depthWidth = 1280;
+      depthHeight = 720;
+    } else if (resMode === "720p") {
+      rgbWidth = 1280;
+      rgbHeight = 720;
+      depthWidth = 1280;
+      depthHeight = 720;
+    } else if (resMode === "VGA") {
+      rgbWidth = 640;
+      rgbHeight = 480;
+      depthWidth = 640;
+      depthHeight = 480;
+    }
+  >%
+
+  Robot {
+    translation IS translation
+    rotation IS rotation
+    name IS name
+    locked IS locked
+    supervisor IS supervisor
+    controller IS controller
+    controllerArgs IS controllerArgs
+    
+    children [
+      RangeFinder {
+        translation 0.005 0 0
+        name %<= '"' + cameraName + '_depth"' >%
+        locked TRUE
+        fieldOfView %<= depthFOV >%
+        width %<= depthWidth >%
+        height %<= depthHeight >%
+        near IS minRange
+        minRange IS minRange      
+        maxRange IS maxRange     
+        noise 0.01        
+        resolution -1     
+      }
+
+      Camera {
+        translation 0 0 0
+        name %<= '"' + cameraName + '_rgb"' >%
+        locked TRUE
+        fieldOfView %<= rgbFOV >%
+        width %<= rgbWidth >%
+        height %<= rgbHeight >%
+        near IS minRange
+        far 10.0
+        antiAliasing TRUE
+        noise 0.01
+        focus IS focus
+        recognition IS recognition
+      }
+
+      Solid {
+        translation 0.013 0 0 
+        rotation 0.57735 0.57735 0.57735 2.0944
+        children [
+          CadShape {
+            url [
+              "../meshes/IntelRealSenseD455.dae"
+            ]
+          }
+        ]
+        locked TRUE
+      }
+    ]
+    
+    boundingObject Transform {
+       rotation 0.57735 0.57735 0.57735 2.0944   
+       children [
+         Box {
+           size 0.099 0.023 0.020
+         }
+       ]
+    }
+    
+    physics IS physics
+    
+  }
+}

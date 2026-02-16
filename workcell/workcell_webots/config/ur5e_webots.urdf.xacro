@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<robot name="ur5e" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:arg name="initial_positions_file" default="initial_positions.yaml" />
+    <xacro:arg name="ur_type" default="ur5e"/>
+    <xacro:arg name="joint_limits_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/joint_limits.yaml"/>
+    <xacro:arg name="kinematics_parameters_file" default="$(find workcell_description)/config/my_robot_calibration.yaml"/>
+    <xacro:arg name="physical_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/physical_parameters.yaml"/>
+    <xacro:arg name="visual_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/visual_parameters.yaml"/>
+
+    <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
+
+    <webots>
+        <plugin type="webots_ros2_control::Ros2Control"/>
+    </webots>
+
+    <xacro:include filename="ur5e_webots.ros2_control.xacro" />
+
+    <link name="world"/>
+
+    <xacro:ur_robot
+        name="$(arg ur_type)"
+        tf_prefix="$(arg ur_type)_"
+        parent="world"
+        joint_limits_parameters_file="$(arg joint_limits_parameters_file)"
+        kinematics_parameters_file="$(arg kinematics_parameters_file)"
+        physical_parameters_file="$(arg physical_parameters_file)"
+        visual_parameters_file="$(arg visual_parameters_file)"
+        generate_ros2_control_tag="false">
+        <origin xyz="0 0 0" rpy="0 0 0" />
+    </xacro:ur_robot>
+
+    <xacro:workcell_ros2_control name="WebotsControl" initial_positions_file="$(arg initial_positions_file)"/>
+</robot>
