@@ -230,7 +230,7 @@ Visualization Manager:
         Goal State Color: 250; 128; 0
         Interactive Marker Size: 0
         Joint Violation Color: 255; 0; 255
-        Planning Group: hand
+        Planning Group: ur_arm
         Query Goal State: true
         Query Start State: false
         Show Workspace: false
@@ -454,4 +454,4 @@ Window Geometry:
     collapsed: false
   Width: 1478
   X: 107
-  Y: 64
+  Y: 360
