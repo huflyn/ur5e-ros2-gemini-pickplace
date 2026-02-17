@@ -8,11 +8,8 @@
 # OS specific
 .DS_Store
 
-# Temporary ignore
+# Temporary/backup ignore
 moveit_node.txt
-
-webots
-
-simulation
-
 .tf_frames
+.backup
+.md
