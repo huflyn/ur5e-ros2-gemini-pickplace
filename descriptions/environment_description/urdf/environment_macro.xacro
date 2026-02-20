@@ -14,7 +14,7 @@
     <xacro:property name="wall_z" value="2.0"/>
     <!-- Robot Mount Parameters -->
     <xacro:property name="robot_mount_x" value="0.24"/>
-    <xacro:property name="robot_mount_y" value="0.335"/>
+    <xacro:property name="robot_mount_y" value="0.325"/>
     <!-- /Parameters -->
 
     <!-- Table to World -->
