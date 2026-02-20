@@ -6,6 +6,9 @@
   <xacro:include filename="$(find environment_description)/urdf/environment_macro.xacro"/>
   <xacro:include filename="$(find realsense2_description)/urdf/_d415.urdf.xacro"/>
 
+  <xacro:property name="M_PI" value="3.1415926535897931"/>
+
+
 
   <xacro:macro name="workcell" params="
     parent
@@ -58,6 +61,8 @@
     <!-- Piab PiSoftGripper -->
     <xacro:pisoftgrip prefix=""/>
 
+
+
     <!-- Realsense D415 -->
     <xacro:sensor_d415
         name="d415"
@@ -67,6 +72,17 @@
         use_mesh="${use_mesh}">
       <origin xyz="0.25 0 0.11" rpy="0 0 0"/>
     </xacro:sensor_d415>
+
+
+    <!-- ===== Simulations-Frame am PROTO-Zentrum ===== -->
+    <link name="d415_sim_optical_frame"/>
+    <joint name="d415_sim_optical_joint" type="fixed">
+      <parent link="d415_bottom_screw_frame"/>
+      <child link="d415_sim_optical_frame"/>
+      <!-- XY = 0: mittig wie bottom_screw
+          Z = halbe Gehäusehöhe (0.023/2 = 0.0115): Sensormitte -->
+      <origin xyz="0 0 0.0115" rpy="${-M_PI/2} 0 ${-M_PI/2}"/>
+    </joint>
 
 
   </xacro:macro>
