@@ -4,12 +4,10 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Global Options1
-        - /RobotModel1
         - /TF1/Frames1
         - /TF1/Tree1
       Splitter Ratio: 0.5
-    Tree Height: 398
+    Tree Height: 612
   - Class: rviz_common/Views
     Expanded:
       - /Current View1
@@ -63,6 +61,10 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        d415_sim_optical_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
         d415_usb_plug_link:
           Alpha: 1
           Show Axes: false
@@ -180,6 +182,8 @@ Visualization Manager:
           Value: true
         d415_link:
           Value: true
+        d415_sim_optical_frame:
+          Value: true
         d415_usb_plug_link:
           Value: true
         epick_base_link:
@@ -237,6 +241,8 @@ Visualization Manager:
                 d415_link:
                   d415_usb_plug_link:
                     {}
+                d415_sim_optical_frame:
+                  {}
               ur5e_base_link:
                 ur5e_base:
                   {}
@@ -286,35 +292,35 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 3.871696710586548
+      Distance: 4.281012058258057
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.9360190033912659
-        Y: 0.7403596639633179
-        Z: 1.1664459705352783
+        X: 0.612794041633606
+        Y: 0.30934953689575195
+        Z: 1.1558747291564941
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.41479891538619995
+      Pitch: 0.3347974717617035
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.1618690490722656
+      Yaw: 0.6018620133399963
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1016
+  Height: 1376
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd0000000100000000000001ad0000039efc0200000002fb000000100044006900730070006c006100790073010000003d00000222000000c900fffffffb0000000a00560069006500770073010000026500000176000000a400ffffff000005870000039e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000100000000000001ad00000506fc0200000002fb000000100044006900730070006c006100790073010000003d000002f8000000c900fffffffb0000000a00560069006500770073010000033b00000208000000a400ffffff00000b770000050600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
-  Width: 1850
-  X: 70
+  Width: 3370
+  X: 1990
   Y: 27
