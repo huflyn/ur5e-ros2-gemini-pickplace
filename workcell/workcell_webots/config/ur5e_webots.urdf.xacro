@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <robot name="ur5e" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <!-- Args -->
     <xacro:arg name="initial_positions_file" default="initial_positions.yaml" />
     <xacro:arg name="ur_type" default="ur5e"/>
     <xacro:arg name="joint_limits_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/joint_limits.yaml"/>
@@ -7,16 +8,22 @@
     <xacro:arg name="physical_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/physical_parameters.yaml"/>
     <xacro:arg name="visual_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/visual_parameters.yaml"/>
 
+    <!-- URDF macros for the UR5e -->
     <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
 
     <webots>
+        <!-- Ros2Control plugin for the UR5e -->
         <plugin type="webots_ros2_control::Ros2Control"/>
     </webots>
 
+    <!-- Include the ROS2 Control configuration for the UR5e -->
     <xacro:include filename="ur5e_webots.ros2_control.xacro" />
+    <xacro:workcell_ros2_control name="WebotsControl" initial_positions_file="$(arg initial_positions_file)"/>
 
+    <!-- Root link -->
     <link name="world"/>
 
+    <!-- UR5e Robot -->
     <xacro:ur_robot
         name="$(arg ur_type)"
         tf_prefix="$(arg ur_type)_"
@@ -29,5 +36,4 @@
         <origin xyz="0 0 0" rpy="0 0 0" />
     </xacro:ur_robot>
 
-    <xacro:workcell_ros2_control name="WebotsControl" initial_positions_file="$(arg initial_positions_file)"/>
 </robot>

@@ -100,22 +100,12 @@ def generate_launch_description():
         robot_name='realsense',
         parameters=[
             {'robot_description': realsense_urdf_path}, # Hier übergeben wir die URDF der RealSense, damit der Controller die Kamera-Frames kennt. Die statischen TFs kommen aus der Workcell-URDF, die wir im State Publisher verwenden.
+            {'set_robot_state_publisher': False},
             {'use_sim_time': True}
         ]
     )
 
-    # Statischer TF (Kamera im Raum)
-    static_tf_camera = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        output='screen',
-        arguments=['0', '0', '0.8', '0', '0', '0', 'map', 'base_link_camera'],
-        parameters=[{'use_sim_time': True}]
-    )
 
-    # ---------------------------------------------------------
-    # 6. ZUSAMMENBAU
-    # ---------------------------------------------------------
     return LaunchDescription([
         world_handler,
         webots,
@@ -129,7 +119,6 @@ def generate_launch_description():
 
         # RealSense Nodes
         realsense_driver,
-        #static_tf_camera,
 
         # Shutdown Handler
         launch.actions.RegisterEventHandler(

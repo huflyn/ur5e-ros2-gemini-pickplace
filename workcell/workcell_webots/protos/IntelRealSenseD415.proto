@@ -3,25 +3,15 @@
 # Model of the Intel Realsense D415 RGBD camera
 # keywords: sensor/range-finder, sensor/camera
 # template language: javascript
-#
-# --- Technical Specifications (D415) ---
-# RGB FOV:     69 deg (H) x 42 deg (V) -> ~1.204 rad
-# Depth FOV:   65 deg (H) x 40 deg (V) -> ~1.134 rad
-# RGB Res:     Up to 1920x1080
-# Depth Res:   Up to 1280x720
-# Min Range:   0.3 m
-# Max Range:   ~10 m
-# Mass:        ~72 g (0.072 kg)
-# ---------------------------------------
 
 PROTO IntelRealSenseD415 [
   field SFVec3f    translation     0 0 0
   field SFRotation rotation        0 0 1 0
-  field SFString   name            "IntelRealSenseD415"
+  field SFString   name            "realsense"
   field SFBool     locked          FALSE
   field SFBool     supervisor      FALSE
   
-  field SFString   controller      "<generic>"
+  field SFString   controller      "<extern>"
   field MFString   controllerArgs  []
 
   field SFString{"1080p", "720p", "VGA"} resolution "720p"
@@ -79,12 +69,12 @@ PROTO IntelRealSenseD415 [
     
     children [
       RangeFinder {
-        translation 0.005 0 0
+        translation 0 0 0
         name %<= '"' + cameraName + '_depth"' >%
         locked TRUE
-        fieldOfView %<= depthFOV >%
-        width %<= depthWidth >%
-        height %<= depthHeight >%
+        fieldOfView %<= rgbFOV >%
+        width %<= rgbWidth >%
+        height %<= rgbHeight >%
         near IS minRange
         minRange IS minRange      
         maxRange IS maxRange     

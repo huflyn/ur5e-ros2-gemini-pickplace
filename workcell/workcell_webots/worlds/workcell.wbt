@@ -4,15 +4,14 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/project
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/Floor.proto"
 EXTERNPROTO "../protos/Klemmbaustein_4x2.proto"
-EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/tools/protos/SuctionCup.proto"
 EXTERNPROTO "../protos/IntelRealSenseD415.proto"
 
 WorldInfo {
   basicTimeStep 20
 }
 Viewpoint {
-  orientation -0.27262258574119735 -0.15109334106046515 0.9501829971279055 4.066770687854187
-  position 2.975742647773368 3.826925584199324 2.567919487260751
+  orientation -0.21252257615617648 -0.10651356048092674 0.9713336275747989 4.04770192071602
+  position 3.061371193661255 4.799698173586816 2.3624761939282526
 }
 TexturedBackground {
 }
@@ -23,6 +22,28 @@ DEF scene Pose {
   translation 0.5 0 -1.15
   rotation 0 0 1 -1.5707996938995747
   children [
+    DEF robot_mount Pose {
+      translation 0 -0.26 1.15
+      children [
+        Solid {
+          translation -0.2 0.7 0.005
+          children [
+            Shape {
+              appearance PBRAppearance {
+                metalness 0
+              }
+              geometry DEF plate Box {
+                size 0.1 0.1 0.01
+              }
+            }
+          ]
+          name "plate"
+          boundingObject USE plate
+          physics Physics {
+          }
+        }
+      ]
+    }
     DEF wall Solid {
       translation 0 -0.55 1
       rotation 0 0 1 1.5708
@@ -75,43 +96,16 @@ DEF robot Pose {
     DEF robot_mount Pose {
       translation 0.24 0 0
       children [
-        DEF camera_mount Pose {
-          translation 0.3 0 0
-          children [
-            DEF tripod_base Solid {
-              translation 0 0 0.055
-              rotation 0 0 1 -2.6179953071795863
-              children [
-                DEF tripod_mount Pose {
-                  translation 0 0 0.055
-                  rotation 0 0 1 2.61799
-                  children [
-                    DEF realsense IntelRealSenseD415 {
-                      translation 0 0 0.014999293692599919
-                      rotation 0 0 -1 1.8562727039077992e-16
-                      name "realsense"
-                      controller "<extern>"
-                    }
-                  ]
-                }
-                DEF tripod_cone Shape {
-                  appearance PBRAppearance {
-                    baseColor 0.466667 0.462745 0.482353
-                    metalness 0
-                  }
-                  geometry Cone {
-                    bottomRadius 0.05
-                    height 0.11
-                    subdivision 3
-                  }
-                }
-              ]
-              name "solid(1)"
-            }
-          ]
-        }
         Robot {
           children [
+            DEF camera_mount Pose {
+              translation 0.25 0 0.11
+              children [
+                IntelRealSenseD415 {
+                  translation 0 0 0.0115
+                }
+              ]
+            }
             Pose {
               translation -0.0467 0.047 0.0252
               rotation 1 0 0 -3.1415923071795864
@@ -701,11 +695,41 @@ DEF robot Pose {
                                                 Pose {
                                                   translation 0 0.1 0
                                                   children [
+                                                    DEF tcp Pose {
+                                                      translation 0 0.1907 0
+                                                      children [
+                                                        Shape {
+                                                          appearance PBRAppearance {
+                                                            baseColor 0.752941 0.109804 0.156863
+                                                            transparency 0.6
+                                                            metalness 0
+                                                          }
+                                                          geometry Box {
+                                                            size 0.07 0.0001 0.07
+                                                          }
+                                                        }
+                                                      ]
+                                                    }
+                                                    DEF pisoftgrip_flansch Pose {
+                                                      translation 0 0.112 0
+                                                      children [
+                                                        Shape {
+                                                          appearance PBRAppearance {
+                                                            baseColor 0.752941 0.109804 0.156863
+                                                            transparency 0.3
+                                                            metalness 0
+                                                          }
+                                                          geometry Box {
+                                                            size 0.07 0.0001 0.07
+                                                          }
+                                                        }
+                                                      ]
+                                                    }
                                                     Solid {
                                                       rotation 1 0 0 -1.5707953071795862
                                                       children [
                                                         DEF epick_end_effector Pose {
-                                                          translation 0 0 0.12
+                                                          translation 0 0 0.13
                                                           children [
                                                             DEF pisoftgrip Solid {
                                                               rotation 1 0 0 3.14159
@@ -714,15 +738,23 @@ DEF robot Pose {
                                                                   translation 0 0 -0.06
                                                                   children [
                                                                     Solid {
-                                                                      translation 0 0 0.008
                                                                       children [
                                                                         VacuumGripper {
+                                                                          translation 0 0 0.005
                                                                           children [
-                                                                            SuctionCup {
-                                                                              physics Physics {
+                                                                            DEF gripping_area Shape {
+                                                                              appearance PBRAppearance {
+                                                                                baseColor 0.862745 0.541176 0.866667
+                                                                                transparency 0.5
+                                                                                metalness 0
+                                                                              }
+                                                                              geometry Cylinder {
+                                                                                height 0.01
+                                                                                radius 0.01
                                                                               }
                                                                             }
                                                                           ]
+                                                                          boundingObject USE gripping_area
                                                                         }
                                                                       ]
                                                                     }
@@ -1594,6 +1626,7 @@ DEF robot Pose {
               }
             ]
           }
+          locked TRUE
           controller "<extern>"
           selfCollision TRUE
         }
@@ -1602,30 +1635,34 @@ DEF robot Pose {
   ]
 }
 DEF bricks Pose {
-  translation 0.9 0 0
-  rotation 0 0 1 1.5708
   children [
-    Klemmbaustein_4x2 {
-      translation -6.797496152923226e-15 -6.439293542825908e-15 -0.005700601377001722
-      rotation -0.6371841463451263 -0.6841252425878975 0.3549211406784372 1.0260114440660452e-12
-    }
-    Klemmbaustein_4x2 {
-      translation 0.06943217818023668 -3.3528874121557806e-09 -0.006728137742150404
-      rotation -5.864610744644226e-06 0.9999999999828 8.081807733200946e-08 0.08340389907648453
-      name "Klemmbaustein_4x2(1)"
-      color 0 0 1
-    }
-    Klemmbaustein_4x2 {
-      translation 0.14 -1.1102230246251565e-16 -1.2377131900212154e-06
-      rotation -0.10609225246845747 0.9943562912589073 0 3.653675794676019e-15
-      name "Klemmbaustein_4x2(3)"
-      color 1 0.666667 0
-    }
-    Klemmbaustein_4x2 {
-      translation -0.06943217818025099 3.3529164999990257e-09 -0.006728137742151102
-      rotation 5.864656836864005e-06 -0.9999999999827998 8.08210066925261e-08 0.0834038990738173
-      name "Klemmbaustein_4x2(2)"
-      color 0 0.333333 0
+    DEF robot_mount Pose {
+      translation 0.24 0 0
+      children [
+        DEF brick_distance Pose {
+          translation 0.7 0 0
+          children [
+            Klemmbaustein_4x2 {
+              translation 0 -0.03 0
+              name "Klemmbaustein_4x2(2)"
+              color 0 0.333333 0
+            }
+            Klemmbaustein_4x2 {
+              translation 0 0.09 0
+              name "Klemmbaustein_4x2(3)"
+              color 1 0.666667 0
+            }
+            Klemmbaustein_4x2 {
+              translation 0 -0.09 0
+              name "Klemmbaustein_4x2(1)"
+              color 0 0 1
+            }
+            Klemmbaustein_4x2 {
+              translation 0 0.03 0
+            }
+          ]
+        }
+      ]
     }
   ]
 }

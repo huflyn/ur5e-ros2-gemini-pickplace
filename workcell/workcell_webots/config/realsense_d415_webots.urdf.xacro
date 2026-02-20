@@ -2,6 +2,8 @@
 <robot name="realsense" xmlns:xacro="http://ros.org/wiki/xacro">
   <!-- D415 macro aus dem offiziellen realsense2_description -->
   <xacro:include filename="$(find realsense2_description)/urdf/_d415.urdf.xacro"/>
+  
+  <xacro:property name="M_PI" value="3.1415926535897931"/>
 
   <!-- Root -->
   <link name="world"/>
@@ -16,19 +18,35 @@
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </xacro:sensor_d415>
 
+  <!-- ===== Simulations-Frame am PROTO-Zentrum ===== -->
+  <link name="d415_sim_optical_frame"/>
+  <joint name="d415_sim_optical_joint" type="fixed">
+    <parent link="d415_bottom_screw_frame"/>
+    <child link="d415_sim_optical_frame"/>
+    <!-- XY = 0: mittig wie bottom_screw
+         Z = halbe Gehäusehöhe (0.023/2 = 0.0115): Sensormitte -->
+    <origin xyz="0 0 0.0115" rpy="${-M_PI/2} 0 ${-M_PI/2}"/>
+  </joint>
+
   <!-- Webots device mapping -->
   <webots>
-    <device reference="realsense_rgb" type="Camera">
-      <ros>
-        <topicName>/camera/color/image_raw</topicName>
-        <alwaysOn>true</alwaysOn>
-      </ros>
-    </device>
-    <device reference="realsense_depth" type="RangeFinder">
-      <ros>
-        <topicName>/camera/depth/image_rect_raw</topicName>
-        <alwaysOn>true</alwaysOn>
-      </ros>
-    </device>
-  </webots>
+  <device reference="realsense_rgb" type="Camera">
+    <ros>
+      <topicName>/webots_realsense/color/image_raw</topicName>
+      <frameName>d415_sim_optical_frame</frameName>
+      <alwaysOn>true</alwaysOn>
+      <enabled>true</enabled>
+    </ros>
+  </device>
+  <device reference="realsense_depth" type="RangeFinder">
+    <ros>
+      <topicName>/webots_realsense/depth/image_rect_raw</topicName>
+      <!-- Same frame name as camera because real realsense uses align_depth:=true -->
+      <frameName>d415_sim_optical_frame</frameName>
+      <alwaysOn>true</alwaysOn>
+      <enabled>true</enabled>
+    </ros>
+  </device>
+</webots>
+
 </robot>
