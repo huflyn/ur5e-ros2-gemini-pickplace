@@ -14,6 +14,7 @@ from webots_ros2_driver.webots_controller import WebotsController
 def generate_launch_description():
     package_dir = get_package_share_directory('workcell_webots')
     workcell_desc_dir = get_package_share_directory('workcell_description')
+    ros2_controllers_yaml_dir = get_package_share_directory('workcell_moveit_config')
 
     # ===== 1) URDFs verarbeiten (xacro → XML-String) =====
 
@@ -23,7 +24,7 @@ def generate_launch_description():
 
     # UR5e Webots URDF (für WebotsController) und ros2_controllers.yaml
     ur5e_xacro = os.path.join(package_dir, 'config', 'ur5e_webots.urdf.xacro')
-    ur5e_control_params = os.path.join(package_dir, 'config', 'ros2_controllers.yaml')
+    ur5e_control_params = os.path.join(ros2_controllers_yaml_dir, 'config', 'ros2_controllers.yaml')
 
 
     # Realsense Webots URDF (für WebotsController)
