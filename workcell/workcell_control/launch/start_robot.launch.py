@@ -13,7 +13,7 @@ def generate_launch_description():
 
     """ description_package = FindPackageShare("workcell_control")
     description_file = PathJoinSubstitution(
-        [description_package, "urdf", "workcell_control.urdf.xacro"]
+        [description_package, "urdf", "workcell_controlled.urdf.xacro"]
     )
 
     rvizconfig_file = PathJoinSubstitution([description_package, "rviz", "view_robot.rviz"])
@@ -58,17 +58,17 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
-            "use_fake_hardware",
+            "use_mock_hardware",
             default_value="false",
-            description="Start robot with fake hardware mirroring command to its states.",
+            description="Start robot with mock hardware mirroring command to its states.",
         )
     )
     declared_arguments.append(
         DeclareLaunchArgument(
-            "fake_sensor_commands",
+            "mock_sensor_commands",
             default_value="false",
-            description="Enable fake command interfaces for sensors used for simple simulations. "
-            "Used only if 'use_fake_hardware' parameter is true.",
+            description="Enable mock command interfaces for sensors used for simple simulations. "
+            "Used only if 'use_mock_hardware' parameter is true.",
         )
     )
     declared_arguments.append(
@@ -130,8 +130,8 @@ def generate_launch_description():
     ur_type = LaunchConfiguration("ur_type")
     robot_ip = LaunchConfiguration("robot_ip")
     launch_rviz = LaunchConfiguration("launch_rviz")
-    use_fake_hardware = LaunchConfiguration("use_fake_hardware")
-    fake_sensor_commands = LaunchConfiguration("fake_sensor_commands")
+    use_mock_hardware = LaunchConfiguration("use_mock_hardware")
+    mock_sensor_commands = LaunchConfiguration("mock_sensor_commands")
     controllers_file = LaunchConfiguration("controllers_file")
     description_package = LaunchConfiguration("description_package")
     description_file = LaunchConfiguration("description_file")
@@ -152,8 +152,8 @@ def generate_launch_description():
             "robot_ip": robot_ip,
             "tf_prefix": [LaunchConfiguration("ur_type"), "_"],
             "launch_rviz": launch_rviz,
-            "use_fake_hardware": use_fake_hardware,
-            "fake_sensor_commands": fake_sensor_commands,
+            "use_mock_hardware": use_mock_hardware,
+            "mock_sensor_commands": mock_sensor_commands,
             "description_package": description_package,
             "description_file": description_file,
             "kinematics_params_file": kinematics_params_file,

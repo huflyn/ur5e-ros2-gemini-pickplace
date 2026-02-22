@@ -4,7 +4,7 @@
   <!--First, include the macro from our workcell description-->
   <xacro:include filename="$(find workcell_description)/urdf/workcell_macro.xacro"/>
   <!--The driver already provides a control tag for the UR arm, we can directly include-->
-  <xacro:include filename="$(find ur_description)/urdf/ur.ros2_control.xacro"/>
+  <xacro:include filename="$(find ur_robot_driver)/urdf/ur.ros2_control.xacro"/>
 
   <!--We need to specify the arguments used for parametrizing our description-->
   <xacro:arg name="ur_type" default="ur5e"/>
@@ -12,6 +12,7 @@
   <xacro:arg name="kinematics_parameters_file" default="$(find workcell_control)/config/my_robot_calibration.yaml"/>
   <xacro:arg name="physical_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/physical_parameters.yaml"/>
   <xacro:arg name="visual_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/visual_parameters.yaml"/>
+
   <!-- Arguments for the Realsense D415 -->
   <xacro:arg name="use_nominal_extrinsics" default="true" />
   <xacro:arg name="add_plug" default="true" />
@@ -22,12 +23,8 @@
   <xacro:arg name="ur_script_filename" default="$(find ur_client_library)/resources/external_control.urscript"/>
   <xacro:arg name="ur_output_recipe_filename" default="$(find ur_robot_driver)/resources/rtde_output_recipe.txt"/>
   <xacro:arg name="ur_input_recipe_filename" default="$(find ur_robot_driver)/resources/rtde_input_recipe.txt"/>
-  <xacro:arg name="use_fake_hardware" default="false" />
-  <xacro:arg name="fake_sensor_commands" default="false" />
-  <!--find hash_kinematics in kinematics_params-->
-  <xacro:property name="kinematics_params_file" value="$(arg kinematics_params)"/>
-  <xacro:property name="kinematics_hash" value="${xacro.load_yaml(kinematics_params_file)['kinematics']['hash']}"/>
-
+  <xacro:arg name="use_mock_hardware" default="false" />
+  <xacro:arg name="mock_sensor_commands" default="false" />
 
   <!-- World Link (represents the origin of the world coordinate frame) -->
   <link name="world"/>
@@ -52,16 +49,15 @@
   <xacro:ur_ros2_control
     name="$(arg ur_type)"
     tf_prefix="$(arg ur_type)_"
-    hash_kinematics="${kinematics_hash}"
+    kinematics_parameters_file="$(arg kinematics_parameters_file)"
     robot_ip="$(arg robot_ip)"
     script_filename="$(arg ur_script_filename)"
     output_recipe_filename="$(arg ur_output_recipe_filename)"
     input_recipe_filename="$(arg ur_input_recipe_filename)"
-    use_fake_hardware="$(arg use_fake_hardware)"
-    fake_sensor_commands="$(arg fake_sensor_commands)"
+    use_mock_hardware="$(arg use_mock_hardware)"
+    mock_sensor_commands="$(arg mock_sensor_commands)"
     headless_mode="$(arg headless_mode)"
   />
 
-  <!--If you had more controlled devices in your description, e.g. a gripper, you can add another ros2_control tag here-->
 
 </robot>
