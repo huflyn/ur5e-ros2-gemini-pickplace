@@ -1,32 +1,23 @@
+from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterFile
 from launch_ros.substitutions import FindPackageShare
+
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.conditions import IfCondition
 from launch.substitutions import (
+    Command,
+    FindExecutable,
     LaunchConfiguration,
     PathJoinSubstitution,
+    TextSubstitution,
 )
-from launch_ros.actions import Node
 
 
 def generate_launch_description():
-
-    """ description_package = FindPackageShare("workcell_control")
-    description_file = PathJoinSubstitution(
-        [description_package, "urdf", "workcell_controlled.urdf.xacro"]
-    )
-
-    rvizconfig_file = PathJoinSubstitution([description_package, "rviz", "view_robot.rviz"])
-
-    rviz_node = Node(
-        package="rviz2",
-        executable="rviz2",
-        name="rviz2",
-        output="screen",
-        arguments=["-d", rvizconfig_file],
-    ) """
-        
-    # declare arguments
+    ur_type = LaunchConfiguration("ur_type")
+    robot_ip = LaunchConfiguration("robot_ip")
     declared_arguments = []
     declared_arguments.append(
         DeclareLaunchArgument(
@@ -49,118 +40,48 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             "robot_ip",
-            default_value="192.168.1.3",  # put your robot's IP address here
+            default_value="192.168.56.101",  # put your robot's IP address here
             description="IP address by which the robot can be reached.",
         )
     )
     declared_arguments.append(
         DeclareLaunchArgument("launch_rviz", default_value="true", description="Launch RViz?")
     )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "use_mock_hardware",
-            default_value="false",
-            description="Start robot with mock hardware mirroring command to its states.",
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "mock_sensor_commands",
-            default_value="false",
-            description="Enable mock command interfaces for sensors used for simple simulations. "
-            "Used only if 'use_mock_hardware' parameter is true.",
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "description_package",
-            default_value="workcell_control",
-            description="description package",
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "description_file",
-            default_value="workcell_controlled.urdf.xacro",
-            description="URDF/XACRO description file with the robot.",
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "kinematics_params_file",
-            default_value=PathJoinSubstitution(
-                [
-                    FindPackageShare("workcell_control"),
-                    "config",
-                    "my_robot_calibration.yaml",
-                ]
+
+    return LaunchDescription(
+        declared_arguments
+        + [
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    [
+                        PathJoinSubstitution(
+                            [
+                                FindPackageShare("ur_robot_driver"),
+                                "launch",
+                                "ur_control.launch.py",
+                            ]
+                        )
+                    ]
+                ),
+                launch_arguments={
+                    "ur_type": ur_type,
+                    "robot_ip": robot_ip,
+                    "tf_prefix": [LaunchConfiguration("ur_type"), "_"],
+                    "rviz_config_file": PathJoinSubstitution(
+                        [
+                            FindPackageShare("workcell_description"),
+                            "rviz",
+                            "urdf.rviz",
+                        ]
+                    ),
+                    "description_launchfile": PathJoinSubstitution(
+                        [
+                            FindPackageShare("workcell_control"),
+                            "launch",
+                            "rsp.launch.py",
+                        ]
+                    ),
+                }.items(),
             ),
-            description="The calibration configuration of the actual robot used.",
-        )
+        ]
     )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "initial_joint_controller",
-            default_value="scaled_joint_trajectory_controller",
-            description="Initially loaded robot controller.",
-            choices=[
-                "scaled_joint_trajectory_controller",
-                "joint_trajectory_controller",
-                "forward_velocity_controller",
-                "forward_position_controller",
-            ],
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "activate_joint_controller",
-            default_value="true",
-            description="Activate loaded joint controller.",
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            "headless_mode",
-            default_value="false",
-            description="Enable headless mode for robot control",
-        )
-    )
-
-    # initialize arguments
-    ur_type = LaunchConfiguration("ur_type")
-    robot_ip = LaunchConfiguration("robot_ip")
-    launch_rviz = LaunchConfiguration("launch_rviz")
-    use_mock_hardware = LaunchConfiguration("use_mock_hardware")
-    mock_sensor_commands = LaunchConfiguration("mock_sensor_commands")
-    controllers_file = LaunchConfiguration("controllers_file")
-    description_package = LaunchConfiguration("description_package")
-    description_file = LaunchConfiguration("description_file")
-    kinematics_params_file = LaunchConfiguration("kinematics_params_file")
-    initial_joint_controller = LaunchConfiguration("initial_joint_controller")
-    activate_joint_controller = LaunchConfiguration("activate_joint_controller")
-    headless_mode = LaunchConfiguration("headless_mode")
-
-    base_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            [
-                PathJoinSubstitution([FindPackageShare("ur_robot_driver"), "launch"]),
-                "/ur_control.launch.py",
-            ]
-        ),
-        launch_arguments={
-            "ur_type": ur_type,
-            "robot_ip": robot_ip,
-            "tf_prefix": [LaunchConfiguration("ur_type"), "_"],
-            "launch_rviz": launch_rviz,
-            "use_mock_hardware": use_mock_hardware,
-            "mock_sensor_commands": mock_sensor_commands,
-            "description_package": description_package,
-            "description_file": description_file,
-            "kinematics_params_file": kinematics_params_file,
-            "initial_joint_controller": initial_joint_controller,
-            "activate_joint_controller": activate_joint_controller,
-            "headless_mode": headless_mode,
-        }.items(),
-    )
-
-    return LaunchDescription(declared_arguments + [base_launch])
