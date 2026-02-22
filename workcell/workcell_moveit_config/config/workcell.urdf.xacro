@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="workcell">
-    <xacro:arg name="initial_positions_file" default="initial_positions.yaml" />
+    <xacro:arg name="initial_positions_file" default="$(find workcell_moveit_config)/config/initial_positions.yaml" />
 
     <!-- Import workcell urdf file -->
     <xacro:include filename="$(find workcell_description)/urdf/workcell.urdf.xacro" />
