@@ -1,77 +1,41 @@
 import os
 import launch
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Command
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
-from launch_ros.substitutions import FindPackageShare
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Command
+
+import xacro
 from ament_index_python.packages import get_package_share_directory
 from webots_ros2_driver.webots_launcher import WebotsLauncher
 from webots_ros2_driver.webots_controller import WebotsController
 
+
 def generate_launch_description():
-    package_name = 'workcell_webots'
-    package_dir = get_package_share_directory(package_name)
-    
-    # ---------------------------------------------------------
-    # 1. PFADE DEFINIEREN
-    # ---------------------------------------------------------
-    ur5e_urdf_path = os.path.join(package_dir, 'config', 'ur5e_webots.urdf.xacro')
+    package_dir = get_package_share_directory('workcell_webots')
+    workcell_desc_dir = get_package_share_directory('workcell_description')
+
+    # ===== 1) URDFs verarbeiten (xacro → XML-String) =====
+
+    # Workcell URDF (komplett, mit ros2_control)
+    workcell_xacro = os.path.join(workcell_desc_dir, 'urdf', 'workcell.urdf.xacro')
+    workcell_description = xacro.process_file(workcell_xacro).toxml()
+
+    # UR5e Webots URDF (für WebotsController) und ros2_controllers.yaml
+    ur5e_xacro = os.path.join(package_dir, 'config', 'ur5e_webots.urdf.xacro')
     ur5e_control_params = os.path.join(package_dir, 'config', 'ros2_controllers.yaml')
-    realsense_urdf_path = os.path.join(package_dir, 'config', 'realsense_d415_webots.urdf.xacro')
 
-    ur5e_robot_description = ParameterValue(
-        Command(["xacro ", ur5e_urdf_path]),
-        value_type=str,
-    )
 
-    workcell_description_package = get_package_share_directory('workcell_description')
-    workcell_description_path = os.path.join(workcell_description_package, 'urdf', 'workcell.urdf.xacro')
-    workcell_robot_description = ParameterValue(
-        Command(["xacro ", workcell_description_path]),
-        value_type=str,
-    )
+    # Realsense Webots URDF (für WebotsController)
+    realsense_xacro = os.path.join(package_dir, 'config', 'realsense_d415_webots.urdf.xacro')
 
-    # ---------------------------------------------------------
-    # 2. ARGUMENTE
-    # ---------------------------------------------------------
-    world_handler = DeclareLaunchArgument(
-        'world',
-        default_value='workcell.wbt', 
-        description='Name der Welt-Datei in worlds/'
-    )
+    # ===== 2) Nodes =====
 
-    # ---------------------------------------------------------
-    # 3. WEBOTS STARTEN
-    # ---------------------------------------------------------
-    webots = WebotsLauncher(
-        world=PathJoinSubstitution([package_dir, 'worlds', LaunchConfiguration('world')]),
-        ros2_supervisor=True,
-        mode='realtime'
-    )
-
-    # ---------------------------------------------------------
-    # 4. ROBOTER 1: UR5e (Arm)
-    # ---------------------------------------------------------
-    ur5e_driver = WebotsController(
-        robot_name='ur5e', 
-        parameters=[
-            {'robot_description': ur5e_urdf_path}, # Hier übergeben wir die URDF des Arms, damit der Controller die Gelenke kennt. Die statischen TFs kommen aus der Workcell-URDF, die wir im State Publisher verwenden.
-            {'use_sim_time': True},
-            {'set_robot_state_publisher': False}, # False, da wir den robot_state_publisher manuell starten, damit er die komplette Workcell-URDF bekommt und nicht nur die Arm-URDF.
-            ur5e_control_params
-        ]
-    )
-
-    ur5e_state_publisher = Node(
+    # TF-Tree + /robot_description Topic (mit ros2_control in workcell.urdf.xacro definiert)
+    robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
-        output='screen',
-        parameters=[{
-            'robot_description': workcell_robot_description, # Hier verwenden wir die komplette Workcell-URDF, damit auch die statischen TFs korrekt veröffentlicht werden
-            'use_sim_time': True
-        }],
+        parameters=[{'robot_description': workcell_description}],
     )
 
     # Spawner
@@ -92,33 +56,35 @@ def generate_launch_description():
         parameters=spawner_params,
     )
 
-    # ---------------------------------------------------------
-    # 5. ROBOTER 2: RealSense (Kamera)
-    # ---------------------------------------------------------
-    # HIER WAR DER FEHLER: Dieser Block muss EINZIGARTIG sein.
+    # Webots starten
+    webots = WebotsLauncher(
+        world=os.path.join(package_dir, 'worlds', 'workcell.wbt')
+    )
+
+    # UR5e Controller – XML-String, NICHT Dateipfad!
+    ur5e_driver = WebotsController(
+        robot_name='ur5e',
+        parameters=[
+            {'robot_description': ur5e_xacro},
+            ur5e_control_params
+        ],
+    )
+
+    # Realsense Controller – XML-String, NICHT Dateipfad!
     realsense_driver = WebotsController(
         robot_name='realsense',
-        parameters=[
-            {'robot_description': realsense_urdf_path}, # Hier übergeben wir die URDF der RealSense, damit der Controller die Kamera-Frames kennt. Die statischen TFs kommen aus der Workcell-URDF, die wir im State Publisher verwenden.
-            {'set_robot_state_publisher': False},
-            {'use_sim_time': True}
-        ]
+        parameters=[{'robot_description': realsense_xacro}],
     )
 
 
     return LaunchDescription([
-        world_handler,
-        webots,
-        webots._supervisor,
         
-        # UR5e Nodes
+        robot_state_publisher,
+        webots,
         ur5e_driver,
-        ur5e_state_publisher,
-        trajectory_spawner,
-        joint_state_spawner,
-
-        # RealSense Nodes
         realsense_driver,
+        joint_state_spawner,
+        trajectory_spawner,
 
         # Shutdown Handler
         launch.actions.RegisterEventHandler(

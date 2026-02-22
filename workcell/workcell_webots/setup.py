@@ -4,14 +4,11 @@ from glob import glob
 package_name = 'workcell_webots'
 data_files = []
 data_files.append(('share/ament_index/resource_index/packages', ['resource/' + package_name]))
-data_files.append(('share/' + package_name + '/launch', glob('launch/*.launch.py')))
+data_files.append(('share/' + package_name + '/launch', glob('launch/*launch.py')))
 data_files.append(('share/' + package_name + '/worlds', ['worlds/workcell.wbt']))
 data_files.append(('share/' + package_name + '/protos', glob('protos/*')))
 data_files.append(('share/' + package_name + '/meshes', glob('meshes/*')))
 data_files.append(('share/' + package_name + '/config', glob('config/*')))
-data_files.append(('share/' + package_name + '/resource', glob('resource/*.urdf')))
-data_files.append(('share/' + package_name + '/resource', glob('resource/*.xacro')))
-data_files.append(('share/' + package_name + '/resource', glob('resource/*.yaml')))
 data_files.append(('share/' + package_name, ['package.xml']))
 
 setup(

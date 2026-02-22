@@ -7,7 +7,7 @@ EXTERNPROTO "../protos/Klemmbaustein_4x2.proto"
 EXTERNPROTO "../protos/IntelRealSenseD415.proto"
 
 WorldInfo {
-  basicTimeStep 20
+  basicTimeStep 10
 }
 Viewpoint {
   orientation -0.21252257615617648 -0.10651356048092674 0.9713336275747989 4.04770192071602
