@@ -3,6 +3,10 @@
 
   <xacro:include filename="$(find workcell_description)/urdf/workcell_macro.xacro"/>
 
+  <!-- ros2_control für Webots -->
+  <xacro:include filename="$(find workcell_webots)/config/ur5e_webots.ros2_control.xacro"/>
+  <xacro:arg name="initial_positions_file" default="$(find workcell_moveit_config)/config/initial_positions.yaml"/>
+
   <xacro:arg name="ur_type" default="ur5e"/>
   <xacro:arg name="joint_limits_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/joint_limits.yaml"/>
   <xacro:arg name="kinematics_parameters_file" default="$(find workcell_description)/config/my_robot_calibration.yaml"/>
@@ -30,5 +34,8 @@
     >
     <origin xyz="0 0 0" rpy="0 0 0" />
   </xacro:workcell>
+
+  <!-- ros2_control Macro aufrufen -->
+  <xacro:workcell_ros2_control name="WebotsControl" initial_positions_file="$(arg initial_positions_file)"/>
 
 </robot>
