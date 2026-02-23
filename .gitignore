@@ -7,11 +7,3 @@
 
 # OS specific
 .DS_Store
-
-# Temporary/backup ignore
-moveit_node.txt
-.tf_frames
-.backup
-.md
-
-sort_program
