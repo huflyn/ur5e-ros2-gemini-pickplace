@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+
+import cv2
+import numpy as np
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image, CameraInfo
+from cv_bridge import CvBridge, CvBridgeError
+from std_msgs.msg import String
+from geometry_msgs.msg import PointStamped
+
+import tf2_ros
+import tf2_geometry_msgs
+from image_geometry import PinholeCameraModel
+
+# Eigene MSG und Funktionen
+from color_detection_msgs.msg import LegoBrick
+from color_detection.color_functions import detect_color, process_mask, display_information
+
+
+class ColorDetectorNode(Node):
+    def __init__(self):
+        super().__init__('color_detector_node')
+        
+        # --- Variablen ---
+        self.bridge = CvBridge()
+        self.camera_model = PinholeCameraModel()
+        self.depth_image = None
+        self.detected_lego_bricks = []
+        self.image_processed = False
+        
+        # --- TF2 Setup ---
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
+        
+        # --- Publisher ---
+        self.lego_brick_pub = self.create_publisher(LegoBrick, '/lego_brick_info', 10)
+        self.lego_brick_coords_pub = self.create_publisher(PointStamped, '/lego_brick_coords', 10)
+        self.lego_brick_color_pub = self.create_publisher(String, '/lego_brick_color', 10)
+
+        # --- Parameters ---
+        # --- Declare basic parameters ---
+        self.declare_parameter('camera_info_topic', '/camera/camera_info')
+        self.declare_parameter('depth_image_topic', '/camera/depth/image_raw')
+        self.declare_parameter('color_image_topic', '/camera/color/image_raw')
+        self.declare_parameter('camera_frame', 'camera_color_optical_frame')
+        self.declare_parameter('robot_base_frame', 'base_link')
+
+        # --- Read basic parameters ---
+        info_topic = self.get_parameter('camera_info_topic').get_parameter_value().string_value
+        depth_topic = self.get_parameter('depth_image_topic').get_parameter_value().string_value
+        color_topic = self.get_parameter('color_image_topic').get_parameter_value().string_value
+        self.camera_frame = self.get_parameter('camera_frame').get_parameter_value().string_value
+        self.robot_base_frame = self.get_parameter('robot_base_frame').get_parameter_value().string_value
+
+        self.get_logger().info(f"Listening to color topic: {color_topic}")
+        self.get_logger().info(f"Using camera frame: {self.camera_frame}")
+        self.get_logger().info(f"Transforming coordinates to: {self.robot_base_frame}")
+
+        # --- Declare HSV parameters (with default fallbacks) ---
+        self.declare_parameter('hsv_red_lower', [0, 200, 0])
+        self.declare_parameter('hsv_red_upper', [10, 255, 130])
+        self.declare_parameter('hsv_yellow_lower', [17, 170, 0])
+        self.declare_parameter('hsv_yellow_upper', [23, 255, 255])
+        self.declare_parameter('hsv_green_lower', [60, 90, 0])
+        self.declare_parameter('hsv_green_upper', [90, 255, 255])
+        self.declare_parameter('hsv_blue_lower', [90, 150, 55])
+        self.declare_parameter('hsv_blue_upper', [105, 255, 80])
+
+        # --- Read HSV parameters and structure them in a dictionary ---
+        self.color_bounds = {
+            'red': {
+                'lower': np.array(self.get_parameter('hsv_red_lower').value),
+                'upper': np.array(self.get_parameter('hsv_red_upper').value)
+            },
+            'yellow': {
+                'lower': np.array(self.get_parameter('hsv_yellow_lower').value),
+                'upper': np.array(self.get_parameter('hsv_yellow_upper').value)
+            },
+            'green': {
+                'lower': np.array(self.get_parameter('hsv_green_lower').value),
+                'upper': np.array(self.get_parameter('hsv_green_upper').value)
+            },
+            'blue': {
+                'lower': np.array(self.get_parameter('hsv_blue_lower').value),
+                'upper': np.array(self.get_parameter('hsv_blue_upper').value)
+            }
+        }
+        
+        # --- Subscriber (mit den dynamischen Variablen) ---
+        self.create_subscription(CameraInfo, info_topic, self.camera_info_callback, 10)
+        self.create_subscription(Image, depth_topic, self.depth_callback, 10)
+        self.create_subscription(Image, color_topic, self.image_callback, 10)
+        
+        # --- Timer für das Senden (Ersetzt die alte while-Schleife) ---
+        # Führt die Funktion alle 3.0 Sekunden aus
+        self.publish_timer = self.create_timer(3.0, self.publish_bricks_timer_callback)
+        
+        self.get_logger().info("Color Detector Node (ROS 2) erfolgreich gestartet.")
+
+
+    def camera_info_callback(self, data):
+        self.camera_model.fromCameraInfo(data)
+
+
+    def depth_callback(self, data):
+        try:
+            # Automatische Unterscheidung zwischen Simulation und echter Hardware
+            if data.encoding == '32FC1':
+                cv_image_meters = self.bridge.imgmsg_to_cv2(data, desired_encoding="32FC1")
+                self.depth_image = cv_image_meters * 1000.0 # Umrechnung in Millimeter
+            else:
+                self.depth_image = self.bridge.imgmsg_to_cv2(data, desired_encoding="16UC1")
+        except CvBridgeError as e:
+            self.get_logger().error(f"Fehler bei Depth-Konvertierung: {e}")
+
+
+    def transform_point(self, x, y, z):
+        point_in_camera_frame = PointStamped()
+        
+        point_in_camera_frame.header.frame_id = self.camera_frame
+        point_in_camera_frame.header.stamp = self.get_clock().now().to_msg()
+        
+        point_in_camera_frame.point.x = x / 1000.0
+        point_in_camera_frame.point.y = y / 1000.0
+        point_in_camera_frame.point.z = z / 1000.0
+
+        try:
+            # Calculate the path from the optical frame to the robot's base frame
+            transform = self.tf_buffer.lookup_transform(self.robot_base_frame, self.camera_frame_id, rclpy.time.Time())
+            
+            # Transform the point
+            point_in_target_frame = tf2_geometry_msgs.do_transform_point(point_in_camera_frame, transform)
+            return point_in_target_frame
+            
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+            self.get_logger().warn(f"TF Error: {e}")
+            return None
+
+
+    def is_duplicate(self, new_point, new_color, existing_bricks, position_threshold=0.1):
+        for existing_point, existing_color in existing_bricks:
+            distance = np.sqrt((new_point.point.x - existing_point.point.x) ** 2 +
+                               (new_point.point.y - existing_point.point.y) ** 2 +
+                               (new_point.point.z - existing_point.point.z) ** 2)
+            if distance < position_threshold and new_color == existing_color:
+                return True
+        return False
+
+
+    def image_callback(self, img_msg):
+        if self.image_processed:
+            return
+        self.image_processed = True
+
+        try:
+            cv2_img = self.bridge.imgmsg_to_cv2(img_msg, "bgr8")
+        except CvBridgeError as e:
+            self.get_logger().error(f"Failed to convert img_msg to cv2: {e}")
+            return
+
+        hsv = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2HSV)
+        colors = ['green', 'yellow', 'red', 'blue']
+
+        for color in colors:
+            # Pass the configured color bounds from the YAML to the detection function
+            mask = detect_color(hsv, color, self.color_bounds)
+            contours = process_mask(mask)
+
+            for cnt in contours:
+                area = cv2.contourArea(cnt)
+                rel_area = area / (cv2_img.shape[0] * cv2_img.shape[1])
+
+                if rel_area > 0.001:
+                    x, y, w, h = cv2.boundingRect(cnt)
+                    center_x = x + w // 2
+                    center_y = y + h // 2
+                    
+                    display_information(cv2_img, color, x, y, w, h, center_x, center_y, self.depth_image, self.get_logger())
+
+                    if self.depth_image is not None:
+                        depth = self.depth_image[center_y, center_x]
+
+                        if self.camera_model.fx() and self.camera_model.fy() and depth is not None:
+                            ray = self.camera_model.projectPixelTo3dRay((center_x, center_y))
+                            transformed_point = self.transform_point(ray[0] * depth, ray[1] * depth, depth)
+                            
+                            if transformed_point is not None:
+                                if not self.is_duplicate(transformed_point, color, self.detected_lego_bricks):
+                                    self.detected_lego_bricks.append((transformed_point, color))
+
+        # Optional: Uncomment to display the image for debugging
+        cv2.imshow('Color Detection', cv2_img)
+        cv2.waitKey(1)
+
+
+    def publish_bricks_timer_callback(self):
+        """Replaces the old ROS 1 while loop. Called every 3 seconds."""
+        if self.detected_lego_bricks:
+            # Sort by Y-coordinate
+            sorted_bricks = sorted(self.detected_lego_bricks, key=lambda brick: brick[0].point.y)
+
+            for brick_point, brick_color in sorted_bricks:
+                lego_brick_msg = LegoBrick()
+                lego_brick_msg.position = brick_point
+                lego_brick_msg.color.data = brick_color
+                
+                self.lego_brick_pub.publish(lego_brick_msg)
+                
+                # Output the exact frame reference using your new line
+                self.get_logger().info(f"Published {brick_color} brick at Y={brick_point.point.y:.2f} m from {self.robot_base_frame}")
+
+            self.detected_lego_bricks.clear()
+        
+        # Reset flag for the next camera frame
+        self.image_processed = False
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = ColorDetectorNode()
+    
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        node.get_logger().info("Node manually stopped.")
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
