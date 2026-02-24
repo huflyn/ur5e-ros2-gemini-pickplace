@@ -1,10 +1,9 @@
 import os
 import launch
 from launch import LaunchDescription
-from launch_ros.actions import Node
+from launch_ros.actions import Node, SetParameter
 from launch_ros.parameter_descriptions import ParameterValue
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Command
-
 import xacro
 from ament_index_python.packages import get_package_share_directory
 from webots_ros2_driver.webots_launcher import WebotsLauncher
@@ -31,6 +30,8 @@ def generate_launch_description():
     realsense_xacro = os.path.join(package_dir, 'config', 'realsense_d415_webots.urdf.xacro')
 
     # ===== 2) Nodes =====
+
+    set_sim_time = SetParameter(name='use_sim_time', value=True)
 
     # TF-Tree + /robot_description Topic (mit ros2_control in workcell.urdf.xacro definiert)
     robot_state_publisher = Node(
@@ -79,7 +80,8 @@ def generate_launch_description():
 
 
     return LaunchDescription([
-        
+
+        set_sim_time,        
         robot_state_publisher,
         webots,
         ur5e_driver,
