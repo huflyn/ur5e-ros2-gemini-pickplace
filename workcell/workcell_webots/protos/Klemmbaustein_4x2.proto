@@ -5,7 +5,7 @@ PROTO Klemmbaustein_4x2 [
   field SFRotation rotation     0 0 1 0
   field SFString   name         "Klemmbaustein_4x2"
   field SFColor    color        1 0 0       # Standard: Rot
-  field SFFloat    mass         0.005       # 5 Gramm (angepasst für Lego)
+  field SFFloat    mass         0.005       # 5 Gramm hat ein Stein dieser Größe ungefähr
 ]
 {
   Solid {
