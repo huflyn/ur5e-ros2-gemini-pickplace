@@ -12,7 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/launch', glob(os.path.join('launch', '*.launch.py'))),
+        ('share/' + package_name + '/launch', glob(os.path.join('launch', '*launch.[pxy][yma]*'))),
         ('share/' + package_name + '/config', glob(os.path.join('config', '*.yaml'))),
 
     ],
@@ -30,6 +30,7 @@ setup(
     entry_points={
         'console_scripts': [
             'test_moveit_api = workcell_application.test_moveit_api:main',
+            'brick_sorter = workcell_application.brick_sorter:main',
         ],
     },
 )
