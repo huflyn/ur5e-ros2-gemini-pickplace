@@ -18,7 +18,7 @@ def generate_launch_description():
         .to_moveit_configs()
     )
 
-    # 3. Den Python Test-Node starten
+    # Python Test-Node starten
     test_node = Node(
         package="workcell_application",
         executable="test_moveit_api",
