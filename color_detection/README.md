@@ -37,7 +37,7 @@ color_detector_node:
     color_image_topic: '/webots_realsense/color/image_raw/image_color'
     
     # 2. Update this to the optical frame of your camera (Z-axis pointing forward):
-    camera_frame_id: 'd415_sim_optical_frame'
+    camera_frame: 'd415_sim_optical_frame'
 ```
 
 ## Launch color_detection

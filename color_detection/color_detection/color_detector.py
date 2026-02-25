@@ -97,7 +97,7 @@ class ColorDetectorNode(Node):
         # Führt die Funktion alle 3.0 Sekunden aus
         self.publish_timer = self.create_timer(3.0, self.publish_bricks_timer_callback)
         
-        self.get_logger().info("Color Detector Node (ROS 2) erfolgreich gestartet.")
+        self.get_logger().info("Color Detector Node (ROS 2) successfully started.") 
 
 
     def camera_info_callback(self, data):
@@ -113,7 +113,7 @@ class ColorDetectorNode(Node):
             else:
                 self.depth_image = self.bridge.imgmsg_to_cv2(data, desired_encoding="16UC1")
         except CvBridgeError as e:
-            self.get_logger().error(f"Fehler bei Depth-Konvertierung: {e}")
+            self.get_logger().error(f"Error converting depth image: {e}")
 
 
     def transform_point(self, x, y, z):
@@ -128,7 +128,7 @@ class ColorDetectorNode(Node):
 
         try:
             # Calculate the path from the optical frame to the robot's base frame
-            transform = self.tf_buffer.lookup_transform(self.robot_base_frame, self.camera_frame_id, rclpy.time.Time())
+            transform = self.tf_buffer.lookup_transform(self.robot_base_frame, self.camera_frame, rclpy.time.Time())
             
             # Transform the point
             point_in_target_frame = tf2_geometry_msgs.do_transform_point(point_in_camera_frame, transform)
