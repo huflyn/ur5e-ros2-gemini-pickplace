@@ -93,9 +93,9 @@ class ColorDetectorNode(Node):
         self.create_subscription(Image, depth_topic, self.depth_callback, 10)
         self.create_subscription(Image, color_topic, self.image_callback, 10)
         
-        # --- Timer für das Senden (Ersetzt die alte while-Schleife) ---
-        # Führt die Funktion alle 3.0 Sekunden aus
-        self.publish_timer = self.create_timer(3.0, self.publish_bricks_timer_callback)
+        # --- Timer für das Senden ---
+        # Führt die Funktion alle 1.0 Sekunden aus
+        self.publish_timer = self.create_timer(1.0, self.publish_bricks_timer_callback)
         
         self.get_logger().info("Color Detector Node (ROS 2) successfully started.") 
 
@@ -209,7 +209,8 @@ class ColorDetectorNode(Node):
                 self.lego_brick_pub.publish(lego_brick_msg)
                 
                 # Output the exact frame reference using your new line
-                self.get_logger().info(f"Published {brick_color} brick at Y={brick_point.point.y:.2f} m from {self.robot_base_frame}")
+                self.get_logger().info(f"Published {brick_color} brick at X={brick_point.point.x:.2f}, Y={brick_point.point.y:.2f}, Z={brick_point.point.z:.2f} from {self.robot_base_frame}")
+                self.get_logger().info(f"Distance from {self.robot_base_frame} to {brick_color} brick: Y={brick_point.point.y:.2f} m")
 
             self.detected_lego_bricks.clear()
         
