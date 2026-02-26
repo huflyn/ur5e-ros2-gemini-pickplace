@@ -30,9 +30,9 @@ def display_information(cv2_img, color, x, y, w, h, center_x, center_y, depth_im
             
         # Use ROS logger if provided, otherwise force print flush
         if logger:
-            logger.info(f"Camera lens -> {color} brick: {depth:.1f} mm")
+            logger.info(f"Distance from camera to {color} brick: {depth:.1f} mm")
         else:
-            print(f"Camera lens -> {color} brick: {depth:.1f} mm", flush=True)
+            print(f"Distance from camera to {color} brick: {depth:.1f} mm", flush=True)
     
     cv2.rectangle(cv2_img, (x, y), (x+w, y+h), (0, 255, 0), 2)
     cv2.putText(cv2_img, color, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
