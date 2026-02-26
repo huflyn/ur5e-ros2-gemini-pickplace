@@ -23,16 +23,18 @@ def process_mask(mask):
 
    
 def display_information(cv2_img, color, x, y, w, h, center_x, center_y, depth_image, logger=None):
+    """
+    Extracts the depth information at the center of the detected object.
+    Draws bounding boxes and returns the depth in mm.
+    """
+    depth_val = None
     if depth_image is not None:
-        depth = depth_image[center_y, center_x]
-        if depth > 1000:  # Ignore objects farther than 1000mm
-            return
+        depth = float(depth_image[center_y, center_x])
+        if depth <= 1000:  # Ignore objects farther than 1000mm
+            depth_val = depth
             
-        # Use ROS logger if provided, otherwise force print flush
-        if logger:
-            logger.info(f"Distance from camera to {color} brick: {depth:.1f} mm")
-        else:
-            print(f"Distance from camera to {color} brick: {depth:.1f} mm", flush=True)
-    
+    # Draw bounding box and text (Keep these so your cv2.imshow still looks good!)
     cv2.rectangle(cv2_img, (x, y), (x+w, y+h), (0, 255, 0), 2)
     cv2.putText(cv2_img, color, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
+    
+    return depth_val

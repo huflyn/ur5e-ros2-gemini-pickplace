@@ -5,6 +5,7 @@ import copy
 import math
 import rclpy
 from rclpy.node import Node
+from rclpy.logging import get_logger
 from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Bool
@@ -113,7 +114,7 @@ def plan_and_execute(robot, arm, logger, target):
 
 def main(args=None):
     rclpy.init(args=args)
-    logger = rclpy.logging.get_logger("brick_sorter_main")
+    logger = get_logger("brick_sorter_main")
     logger.info("Initializing MoveItPy and Perception Node...")
 
     # 1. Load MoveItPy and the robot arm component
@@ -148,7 +149,10 @@ def main(args=None):
                 
                 logger.info(
                     "\n=================================================================\n"
-                    f"Starting Pick & Place for: {color.upper()} BRICK @ x={brick.position.point.x:.3f}, y={brick.position.point.y:.3f}, z={brick.position.point.z:.3f}\n"
+                    f" Starting Pick & Place for: {color.upper()} BRICK\n"
+                    "-----------------------------------------------------------------\n"
+                    f" * Robot Target   : X = {brick.position.point.x:.3f}, Y = {brick.position.point.y:.3f}, Z = {brick.position.point.z:.3f}\n"
+                    f" * Camera Distance: {brick.camera_distance_mm:.1f} mm\n"
                     "================================================================="
                 )
 

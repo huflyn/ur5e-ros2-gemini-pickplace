@@ -140,7 +140,11 @@ class ColorDetectorNode(Node):
 
 
     def is_duplicate(self, new_point, new_color, existing_bricks, position_threshold=0.1):
-        for existing_point, existing_color in existing_bricks:
+        # Update: existing_bricks now contains tuples of 3 elements (point, color, depth)
+        for brick_data in existing_bricks:
+            existing_point = brick_data[0]
+            existing_color = brick_data[1]
+            
             distance = np.sqrt((new_point.point.x - existing_point.point.x) ** 2 +
                                (new_point.point.y - existing_point.point.y) ** 2 +
                                (new_point.point.z - existing_point.point.z) ** 2)
@@ -164,7 +168,6 @@ class ColorDetectorNode(Node):
         colors = ['green', 'yellow', 'red', 'blue']
 
         for color in colors:
-            # Pass the configured color bounds from the YAML to the detection function
             mask = detect_color(hsv, color, self.color_bounds)
             contours = process_mask(mask)
 
@@ -177,18 +180,18 @@ class ColorDetectorNode(Node):
                     center_x = x + w // 2
                     center_y = y + h // 2
                     
-                    display_information(cv2_img, color, x, y, w, h, center_x, center_y, self.depth_image, self.get_logger())
+                    # Fetch the depth distance silently
+                    brick_depth = display_information(cv2_img, color, x, y, w, h, center_x, center_y, self.depth_image, self.get_logger())
 
-                    if self.depth_image is not None:
-                        depth = self.depth_image[center_y, center_x]
-
-                        if self.camera_model.fx() and self.camera_model.fy() and depth is not None:
+                    if brick_depth is not None:
+                        if self.camera_model.fx() and self.camera_model.fy():
                             ray = self.camera_model.projectPixelTo3dRay((center_x, center_y))
-                            transformed_point = self.transform_point(ray[0] * depth, ray[1] * depth, depth)
+                            transformed_point = self.transform_point(ray[0] * brick_depth, ray[1] * brick_depth, brick_depth)
                             
                             if transformed_point is not None:
                                 if not self.is_duplicate(transformed_point, color, self.detected_lego_bricks):
-                                    self.detected_lego_bricks.append((transformed_point, color))
+                                    # Append ALL 3 values to the list
+                                    self.detected_lego_bricks.append((transformed_point, color, brick_depth))
 
         # Optional: Uncomment to display the image for debugging
         cv2.imshow('Color Detection', cv2_img)
@@ -196,22 +199,20 @@ class ColorDetectorNode(Node):
 
 
     def publish_bricks_timer_callback(self):
-        """Replaces the old ROS 1 while loop. Called every 3 seconds."""
+        """Called by the timer to publish the detected bricks silently."""
         if self.detected_lego_bricks:
             # Sort by Y-coordinate
             sorted_bricks = sorted(self.detected_lego_bricks, key=lambda brick: brick[0].point.y)
 
-            for brick_point, brick_color in sorted_bricks:
+            # Unpack all 3 values
+            for brick_point, brick_color, brick_depth in sorted_bricks:
                 lego_brick_msg = LegoBrick()
                 lego_brick_msg.position = brick_point
                 lego_brick_msg.color.data = brick_color
+                lego_brick_msg.camera_distance_mm = brick_depth
                 
                 self.lego_brick_pub.publish(lego_brick_msg)
                 
-                # Output the exact frame reference using your new line
-                self.get_logger().info(f"Published {brick_color} brick at X={brick_point.point.x:.2f}, Y={brick_point.point.y:.2f}, Z={brick_point.point.z:.2f} from {self.robot_base_frame}")
-                self.get_logger().info(f"Distance from {self.robot_base_frame} to {brick_color} brick: Y={brick_point.point.y:.2f} m")
-
             self.detected_lego_bricks.clear()
         
         # Reset flag for the next camera frame

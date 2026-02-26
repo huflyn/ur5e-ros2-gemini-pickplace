@@ -1,2 +1,3 @@
 geometry_msgs/PointStamped position
 std_msgs/String color
+float32 camera_distance_mm
