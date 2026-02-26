@@ -5,8 +5,11 @@ Moves the robot to defined test positions requiring user confirmation.
 """
 import time
 import math
+
 import rclpy
+from rclpy.node import Node
 from rclpy.logging import get_logger
+from std_msgs.msg import Empty
 from geometry_msgs.msg import PoseStamped
 from tf_transformations import quaternion_from_euler
 from moveit.planning import MoveItPy
@@ -44,6 +47,23 @@ def plan_and_execute(robot, arm, logger, target):
     else:
         logger.error("❌ Motion planning failed! ❌")
         return False
+
+
+class TriggerNode(Node):
+    """A simple node to listen for a manual trigger message."""
+    def __init__(self):
+        super().__init__('alignment_trigger_node')
+        self.triggered = False
+        self.subscription = self.create_subscription(
+            Empty,
+            '/next_step',
+            self.trigger_callback,
+            10
+        )
+
+    def trigger_callback(self, msg):
+        self.get_logger().info("Trigger received! Moving to the next pose...")
+        self.triggered = True
 
 
 def main(args=None):
@@ -122,21 +142,29 @@ def main(args=None):
     logger.info(" position and compare with expected values.")
     logger.info("="*50 + "\n")
 
+
+    trigger_node = TriggerNode()
+
     try:
         # Iterate through all defined test poses
         for i, pose_config in enumerate(test_poses):
             name = pose_config["name"]
+            logger.info("\n" + "="*50)
             logger.info("="*50)
-            logger.info(f"--- Test {i+1}: {name} ---")
+            logger.info(f"🟢 Test {i+1}: {name} 🟢")
             logger.info("="*50)
             
-            # --- Countdown Timer ---
-            wait_time = 10  # Seconds to wait for you to measure / clear the area
-            logger.info(f"Waiting {wait_time} seconds before moving to the next pose...")
+            # --- THE TRIGGER WAIT LOOP ---
+            logger.info("="*50)
+            logger.info("⏯  Waiting for manual trigger. Run in a separate terminal:")
+            logger.info("ros2 topic pub --once /next_step std_msgs/msg/Empty")
+            logger.info("="*50 + "\n")
             
-            for countdown in range(wait_time, 0, -1):
-                logger.info(f"Starting in {countdown}...")
-                time.sleep(1.0)
+            trigger_node.triggered = False # Reset the flag
+            
+            # Spin the node to check for messages until the flag becomes True
+            while not trigger_node.triggered and rclpy.ok():
+                rclpy.spin_once(trigger_node, timeout_sec=0.1)
 
             # 2. Prepare the target based on its type
             if pose_config["type"] == "named":
@@ -159,9 +187,10 @@ def main(args=None):
             
             if success:
                 logger.info("="*50)
-                logger.info("✅ Position reached. You can now take your measurements.")
-                logger.info(" Messure from the robot base to the TCP at each")
-                logger.info(" position and compare with expected values.")
+                logger.info(f"✅ Position {i+1} reached:" + "\n")
+                logger.info(f"{name}" + "\n")
+                logger.info("Messure from the robot base to the TCP at each")
+                logger.info("position and compare with expected values.")
                 logger.info("="*50 + "\n")
             else:
                 logger.info("="*50)
