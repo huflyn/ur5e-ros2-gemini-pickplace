@@ -13,19 +13,21 @@ This package manages high-level robot control for the Brick Sorter application u
 
 - [Package Structure](#package-structure)
 - [Configuration (YAML)](#configuration-yaml)
-- [Launch Files](#launch-files)
-- [Workflow \& Robustness](#workflow--robustness)
 - [Usage of `brick_sorter.py`](#usage-of-brick_sorterpy)
-  - [Brick Sorter Workflow](#brick-sorter-workflow)
+  - [Workflow](#workflow)
+  - [Starting the Application](#starting-the-application)
+- [Usage of `verify_alignment.py`](#usage-of-verify_alignmentpy)
+  - [Workflow](#workflow-1)
   - [Starting the Script](#starting-the-script)
 - [Usage of `test_moveit_api.py`](#usage-of-test_moveit_apipy)
-  - [MoveIt API Test Workflow](#moveit-api-test-workflow)
   - [Starting the Script](#starting-the-script-1)
+  - [Features Tested](#features-tested)
 
 
 ## Package Structure
 
-* **`brick_sorter.py`**: The main application node. It handles the pick-and-place state machine, listens to `/lego_brick_info`, and executes trajectories. It is a replication of the ROS 1 `ur5e_moveit_script_erweitert.py`.
+* **`brick_sorter.py`**: The main application node. It handles the pick-and-place state machine, listens to `/lego_brick_info`, and executes trajectories. It is a replication of the ROS 1 `ur5e_moveit_script_erweitert.py` with enhanced robustness.
+* **`verify_alignment.py`**: A verification and calibration script to manually test workspace coordinates, TCP accuracy, and robot alignment using an interactive ROS topic trigger.
 * **`test_moveit_api.py`**: A verification script used to test basic MoveIt 2 planning and connectivity.
 
 ## Configuration (YAML)
@@ -45,64 +47,41 @@ brick_sorter_node:
     dropoff_red: [0.27, 0.438]
     dropoff_green: [0.27, 0.318]
     dropoff_blue: [0.27, 0.198]
-```
-
-## Launch Files
-The launch file automatically loads the Robot Description (URDF/SRDF) and application parameters.
-
-**Start Brick Sorter:**
-
-```bash
-ros2 launch workcell_application brick_sorter.launch.py
 
 ```
-
-**Run MoveIt API Test:**
-
-```bash
-ros2 launch workcell_application test_moveit_api.launch.py
-
-```
-
-## Workflow & Robustness
-
-The application follows a strict sequence to ensure reliable operation in both simulation and reality:
-
-1. **Initialization**: Moves to a predefined `ready` pose to clear the camera view.
-2. **Approach & Grasp**: Targets the brick's X/Y coordinates and descends to a fixed Z-height.
-3. **Error Handling**: If a trajectory fails (e.g., controller timeout or joint deviation), the node aborts the current cycle, resets the brick data, and returns to the `ready` pose.
-4. **Transport & Release**: Moves to the color-coded zone defined in the YAML file.
-5. **Damping**: Includes short `time.sleep` intervals between moves to allow physics/controllers to settle, preventing "Start point deviates" errors.
 
 ---
+
 ## Usage of `brick_sorter.py`
 
-### Brick Sorter Workflow
+This is the main automated sorting application. It continuously sorts detected Lego bricks by executing the following specific workflow:
 
-The application follows a strict sequence to ensure reliable operation in both simulation and reality:
+### Workflow
 
-1. **Initialization**: Moves to a predefined `ready` pose to clear the camera view.
-2. **Approach & Grasp**: Targets the brick's X/Y coordinates and descends to a fixed Z-height.
-3. **Error Handling**: If a trajectory fails (e.g., controller timeout or joint deviation), the node aborts the current cycle, resets the brick data, and returns to the `ready` pose.
-4. **Transport & Release**: Moves to the color-coded zone defined in the YAML file.
-5. **Damping**: Includes short `time.sleep` intervals between moves to allow physics/controllers to settle, preventing "Start point deviates" errors.
+1. **Clear View:** Moves to a predefined `ready` pose so the camera has an unobstructed view of the workspace.
+2. **Lock Perception:** Once a brick is detected, it locks the incoming ROS message queue to prevent processing stale data ("ghost bricks") during movement.
+3. **Pick:** Moves above the brick's X/Y coordinates, descends to the defined Z-height, and activates the vacuum gripper.
+4. **Place:** Transports the brick to the color-coded drop-off zone (defined in the YAML) and releases the gripper.
+5. **Flush & Reset:** Returns to the `ready` pose, clears all old camera messages from the queue, and unlocks perception for the next brick.
+*(Note: If a trajectory fails due to controller timeouts or collisions, the cycle safely aborts and resets to step 1).*
 
-### Starting the Script
+### Starting the Application
 
 You need to open three terminals to run the full application:
 
 1. **Terminal 1**: Start the Robot
 
-   - **Option 1:** Start the Gazebo **Simulation**  
+   - **Option 1:** Start the **Simulation**  
 
         ```bash
         ros2 launch workcell_simulation simulation.launch.py
         ```
 
-   - **Option 2:** Start the **Real Robot** (after sourcing the appropriate workspace)  
+   - **Option 2:** Start the **Real Robot** 
 
         ```bash
-        ros2 launch workcell_bringup bringup.launch.py
+        # You can set the robot_ip either via command line argument or directly in the start_robot.launch.py file
+        ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
         ```
 
 2. **Terminal 2**: Start the Color Detector
@@ -120,24 +99,52 @@ You need to open three terminals to run the full application:
 
 ---
 
-## Usage of `test_moveit_api.py`
+## Usage of `verify_alignment.py`
 
-### MoveIt API Test Workflow
+This script is a manual tool used for hardware commissioning. It allows you to move the robot step-by-step through predefined test poses to verify workspace coordinates and TCP alignment safely.
 
-This script is designed to verify the connectivity and demonstrate the basic functionality of the MoveIt 2 Python API.
-This includes:
-- Initializing the MoveIt 2 interface.
-- Planning a simple trajectory to a predefined pose.
-  - set goal state with predefined string (e.g., "ready" pose, defined in the MoveIt Config SRDF)
-  - set goal state with `PoseStamped` message (e.g., target brick position coordinates)
-  - Single-Pipeline Planning (`PlanRequestParameters`)
-  - Multi-Pipeline Planning (`MultiPipelinePlanRequestParameters`)
-- Executing the planned trajectory.
+### Workflow
+
+1. Start the script via the launch command below.
+2. The robot will wait for a manual trigger before moving to the next test pose.
+3. Open a separate terminal to send the trigger command:
+
+```bash
+ros2 topic pub --once /next_step std_msgs/msg/Empty
+```
+
+```bash
+# Recommended: Create an alias for quick triggering
+alias next="ros2 topic pub --once /next_step std_msgs/msg/Empty"
+
+# Execute the alias to move to the next pose
+next
+```
 
 ### Starting the Script
 
-You can run the MoveIt API test to verify connectivity and basic planning:
+```bash
+ros2 launch workcell_application verify_alignment.launch.py
+```
+
+---
+
+## Usage of `test_moveit_api.py`
+
+This script is designed to verify the connectivity and demonstrate the basic functionality of the MoveIt 2 Python API.
+
+### Starting the Script
 
 ```bash
 ros2 launch workcell_application test_moveit_api.launch.py
 ```
+
+### Features Tested
+
+* Initializing the MoveIt 2 interface.
+* Planning a simple trajectory to a predefined pose.
+  * set goal state with predefined string (e.g., "ready" pose, defined in the MoveIt Config SRDF)
+  * set goal state with `PoseStamped` message (e.g., target brick position coordinates)
+  * Single-Pipeline Planning (`PlanRequestParameters`)
+  * Multi-Pipeline Planning (`MultiPipelinePlanRequestParameters`)
+* Executing the planned trajectory.
