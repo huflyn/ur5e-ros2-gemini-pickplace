@@ -20,6 +20,19 @@ This package detects colored Lego bricks using a camera stream (RGB + Depth), ca
 * **`hsv_tuner.py`**: A standalone ROS 2 GUI tool. It opens an OpenCV window with trackbars, allowing you to fine-tune HSV values in real-time. It prints the tuned values directly to the terminal in a YAML-friendly format.
 
 
+## Published Topics & Custom Messages
+
+The `color_detector.py` node processes the images silently in the background to keep the terminal logs clean. It publishes the consolidated data of all detected bricks to the `/lego_brick_info` topic.
+
+This package requires the **`color_detection_msgs`** package, which defines the custom message structure used for communication.
+
+**Message Format (`color_detection_msgs/LegoBrick.msg`):**
+```text
+geometry_msgs/PointStamped position  # Transformed 3D coordinates in the robot's base frame
+std_msgs/String color                # The detected color name (e.g., "red", "blue")
+float32 camera_distance_mm           # Raw depth distance from the camera lens to the brick
+```
+
 
 ## Configuration & Camera Setup (YAML)
 
