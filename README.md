@@ -16,7 +16,11 @@
     - [Key Packages](#key-packages)
 - [IV) Quickstart: Brick Sorter Application](#iv-quickstart-brick-sorter-application)
     - [Step 1: Start the Robot Driver (Real or Simulated)](#step-1-start-the-robot-driver-real-or-simulated)
+      - [Option A: Webots Simulation](#option-a-webots-simulation)
+      - [Option B: Real Hardware (UR5e)](#option-b-real-hardware-ur5e)
     - [Step 2: Start the Perception Pipeline](#step-2-start-the-perception-pipeline)
+      - [Option A: with Simulation](#option-a-with-simulation)
+      - [Option B: with Real Camera](#option-b-with-real-camera)
     - [Step 3: Start the Application](#step-3-start-the-application)
 - [X) Documentation and References](#x-documentation-and-references)
 
@@ -92,26 +96,43 @@ To startup the complete system for automated pick-and-place, you need to start 3
 
 ### Step 1: Start the Robot Driver (Real or Simulated)
 
-- **Option A: Webots Simulation**
-  ```bash
-  ros2 launch workcell_simulation simulation.launch.py
-  ```
+#### Option A: Webots Simulation
+```bash
+ros2 launch workcell_simulation simulation.launch.py
+```
 
-- **Option B: Real Hardware (UR5e)**
+#### Option B: Real Hardware (UR5e)
 
-  Make sure the external control node is active on the teach pendant.
+Make sure the external control node is active on the teach pendant.
 
-  ```bash
-  ros2 launch workcell_control start_robot.launch.py
-  ```
+```bash
+ros2 launch workcell_control start_robot.launch.py
+```
 
 ### Step 2: Start the Perception Pipeline
 
 This node processes the camera stream and publishes the 3D coordinates of detected bricks.
 
+**Launch Arguments**
+
+- `use_sim` (bool, default: false): Set to true to use simulation topics and parameters.
+- `sort_method` (string, default: "closest", on y-axis): Method to sort detected bricks. Options: "closest" and "random".
+
+#### Option A: with Simulation
 ```bash
-ros2 launch color_detection color_detector.launch.py
+ros2 launch color_detection color_detector.launch.py use_sim:=true
 ```
+
+#### Option B: with Real Camera
+```bash 
+ros2 launch color_detection color_detector.launch.py
+``` 
+
+> [!TIP] Endless Loop Prevention:
+> If the robot fails to grasp a brick repeatedly (e.g., due to edge distortion), use sort_method:=random to shuffle the target order.
+> ```bash
+> ros2 launch color_detection color_detector.launch.py sort_method:=random
+> ```
 
 ### Step 3: Start the Application
 

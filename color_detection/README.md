@@ -61,6 +61,11 @@ color_detector_node:
 
 ## Launch color_detection
 
+**Launch Arguments**
+
+- `use_sim` (bool, default: false): Set to true to use simulation topics and parameters.
+- `sort_method` (string, default: "closest", on y-axis): Method to sort detected bricks. Options: "closest" and "random".
+
 ### Simulation
 ```bash
 ros2 launch color_detection color_detector.launch.py use_sim:=true
@@ -75,7 +80,7 @@ ros2 launch color_detection color_detector.launch.py
 
 By **default**, the detector **sorts bricks deterministically by their Y-coordinate**. If the robot repeatedly fails to grasp a specific brick (e.g., due to camera distortion at the edges), it can get stuck in an endless loop.
 
-To prevent this, you can **randomize the sorting order using the `sort_method` argument**. The node will print a summary of the active configuration to the terminal upon launch.
+To prevent this, you can **randomize the sorting order** by using the launch argument **`sort_method:=random`**. The node will print a summary of the active configuration to the terminal upon launch.
 
 **Launch with randomized sorting (Simulation):**
 ```bash
