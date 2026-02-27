@@ -36,67 +36,77 @@ float32 camera_distance_mm           # Raw depth distance from the camera lens t
 
 ## Configuration & Camera Setup (YAML)
 
-We use parameter files (**`config/sim_topics.yaml`** and **`config/real_topics.yaml`**) to seamlessly switch between Webots simulation and real-world hardware. These files store topic names, camera frames, and the HSV color thresholds.
+We use parameter files in the `config/` directory to seamlessly switch between Webots simulation and real-world hardware, and to manage color thresholds:
+
+* **`sim_params.yaml` / `real_params.yaml`**: Store the camera topic names and the target `tf2` frames.
+* **`hsv_bounds.yaml`**: Centrally stores the HSV color thresholds for all detected colors.
 
 > [!IMPORTANT]
-> Before running the node on a new setup, you must adjust the camera topics and the `tf2` frame in the YAML file:
+> Before running the node on a new setup, you must adjust the camera topics and the `tf2` frames in the respective parameters YAML file. Example (`sim_params.yaml`):
 
 ```yaml
 color_detector_node:
   ros__parameters:
-    # 1. Update these to match your camera's output topics:
+    # --- Camera Topics ---
     camera_info_topic: '/webots_realsense/depth/image_rect_raw/camera_info'
     depth_image_topic: '/webots_realsense/depth/image_rect_raw/image'
     color_image_topic: '/webots_realsense/color/image_raw/image_color'
-    
-    # 2. Update this to the optical frame of your camera (Z-axis pointing forward):
+
+    # Frame of the camera for TF transformations
     camera_frame: 'd415_sim_optical_frame'
+
+    # Target frame for the 3D coordinates
+    robot_base_frame: 'ur5e_base_link'
 ```
 
 ## Launch color_detection
 
-**Simulation:**
+### Simulation
 ```bash
 ros2 launch color_detection color_detector.launch.py use_sim:=true
 ```
 
-**Real Camera:**
+### Real Camera
 ```bash
 ros2 launch color_detection color_detector.launch.py
 ```
 
+### Sorting Method (Endless Loop Prevention)
 
+By **default**, the detector **sorts bricks deterministically by their Y-coordinate**. If the robot repeatedly fails to grasp a specific brick (e.g., due to camera distortion at the edges), it can get stuck in an endless loop.
+
+To prevent this, you can **randomize the sorting order using the `sort_method` argument**. The node will print a summary of the active configuration to the terminal upon launch.
+
+**Launch with randomized sorting (Simulation):**
+```bash
+ros2 launch color_detection color_detector.launch.py use_sim:=true sort_method:=random
+```
+
+**Launch with randomized sorting (Real Camera):**
+```bash
+ros2 launch color_detection color_detector.launch.py sort_method:=random
+```
 
 ## Using the HSV Tuner
 
-To find the perfect HSV color thresholds for your environment, use the built-in tuning tool. It opens a live video feed with trackbars. 
-
-You can pass the correct camera topic directly via the command line:
+To find the perfect HSV color thresholds for your environment, use the built-in tuning tool. It opens a live video feed with trackbars and automatically loads the correct camera topics based on your configuration.
 
 **Run the tuner (Simulation):**
 ```bash
-ros2 run color_detection hsv_tuner --ros-args -p color_image_topic:=/webots_realsense/color/image_raw/image_color
-```
-
-**Run the tuner (Real Camera):**
-
-```bash
-ros2 run color_detection hsv_tuner --ros-args -p color_image_topic:=/camera/color/image_raw  # adjust topic name
+ros2 launch color_detection hsv_tuner.launch.py use_sim:=true
 ```
 
 **Tuning Workflow:**
 
 1. Adjust the trackbars until the `Pure Mask` window clearly shows your target object in solid white and everything else in black.
 2. The node automatically prints the YAML-formatted values to your terminal every 2 seconds.
-3. Press `Ctrl+C` to stop the tuner, copy the printed array values from the terminal, and paste them into your active YAML configuration file (e.g., `sim_topics.yaml`).
-
-
+3. Press `Ctrl+C` to stop the tuner, copy the printed array values from the terminal, and paste them into your **`hsv_bounds.yaml`** configuration file.
 
 ## How to Add a New Color (e.g., 'orange')
 
 Adding a new color requires exactly three steps, without touching the core image processing logic:
 
-**Step 1: Add the HSV bounds to your YAML file**
+**Step 1: Add the HSV bounds to your `hsv_bounds.yaml` file**
 
 ```yaml
 #   hsv_color_lower: [H, S, V]
