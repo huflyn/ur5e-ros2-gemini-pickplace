@@ -28,8 +28,9 @@ def generate_launch_description():
 
 
     # Paths to the YAML parameter files
-    sim_params = os.path.join(pkg_dir, 'config', 'sim_topics.yaml')
-    real_params = os.path.join(pkg_dir, 'config', 'real_topics.yaml')
+    sim_params = os.path.join(pkg_dir, 'config', 'sim_params.yaml')
+    real_params = os.path.join(pkg_dir, 'config', 'real_params.yaml')
+    hsv_bounds = os.path.join(pkg_dir, 'config', 'hsv_bounds.yaml')
 
 
     # Node configuration for simulation
@@ -38,7 +39,7 @@ def generate_launch_description():
         executable='color_detector',
         name='color_detector_node',
         output='screen',
-        parameters=[sim_params, {'sort_method': sort_method}],
+        parameters=[sim_params, hsv_bounds, {'sort_method': sort_method}],
         condition=IfCondition(use_sim)
     )
 
@@ -48,7 +49,7 @@ def generate_launch_description():
         executable='color_detector',
         name='color_detector_node',
         output='screen',
-        parameters=[real_params, {'sort_method': sort_method}],
+        parameters=[real_params, hsv_bounds, {'sort_method': sort_method}],
         condition=UnlessCondition(use_sim)
     )
 
