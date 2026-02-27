@@ -4,7 +4,7 @@
   <xacro:include filename="$(find workcell_description)/urdf/workcell_macro.xacro"/>
 
   <!-- ros2_control für Webots -->
-  <xacro:include filename="$(find workcell_webots)/config/ur5e_webots.ros2_control.xacro"/>
+  <xacro:include filename="$(find workcell_simulation)/config/ur5e_webots.ros2_control.xacro"/>
   <xacro:arg name="initial_positions_file" default="$(find workcell_moveit_config)/config/initial_positions.yaml"/>
 
   <xacro:arg name="ur_type" default="ur5e"/>
