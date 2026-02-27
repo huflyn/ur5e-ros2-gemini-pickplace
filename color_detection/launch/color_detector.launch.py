@@ -22,8 +22,8 @@ def generate_launch_description():
 
     sort_method_arg = DeclareLaunchArgument(
         'sort_method',
-        default_value='y_axis',
-        description='Method to sort detected objects: "y_axis" (default, deterministic) or "random" (prevents endless loops)'
+        default_value='closest',
+        description='Method to sort detected objects: "closest" (default, deterministic) or "random" (prevents endless loops)'
     )
 
 
@@ -64,7 +64,7 @@ def generate_launch_description():
             '- Sorting Method: ', sort_method, '\n',
             '\nValid Arguments:\n',
             '- use_sim (default: false) - Set to true to use Webots simulation topics \n',
-            '- sort_method (default: y_axis) - Can be set to "random" to prevent endless loops on edge cases\n',
+            '- sort_method (default: closest) - Can be set to "random" to prevent endless loops on edge cases\n',
             '========================================='
         ]
     )

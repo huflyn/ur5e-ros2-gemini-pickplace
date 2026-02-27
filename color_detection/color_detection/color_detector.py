@@ -212,7 +212,7 @@ class ColorDetectorNode(Node):
                 random.shuffle(self.detected_lego_bricks)
                 sorted_bricks = self.detected_lego_bricks
             else:
-                # Default fallback: Sort by Y-coordinate
+                # Default fallback: Closest - Sort by Y-coordinate
                 sorted_bricks = sorted(self.detected_lego_bricks, key=lambda brick: brick[0].point.y)
 
             # Unpack all 3 values
