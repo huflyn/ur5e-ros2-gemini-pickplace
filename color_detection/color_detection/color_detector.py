@@ -2,6 +2,7 @@
 
 import cv2
 import numpy as np
+import random
 
 import rclpy
 from rclpy.node import Node
@@ -45,7 +46,8 @@ class ColorDetectorNode(Node):
         self.declare_parameter('depth_image_topic', '/camera/depth/image_raw')
         self.declare_parameter('color_image_topic', '/camera/color/image_raw')
         self.declare_parameter('camera_frame', 'camera_color_optical_frame')
-        self.declare_parameter('robot_base_frame', 'base_link')
+        self.declare_parameter('robot_base_frame', 'base_link')        
+        self.declare_parameter('sort_method', 'y_axis') # Options: 'y_axis' (default, deterministic) or 'random' (prevents endless loops on edge cases)
 
         # --- Read basic parameters ---
         info_topic = self.get_parameter('camera_info_topic').get_parameter_value().string_value
@@ -201,8 +203,17 @@ class ColorDetectorNode(Node):
     def publish_bricks_timer_callback(self):
         """Called by the timer to publish the detected bricks silently."""
         if self.detected_lego_bricks:
-            # Sort by Y-coordinate
-            sorted_bricks = sorted(self.detected_lego_bricks, key=lambda brick: brick[0].point.y)
+            
+            # Fetch the current sorting method dynamically
+            sort_method = self.get_parameter('sort_method').get_parameter_value().string_value
+            
+            if sort_method == 'random':
+                # Shuffle the list randomly to break deterministic endless loops on unreachable bricks
+                random.shuffle(self.detected_lego_bricks)
+                sorted_bricks = self.detected_lego_bricks
+            else:
+                # Default fallback: Sort by Y-coordinate
+                sorted_bricks = sorted(self.detected_lego_bricks, key=lambda brick: brick[0].point.y)
 
             # Unpack all 3 values
             for brick_point, brick_color, brick_depth in sorted_bricks:
