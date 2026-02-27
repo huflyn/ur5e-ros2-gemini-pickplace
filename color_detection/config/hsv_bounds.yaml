@@ -1,0 +1,14 @@
+color_detector_node:
+  ros__parameters:
+    # --- HSV Color Thresholds ---
+    hsv_red_lower: [0, 145, 100]
+    hsv_red_upper: [10, 255, 255]
+
+    hsv_yellow_lower: [16, 128, 117]
+    hsv_yellow_upper: [53, 255, 255]
+
+    hsv_green_lower: [40, 83, 0]
+    hsv_green_upper: [80, 255, 255]
+
+    hsv_blue_lower: [32, 81, 175]
+    hsv_blue_upper: [147, 255, 255]
