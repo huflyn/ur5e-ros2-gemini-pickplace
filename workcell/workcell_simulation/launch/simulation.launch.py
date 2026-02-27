@@ -11,7 +11,7 @@ from webots_ros2_driver.webots_controller import WebotsController
 
 
 def generate_launch_description():
-    package_dir = get_package_share_directory('workcell_webots')
+    package_dir = get_package_share_directory('workcell_simulation')
     workcell_desc_dir = get_package_share_directory('workcell_description')
     ros2_controllers_yaml_dir = get_package_share_directory('workcell_moveit_config')
 
