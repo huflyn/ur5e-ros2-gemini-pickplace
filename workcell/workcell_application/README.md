@@ -1,4 +1,4 @@
-# Workcell Application Package (ROS 2 Jazzy) <!-- omit from toc -->
+# Workcell Application Package (`workcell_application`) <!-- omit from toc -->
 
 [![jazzy][jazzy-badge]][jazzy]
 [![ubuntu24][ubuntu24-badge]][ubuntu24]

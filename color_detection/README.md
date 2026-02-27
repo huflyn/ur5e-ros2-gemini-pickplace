@@ -1,4 +1,4 @@
-# Color Detection Package (ROS 2 Jazzy)
+# Color Detection Package (`color_detection`)
 
 [![jazzy][jazzy-badge]][jazzy]
 [![ubuntu24][ubuntu24-badge]][ubuntu24]

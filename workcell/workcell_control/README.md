@@ -1,4 +1,4 @@
-# Workcell Control (`workcell_control`)
+# Workcell Control Package (`workcell_control`)
 
 [![jazzy][jazzy-badge]][jazzy]
 [![ubuntu24][ubuntu24-badge]][ubuntu24]

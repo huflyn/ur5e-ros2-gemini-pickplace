@@ -1,4 +1,4 @@
-# Color Detection Messages (`color_detection_msgs`)
+# Color Detection Messages Package (`color_detection_msgs`)
 
 [![jazzy][jazzy-badge]][jazzy]
 [![ubuntu24][ubuntu24-badge]][ubuntu24]

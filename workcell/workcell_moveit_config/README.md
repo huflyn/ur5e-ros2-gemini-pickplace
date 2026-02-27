@@ -1,4 +1,4 @@
-# Workcell MoveIt Configuration (`workcell_moveit_config`)
+# Workcell MoveIt Configuration Package (`workcell_moveit_config`)
 
 [![jazzy][jazzy-badge]][jazzy]
 [![ubuntu24][ubuntu24-badge]][ubuntu24]
@@ -27,7 +27,7 @@ To startup the complete system, you’ll have to start 3 launch files in individ
 - #### Option A: Webots Simulation
 
   ```bash
-  ros2 launch workcell_webots simulation.launch.py
+  ros2 launch workcell_simulation simulation.launch.py
   ```
 
 - #### Option B: Mock Hardware (no Webots, just RViz and MoveIt)
