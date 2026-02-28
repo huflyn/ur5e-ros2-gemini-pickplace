@@ -232,7 +232,7 @@ def main(args=None):
                     logger.info("="*50)
                     
                     # 1. Linear move directly above the brick
-                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_above):
+                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_above):
                         logger.error("❌ Failed to reach hover pose. Aborting!")
                         plan_and_execute(ur5e, ur5e_arm, logger, "ready")
                         continue 
