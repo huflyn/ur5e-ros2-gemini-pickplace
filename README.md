@@ -8,57 +8,63 @@
 [ubuntu24-badge]: https://img.shields.io/badge/-UBUNTU%2024%2E04-blue?style=flat-square&logo=ubuntu&logoColor=white
 [ubuntu24]: https://releases.ubuntu.com/noble/
 
+
+This repository demonstrates how to integrate the Google Gemini Robotics-ER 1.5 model (via the Gemini API) with a Universal Robots UR5e manipulator in a ROS 2 Jazzy environment. The project includes a complete perception-to-action pipeline for a simple pick-and-place application, utilizing MoveIt 2 for motion planning and control.
+
 - [I) Prerequisites](#i-prerequisites)
 - [II) Installation and Setup](#ii-installation-and-setup)
-  - [Install ROS 2 Drivers and Tools](#install-ros-2-drivers-and-tools)
+  - [ROS 2 Packages and Google GenAI SDK](#ros-2-packages-and-google-genai-sdk)
   - [Setup Google Gemini API](#setup-google-gemini-api)
-- [III) Workspace Overview](#iii-workspace-overview)
-    - [Key Packages](#key-packages)
+- [III) Workspace](#iii-workspace)
+  - [Overview](#overview)
+  - [Key Packages](#key-packages)
 - [IV) Quickstart: Brick Sorter Application](#iv-quickstart-brick-sorter-application)
-    - [Step 1: Start the Robot Driver (Real or Simulated)](#step-1-start-the-robot-driver-real-or-simulated)
-      - [Option A: Webots Simulation](#option-a-webots-simulation)
-      - [Option B: Real Hardware (UR5e)](#option-b-real-hardware-ur5e)
-    - [Step 2: Start the Perception Pipeline](#step-2-start-the-perception-pipeline)
-      - [Option A: with Simulation](#option-a-with-simulation)
-      - [Option B: with Real Camera](#option-b-with-real-camera)
-    - [Step 3: Start the Application](#step-3-start-the-application)
+  - [Step 1: Start the Robot Driver (Real or Simulated)](#step-1-start-the-robot-driver-real-or-simulated)
+  - [Step 2: Start the Perception Pipeline](#step-2-start-the-perception-pipeline)
+  - [Step 3: Start the Application](#step-3-start-the-application)
 - [X) Documentation and References](#x-documentation-and-references)
 
 
 # I) Prerequisites
 
 **Software:**
-- [(Ubuntu 24.04 LTS)](https://releases.ubuntu.com/noble/)
-- [(ROS 2 Jazzy)](https://docs.ros.org/en/jazzy/index.html)
+- [Ubuntu 24.04 LTS](https://releases.ubuntu.com/noble/)
+- [ROS 2 Jazzy](https://docs.ros.org/en/jazzy/index.html)
   
-**Hardware:**
-- [(Universal Robot UR5e)](https://www.universal-robots.com/)
-- [(Robotiq EPick Vakuumpumpe)](https://robotiq.com/products/vacuum-grippers#EPick)
-- [(Piab piSOFTGRIP)](https://www.piab.com/suction-cups-and-soft-grippers/soft-grippers/pisoftgrip-vacuum-driven-soft-gripper-/sg.x)
-- [(Intel RealSense D415 camera)](https://www.intel.com/content/www/us/en/products/sku/128256/intel-realsense-depth-camera-d415/specifications.html)
-
+**Hardware (Real or Simulated):**
+- [Universal Robot UR5e](https://www.universal-robots.com/)
+- [Robotiq EPick Vakuumpumpe](https://robotiq.com/products/vacuum-grippers#EPick)
+- [Piab piSOFTGRIP](https://www.piab.com/suction-cups-and-soft-grippers/soft-grippers/pisoftgrip-vacuum-driven-soft-gripper-/sg.x)
+- [Intel RealSense D415 camera](https://www.intel.com/content/www/us/en/products/sku/128256/intel-realsense-depth-camera-d415/specifications.html)
 
 
 # II) Installation and Setup
 
-## Install ROS 2 Drivers and Tools
+To make sure all components of this workspace function correctly, you need to install and set up the required ROS 2 packages, the Google GenAI SDK, and configure access to the Gemini API.
 
-Instructions: [INSTALL.md](INSTALL.md)
+## ROS 2 Packages and Google GenAI SDK
+
+**Instructions:** [INSTALL.md](INSTALL.md)
 
 - [ros2_control](https://control.ros.org/jazzy/doc/getting_started/getting_started.html)
 - [Universal Robots ROS2 Driver](https://docs.universal-robots.com/Universal_Robots_ROS_Documentation/doc/ur_robot_driver/ur_robot_driver/doc/installation/installation.html)
+- [Universal Robots ROS2 Description](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/tree/jazzy)
 - [MoveIt 2](https://moveit.ai/install-moveit2/binary/)
 - [Realsense ROS Wrapper](https://github.com/realsenseai/realsense-ros)
-- [Google Gen AI SDK](https://ai.google.dev/gemini-api/docs/quickstart)
 - [Optional: Webots](https://docs.ros.org/en/jazzy/Tutorials/Advanced/Simulators/Webots/Installation-Ubuntu.html)
+- [Google Gen AI SDK](https://ai.google.dev/gemini-api/docs/quickstart)
 
 
 ## Setup Google Gemini API
 
-Instructions: [GEMINI_API.md](GEMINI_API.md)
+**Instructions:** [GEMINI_API.md](GEMINI_API.md)
 
 
-# III) Workspace Overview
+# III) Workspace 
+
+This workspace is structured to provide a clear separation of concerns, with dedicated packages for perception, application logic, and hardware interfaces. Each package contains its own `README.md` with specific instructions and details.
+
+## Overview
 
 This repository is designed with a modular architecture, separating hardware drivers, perception, and high-level application logic.
 
@@ -79,7 +85,7 @@ ros2_ws/src/
     └── workcell_simulation
 ```
 
-### Key Packages
+## Key Packages
 For detailed instructions, please refer to the `README.md` files located inside each specific package folder.
 
 * **[`workcell_application`](workcell/workcell_application/)**: The core package. Contains the main `brick_sorter.py` state machine, MoveIt 2 Python API logic, and hardware alignment tools.
@@ -90,60 +96,77 @@ For detailed instructions, please refer to the `README.md` files located inside 
 * **[`workcell_moveit_config`](workcell/workcell_moveit_config/)**: The MoveIt 2 setup package, containing SRDFs, kinematics, and controller configurations.
 * **[`descriptions`](descriptions/)**: Modular URDF and Xacro files for the complete Workcell, the UR5e, piSOFTGRIP, Robotiq EPick, and the environment.
 
+
+
 # IV) Quickstart: Brick Sorter Application
 
 To startup the complete system for automated pick-and-place, you need to start 3 launch files in individual terminals. 
 
-### Step 1: Start the Robot Driver (Real or Simulated)
 
-#### Option A: Webots Simulation
+## Step 1: Start the Robot Driver (Real or Simulated)
+
+This will start the ROS 2 node that interfaces with the UR5e, either in real hardware mode or in Webots simulation.
+
+<details>
+  <summary><b>Option A: Webots Simulation</b></summary>
+
+This will launch the Webots simulation of the workcell. 
+
+Make sure you have Webots and the `webots_ros2` package installed. 
+  
 ```bash
 ros2 launch workcell_simulation simulation.launch.py
 ```
+</details>
 
-#### Option B: Real Hardware (UR5e)
+<details>
+  <summary><b>Option B: Real Hardware (UR5e)</b></summary>
 
-Make sure the external control node is active on the teach pendant.
+This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces.
+
+Make sure the **external control** node is **active** on the teach pendant.
+For details see the [**workcell_control README**](workcell/workcell_control/README.md).
+
+> [!CAUTION]
+> Follow all safety precautions when working with real robots.
 
 ```bash
-ros2 launch workcell_control start_robot.launch.py
+# You can set the robot_ip either via command line argument or directly in the start_robot.launch.py file
+ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
 ```
+</details>
 
-### Step 2: Start the Perception Pipeline
+
+## Step 2: Start the Perception Pipeline
 
 This node processes the camera stream and publishes the 3D coordinates of detected bricks.
 
-**Launch Arguments**
+For details see the [**color_detection README**](color_detection/README.md).
 
-- `use_sim` (bool, default: false): Set to true to use simulation topics and parameters.
-- `sort_method` (string, default: "closest", on y-axis): Method to sort detected bricks. Options: "closest" and "random".
-
-#### Option A: with Simulation
 ```bash
-ros2 launch color_detection color_detector.launch.py use_sim:=true
+ros2 launch color_detection color_detector.launch.py
 ```
 
-#### Option B: with Real Camera
-```bash 
-ros2 launch color_detection color_detector.launch.py
-``` 
+### Launch Arguments <!-- omit from toc -->
 
-> [!TIP] Endless Loop Prevention:
-> If the robot fails to grasp a brick repeatedly (e.g., due to edge distortion), use sort_method:=random to shuffle the target order.
-> ```bash
-> ros2 launch color_detection color_detector.launch.py sort_method:=random
-> ```
+- `use_sim` (bool, default: false): Use `use_sim:=true` to run with simulation camera topics and parameters.
+- `sort_method` (string, default: "closest"): Use `sort_method:=random` to shuffle the target order.
 
-### Step 3: Start the Application
+> [!IMPORTANT] 
+> **Using Real Hardware:** You need to adjust the **camera topics** and **frames** in the `real_params.yaml` file before running the node.
+
+
+## Step 3: Start the Application
 
 This will start the high-level state machine utilizing MoveIt 2 to pick and sort the detected bricks.
+
+For details see the [**workcell_application README**](workcell/workcell_application/README.md).
 
 ```bash
 ros2 launch workcell_application brick_sorter.launch.py
 ```
 
-> [!NOTE]
-> For **more details** to the **Brick Sorter** and **workspace calibration and alignment testing** see the **`workcell_application`** [**README**](workcell/workcell_application/README.md).
+
 
 # X) Documentation and References
 
@@ -166,3 +189,6 @@ Realsense
 Google Gemini
 - [Google Gemini API](https://ai.google.dev/gemini-api/docs/)
 - [Google Gemini Robotics-ER 1.5](https://ai.google.dev/gemini-api/docs/robotics-overview)
+
+---
+> Jump to: [Table of Contents](#table-of-contents)
