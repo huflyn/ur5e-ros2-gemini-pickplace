@@ -33,6 +33,11 @@ std_msgs/String color                # The detected color name (e.g., "red", "bl
 float32 camera_distance_mm           # Raw depth distance from the camera lens to the brick
 ```
 
+### Edge Margin (Safe Zone)
+
+To ensure reliable grasping and accurate center-point calculations, the detector implements a **25-pixel safe zone** around the image borders. Bricks that touch or cross this margin (e.g., partially visible bricks at the edge of the camera frame) are deliberately ignored. 
+
+This prevents the robot from calculating faulty TCP coordinates based on incomplete contours or distortion.
 
 ## Configuration & Camera Setup (YAML)
 
