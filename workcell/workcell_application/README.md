@@ -16,6 +16,9 @@ This package manages high-level robot control for the Brick Sorter application u
 - [Usage of `brick_sorter.py`](#usage-of-brick_sorterpy)
   - [Workflow](#workflow)
   - [Starting the Application](#starting-the-application)
+    - [Terminal 1: Start the Robot](#terminal-1-start-the-robot)
+    - [Terminal 2: Start the Color Detector](#terminal-2-start-the-color-detector)
+    - [Terminal 3: Start the Brick Sorter Application](#terminal-3-start-the-brick-sorter-application)
 - [Usage of `verify_alignment.py`](#usage-of-verify_alignmentpy)
   - [Workflow](#workflow-1)
   - [Starting the Script](#starting-the-script)
@@ -69,33 +72,38 @@ This is the main automated sorting application. It continuously sorts detected L
 
 You need to open three terminals to run the full application:
 
-1. **Terminal 1**: Start the Robot
+#### Terminal 1: Start the Robot
 
-   - **Option 1:** Start the **Simulation**  
+- **Option 1:** Start the **Simulation**  
 
-        ```bash
-        ros2 launch workcell_simulation simulation.launch.py
-        ```
+  ```bash
+  ros2 launch workcell_simulation simulation.launch.py
+  ```
 
-   - **Option 2:** Start the **Real Robot** 
+- **Option 2:** Start the **Real Robot** 
 
-        ```bash
-        # You can set the robot_ip either via command line argument or directly in the start_robot.launch.py file
-        ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
-        ```
+  ```bash
+  # You can set the robot_ip either via command line argument or directly in the start_robot.launch.py file
+  ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
+  ```
 
-2. **Terminal 2**: Start the Color Detector
+#### Terminal 2: Start the Color Detector
+
+Launch Arguments:
+
+- `use_sim` (bool, default: false): Set to true to use simulation topics and parameters.
+- `sort_method` (string, default: "closest", on y-axis): Method to sort detected bricks. Options: "closest" and "random".
+
+```bash
+ros2 launch color_detection color_detector.launch.py
+```
+
+
+#### Terminal 3: Start the Brick Sorter Application
    
-    ```bash
-    ros2 launch color_detection color_detector.launch.py
-    ```
-
-
-3. **Terminal 2**: Start the Brick Sorter Application
-   
-    ```bash
-    ros2 launch workcell_application brick_sorter.launch.py
-    ```
+```bash
+ros2 launch workcell_application brick_sorter.launch.py
+```
 
 ---
 
