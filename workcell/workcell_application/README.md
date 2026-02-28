@@ -75,7 +75,7 @@ This is an **advanced replication of the ROS 1 ur5e_moveit_script_erweitert.py**
 
 You need to open three terminals to run the full application:
 
-#### Terminal 1: Start the Robot <!-- omit from toc -->
+#### Terminal 1: Start the Robot
 
 - **Option 1:** Start the **Simulation**  
 
@@ -90,7 +90,7 @@ You need to open three terminals to run the full application:
   ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
   ```
 
-#### Terminal 2: Start the Color Detector <!-- omit from toc -->
+#### Terminal 2: Start the Color Detector
 
 Launch Arguments:
 
@@ -105,7 +105,7 @@ ros2 launch color_detection color_detector.launch.py
 > **Using Real Hardware:** You need to adjust the **camera topics** and **frames** in the `real_params.yaml` file before running the node.
 
 
-#### Terminal 3: Start the Brick Sorter Application <!-- omit from toc -->
+#### Terminal 3: Start the Brick Sorter Application
    
 ```bash
 ros2 launch workcell_application brick_sorter.launch.py
