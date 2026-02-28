@@ -15,7 +15,7 @@
 - [Google Gen AI SDK (Docs)](#google-gen-ai-sdk-docs)
 - [Optional: Webots (Docs)](#optional-webots-docs)
 
-
+In order to run all packages in this workspace, you need to have the necessary ROS 2 drivers and tools installed for controlling the robot, processing sensor data, and integrating with the Google Gemini API. Below are the instructions for installing these components on Ubuntu 24.04 with ROS 2 Jazzy.
 
 # ros2_control ([Docs](https://control.ros.org/jazzy/index.html))
 
@@ -49,7 +49,6 @@ sudo apt install ros-jazzy-rmw-cyclonedds-cpp
 # You may want to add this to ~/.bashrc to source it automatically
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 ```
-
 
 # ROS Wrapper for RealSense™ Cameras ([GitHub](https://github.com/realsenseai/realsense-ros))
 
