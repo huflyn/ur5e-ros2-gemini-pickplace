@@ -2,11 +2,11 @@ brick_sorter_node:
   ros__parameters:
     # Z-Heights
     hover_height: 0.20
-    dropoff_height: 0.12
+    dropoff_height: 0.10
     grasp_z_offset: 0.0 # Optional: To ensure a secure grasp by going slightly below the detected Z
     
     # Drop-off coordinates: [X, Y]
-    dropoff_yellow: [0.27, 0.558]
-    dropoff_red: [0.27, 0.438]
-    dropoff_green: [0.27, 0.318]
-    dropoff_blue: [0.27, 0.198]
+    dropoff_yellow: [-0.27, 0.450]
+    dropoff_red: [0.27, 0.450]
+    dropoff_green: [-0.27, 0.350]
+    dropoff_blue: [0.27, 0.350]
