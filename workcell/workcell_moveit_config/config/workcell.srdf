@@ -28,6 +28,22 @@
         <joint name="ur5e_wrist_2_joint" value="-1.571"/>
         <joint name="ur5e_wrist_3_joint" value="0"/>
     </group_state>
+    <group_state name="ready_left" group="ur_arm">
+        <joint name="ur5e_elbow_joint" value="1.571"/>
+        <joint name="ur5e_shoulder_lift_joint" value="-1.571"/>
+        <joint name="ur5e_shoulder_pan_joint" value="1.571"/>
+        <joint name="ur5e_wrist_1_joint" value="-1.571"/>
+        <joint name="ur5e_wrist_2_joint" value="-1.571"/>
+        <joint name="ur5e_wrist_3_joint" value="-0.785"/>
+    </group_state>
+    <group_state name="ready_right" group="ur_arm">
+        <joint name="ur5e_elbow_joint" value="1.571"/>
+        <joint name="ur5e_shoulder_lift_joint" value="-1.571"/>
+        <joint name="ur5e_shoulder_pan_joint" value="1.571"/>
+        <joint name="ur5e_wrist_1_joint" value="-1.571"/>
+        <joint name="ur5e_wrist_2_joint" value="-1.571"/>
+        <joint name="ur5e_wrist_3_joint" value="0.785"/>
+    </group_state>^
     <group_state name="up" group="ur_arm">
         <joint name="ur5e_elbow_joint" value="0"/>
         <joint name="ur5e_shoulder_lift_joint" value="-1.571"/>
