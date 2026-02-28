@@ -131,8 +131,16 @@ def main(args=None):
     q_down = quaternion_from_euler(math.pi, 0.0, 0.0)
 
     # --- Initialisierungs-Fahrt VOR der Schleife ---
+    logger.info("="*50)
     logger.info("Initializing: Moving to 'ready' pose before starting the detection cycle...")
+    logger.info("="*50 + "\n")
+    brick_sorter_node.set_gripper(turn_on=False) # Ensure gripper is off at the start
+    time.sleep(1.0) # Wait for vacuum to release
     plan_and_execute(ur5e, ur5e_arm, logger, "ready")
+
+    # --- Timer variables for Idle/Standby logic ---
+    last_activity_time = time.time()
+    is_idling = False
 
 
     try:
@@ -140,31 +148,33 @@ def main(args=None):
             # Spin the executor to check for new ROS messages
             executor.spin_once(timeout_sec=0.1)
 
+            # --- Check if a new brick was detected ---
             if brick_sorter_node.lego_brick_data is not None:
-
+                
+                is_idling = False # Reset idle state as we found work
                 brick_sorter_node.accept_new_bricks = False # Sets flag to ignore new bricks while processing the current one
 
                 brick = brick_sorter_node.lego_brick_data
                 color = brick.color.data
                 
-                logger.info(
-                    "\n=================================================================\n"
-                    f" Starting Pick & Place for: {color.upper()} BRICK\n"
-                    "-----------------------------------------------------------------\n"
-                    f" * Robot Target   : X = {brick.position.point.x:.3f}, Y = {brick.position.point.y:.3f}, Z = {brick.position.point.z:.3f}\n"
-                    f" * Camera Distance: {brick.camera_distance_mm:.1f} mm\n"
-                    "================================================================="
-                )
+                logger.info("="*50)
+                logger.info(f" Starting Pick & Place for: {color.upper()} BRICK")
+                logger.info("-"*50)
+                logger.info(f" * Robot Target   : X = {brick.position.point.x:.3f}, Y = {brick.position.point.y:.3f}, Z = {brick.position.point.z:.3f}")
+                logger.info(f" * Camera Distance: {brick.camera_distance_mm:.1f} mm")
+                logger.info("="*50 + "\n")
 
                 # Check if we have a drop-off location for this color
                 if color not in brick_sorter_node.dropoffs:
-                    logger.error(f"No drop-off location defined for color '{color}'. Skipping brick!")
+                    logger.error(f"❌ No drop-off location defined for color '{color}'. Skipping brick!")
                     brick_sorter_node.lego_brick_data = None
                     brick_sorter_node.accept_new_bricks = True
+                    last_activity_time = time.time()  # Reset idle timer
                     continue
 
                 target_xy = brick_sorter_node.dropoffs[color]
 
+                # --- Pose Definitions ---
                 # 1. Hover pose above the brick
                 pose_above = PoseStamped()
                 pose_above.header.frame_id = "ur5e_base_link"
@@ -175,7 +185,7 @@ def main(args=None):
                 
                 pose_above.pose.position.x = brick.position.point.x
                 pose_above.pose.position.y = brick.position.point.y
-                pose_above.pose.position.z = brick_sorter_node.hover_height # Dynamic height!
+                pose_above.pose.position.z = brick_sorter_node.hover_height
 
                 # 2. Grasp pose
                 pose_grasp = copy.deepcopy(pose_above)
@@ -184,8 +194,8 @@ def main(args=None):
 
                 # 3. Hover pose above the drop-off zone
                 pose_drop_hover = copy.deepcopy(pose_above)
-                pose_drop_hover.pose.position.x = target_xy[0] # Dynamic X from YAML
-                pose_drop_hover.pose.position.y = target_xy[1] # Dynamic Y from YAML
+                pose_drop_hover.pose.position.x = target_xy[0]
+                pose_drop_hover.pose.position.y = target_xy[1]
                     
                 # 4. Drop-off pose
                 pose_drop = copy.deepcopy(pose_drop_hover)
@@ -195,66 +205,121 @@ def main(args=None):
                 # Execution Sequence (with Error Handling)
                 # ---------------------------------------------------------
                 try:
+                    # Step 1: Move above the brick
+                    logger.info("="*50)
                     logger.info("Step 1: Moving above the brick")
+                    logger.info("="*50 + "\n")
                     if not plan_and_execute(ur5e, ur5e_arm, logger, pose_above):
-                        logger.error("Failed to reach hover pose. Aborting cycle!")
-                        plan_and_execute(ur5e, ur5e_arm, logger, "ready") # Zurück auf Start
-                        continue # Schleife sofort abbrechen und von vorne beginnen
+                        logger.error("❌ Failed to reach hover pose. Aborting cycle!")
+                        plan_and_execute(ur5e, ur5e_arm, logger, "ready")
+                        continue 
                     
+                    # Step 2: Lower to grasp pose
+                    logger.info("="*50)
                     logger.info(f"Step 2: Lowering to grasp position z={brick.position.point.z:.3f} with optional offset {brick_sorter_node.grasp_z_offset:.3f}")
+                    logger.info("="*50 + "\n")
                     if not plan_and_execute(ur5e, ur5e_arm, logger, pose_grasp):
-                        logger.error("Failed to reach grasp pose. Aborting cycle!")
-                        plan_and_execute(ur5e, ur5e_arm, logger, pose_above) # Zuerst hochziehen
-                        plan_and_execute(ur5e, ur5e_arm, logger, "ready") # Dann zurück auf Start
-                        continue
-                    
-                    logger.info("Step 3: Activating gripper")
-                    brick_sorter_node.set_gripper(turn_on=True)
-                    time.sleep(1.0) # Wait for vacuum to build up
-                    
-                    logger.info("Step 4: Lifting the brick")
-                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_above):
-                        logger.error("Failed to lift brick. Dropping and aborting!")
-                        brick_sorter_node.set_gripper(turn_on=False) # Notabwurf!
+                        logger.error("❌ Failed to reach grasp pose. Aborting cycle!")
+                        plan_and_execute(ur5e, ur5e_arm, logger, pose_above)
                         plan_and_execute(ur5e, ur5e_arm, logger, "ready")
                         continue
                     
-                    logger.info(f"Step 5: Moving to {color} drop-off zone")
-                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_drop_hover):
-                        logger.error("Failed to reach drop-off zone. Dropping and aborting!")
+                    # Step 3: Activate gripper
+                    logger.info("="*50)
+                    logger.info("Step 3: Activating gripper")
+                    logger.info("="*50 + "\n")
+                    brick_sorter_node.set_gripper(turn_on=True)
+                    time.sleep(1.0) # Wait for vacuum to build up
+                    
+                    # Step 4: Lift the brick
+                    logger.info("="*50)
+                    logger.info("Step 4: Lifting the brick")
+                    logger.info("="*50 + "\n")
+                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_above):
+                        logger.error("❌ Failed to lift brick. Dropping and aborting!")
                         brick_sorter_node.set_gripper(turn_on=False)
                         plan_and_execute(ur5e, ur5e_arm, logger, "ready")
                         continue
                     
-                    logger.info("Step 6: Lowering to drop-off height")
-                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_drop):
-                        logger.warn("Failed to lower completely. Dropping from current height.")
-                        # Hier brechen wir NICHT ab, sondern lassen den Stein einfach fallen.
+                    # Step 5: Move to drop-off hover pose
+                    logger.info("="*50)
+                    logger.info(f"Step 5: Moving to {color} drop-off zone")
+                    logger.info("="*50 + "\n")
+                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_drop_hover):
+                        logger.error("❌ Failed to reach drop-off zone. Dropping and aborting!")
+                        brick_sorter_node.set_gripper(turn_on=False)
+                        plan_and_execute(ur5e, ur5e_arm, logger, "ready")
+                        continue
                     
+                    # Step 6: Lower to drop-off height
+                    logger.info("="*50)
+                    logger.info("Step 6: Lowering to drop-off height")
+                    logger.info("="*50 + "\n")
+                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_drop):
+                        logger.warn("❌ Failed to lower completely. Dropping from current height.")
+                    
+                    # Step 7: Release the gripper
+                    logger.info("="*50)
                     logger.info("Step 7: Releasing gripper")
+                    logger.info("="*50 + "\n")
                     brick_sorter_node.set_gripper(turn_on=False)
                     time.sleep(1.0) # Wait for vacuum to release
                     
+                    # Step 8: Retreat upwards
+                    logger.info("="*50)
                     logger.info("Step 8: Retreating upwards")
+                    logger.info("="*50 + "\n")
                     plan_and_execute(ur5e, ur5e_arm, logger, pose_drop_hover)
 
+                    # Step 9: Return to ready pose
+                    logger.info("="*50)
                     logger.info("Step 9: Returning to 'ready' pose to clear the camera view")
+                    logger.info("="*50 + "\n")
                     plan_and_execute(ur5e, ur5e_arm, logger, "ready")
 
                 finally:
+                    # Step 10: Flush stale data and reset for the next cycle (this runs even if we had an error in the try block)
+                    logger.info("="*50)
                     logger.info("Cycle complete or aborted. Flushing stale camera data...")
+                    logger.info("="*50 + "\n")
                     
-                    # 1. Kurz warten, damit die Kamera den nun leeren Tisch registriert
+                    # short pause to ensure all movements have settled before we flush the queue and accept new bricks
                     time.sleep(0.5)
                     
-                    # 2. Alle alten "Geister-Nachrichten" aus der ROS Queue saugen und wegwerfen
+                    # We flush the callback queue to remove any stale brick detections that might have come in while we were processing
                     for _ in range(15):
                         executor.spin_once(timeout_sec=0.01)
-                    
-                    # 3. System wieder scharfschalten für den nächsten sauberen Durchlauf
+
+                    # Reset for the next cycle
                     brick_sorter_node.lego_brick_data = None
                     brick_sorter_node.accept_new_bricks = True
+                    logger.info("="*50)
                     logger.info("Waiting for the next target...")
+                    logger.info("="*50 + "\n")
+                    last_activity_time = time.time()
+
+            # --- Idle / Standby Logic ---
+            else:
+                # If no bricks are detected for 5 seconds and we aren't idling yet
+                if (time.time() - last_activity_time) > 5.0 and not is_idling:
+                    logger.info("="*50)
+                    logger.info("\n--- NO BRICKS DETECTED ---")
+                    logger.info("Table is clear. Moving to standby and waiting for new objects...")
+                    logger.info("="*50 + "\n")
+                    
+                    # Ensure the robot is at the ready pose
+                    plan_and_execute(ur5e, ur5e_arm, logger, "ready")
+                    
+                    # Wiggle Animation:
+                    plan_and_execute(ur5e, ur5e_arm, logger, "ready_left")
+                    plan_and_execute(ur5e, ur5e_arm, logger, "ready_right")
+                    plan_and_execute(ur5e, ur5e_arm, logger, "ready")
+
+                    logger.info("="*50)
+                    logger.info("⏯  STANDBY: Waiting for new bricks to be detected  ⏯")
+                    logger.info("="*50 + "\n")
+
+                    is_idling = True # Prevents logging this block repeatedly
 
     except KeyboardInterrupt:
         logger.info("Application manually stopped.")
