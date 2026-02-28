@@ -224,7 +224,7 @@ def main(args=None):
 
 
                 # ---------------------------------------------------------
-                # Execution Sequence (Fluid & Compact Cartesian Moves)
+                # Execution Sequence (Hybrid: Pilz LIN for precision, OMPL for transit)
                 # ---------------------------------------------------------
                 try:
                     logger.info("="*50)
@@ -232,16 +232,15 @@ def main(args=None):
                     logger.info("="*50)
                     
                     # 1. Linear move directly above the brick
-                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_above):
-                        logger.error("❌ Failed to reach hover pose. Aborting!")
+                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_above):
+                        logger.error("❌ Failed to reach hover pose using OMPL. Aborting!")
                         plan_and_execute(ur5e, ur5e_arm, logger, "ready")
                         continue 
                         
                     # 2. Linear move down to the brick
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_grasp):
-                        logger.error("❌ Failed to reach grasp pose. Aborting!")
-                        plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_above)
-                        plan_and_execute(ur5e, ur5e_arm, logger, "ready")
+                        logger.error("❌ Failed to reach grasp pose linearly. Aborting!")
+                        plan_and_execute(ur5e, ur5e_arm, logger, "ready") # OMPL back to safe state
                         continue
                         
                     # 3. Activate gripper
@@ -254,20 +253,18 @@ def main(args=None):
                     
                     # 4. Linear retreat straight up
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_above):
-                        logger.error("❌ Failed to lift brick. Dropping and aborting!")
+                        logger.error("❌ Failed to lift brick linearly. Dropping and aborting!")
                         brick_sorter_node.set_gripper(turn_on=False)
                         plan_and_execute(ur5e, ur5e_arm, logger, "ready")
                         continue
                     
                     # 5. Transfer to the drop-off hover zone
-                    # Note: If this long horizontal Pilz LIN move fails due to joint limits, 
-                    # you might want to switch this specific step back to standard plan_and_execute (OMPL).
+                    # Try a beautiful straight line first. If it hits a kinematic limit, 
+                    # fall back to OMPL so we don't drop the brick unnecessarily.
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_drop_hover):
                         logger.warn("⚠️ LIN transfer failed (Singularity?). Attempting OMPL fallback...")
-                        # Optional Fallback: If the straight line is mathematically impossible, 
-                        # let OMPL find a way around the singularity so we don't drop the brick.
                         if not plan_and_execute(ur5e, ur5e_arm, logger, pose_drop_hover):
-                            logger.error("❌ Failed to reach drop-off zone. Dropping and aborting!")
+                            logger.error("❌ Failed to reach drop-off zone entirely. Dropping and aborting!")
                             brick_sorter_node.set_gripper(turn_on=False)
                             plan_and_execute(ur5e, ur5e_arm, logger, "ready")
                             continue
@@ -285,16 +282,14 @@ def main(args=None):
                     logger.info("Phase 3: Retreat & Return")
                     logger.info("="*50)
                     
-                    # 8. Linear retreat straight up from the drop-off zone
+                    # 8. Strict Pilz LIN retreat straight up from the drop-off zone
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_drop_hover):
-                        logger.error("❌ Failed to retreat from drop-off zone. Attempting to return to ready.")
-                        if not plan_and_execute(ur5e, ur5e_arm, logger, "ready"):
-                            logger.error("❌ Failed to return to ready pose after drop-off issue! Robot might be stuck.")
-                            continue
+                        logger.warn("⚠️ Vertical retreat failed. Arm might be in a weird state.")
                     
-                    # 9. Return to ready pose using standard OMPL (joint space is fine here!)
+                    # 9. Return to ready pose using standard OMPL, a "dance" is fine to unwind the joints
                     if not plan_and_execute(ur5e, ur5e_arm, logger, "ready"):
                         logger.error("❌ Failed to return to ready pose! Robot might be stuck.")
+
 
                 finally:
                     # Step 10: Flush stale data and reset for the next cycle (this runs even if we had an error in the try block)
