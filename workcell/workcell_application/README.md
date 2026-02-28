@@ -25,11 +25,12 @@ This package manages high-level robot control for the Brick Sorter application u
 - [Usage of `test_moveit_api.py`](#usage-of-test_moveit_apipy)
   - [Starting the Script](#starting-the-script-1)
   - [Features Tested](#features-tested)
+- [Known Limitations \& Future Work](#known-limitations--future-work)
 
 
 ## Package Structure
 
-* **`brick_sorter.py`**: The main application node. It handles the pick-and-place state machine, listens to `/lego_brick_info`, and executes trajectories. It is a replication of the ROS 1 `ur5e_moveit_script_erweitert.py` with enhanced robustness.
+* **`brick_sorter.py`**: The main application node. It handles the pick-and-place state machine, listens to `/lego_brick_info`, and executes trajectories.
 * **`verify_alignment.py`**: A verification and calibration script to manually test workspace coordinates, TCP accuracy, and robot alignment using an interactive ROS topic trigger.
 * **`test_moveit_api.py`**: A verification script used to test basic MoveIt 2 planning and connectivity.
 
@@ -42,14 +43,14 @@ brick_sorter_node:
   ros__parameters:
     # Z-Heights
     hover_height: 0.20
-    dropoff_height: 0.12
+    dropoff_height: 0.10
     grasp_z_offset: 0.0 # Optional: To ensure a secure grasp by going slightly below the detected Z
     
     # Drop-off coordinates: [X, Y]
-    dropoff_yellow: [0.27, 0.558]
-    dropoff_red: [0.27, 0.438]
-    dropoff_green: [0.27, 0.318]
-    dropoff_blue: [0.27, 0.198]
+    dropoff_yellow: [-0.27, 0.450]
+    dropoff_red: [0.27, 0.450]
+    dropoff_green: [-0.27, 0.350]
+    dropoff_blue: [0.27, 0.350]
 
 ```
 
@@ -57,7 +58,9 @@ brick_sorter_node:
 
 ## Usage of `brick_sorter.py`
 
-This is the main automated sorting application. It continuously sorts detected Lego bricks by executing the following specific workflow:
+This is an **advanced replication of the ROS 1 ur5e_moveit_script_erweitert.py**. It utilizes a hybrid motion planning architecture, seamlessly switching between **OMPL** for joint-space travel and the **Pilz Industrial Motion Planner** (LIN) for strict Cartesian vertical movements. It also features **dynamic fallback logic** to prevent execution failures during singularities.
+
+ It continuously sorts detected Lego bricks by executing the following specific workflow:
 
 ### Workflow
 
@@ -91,12 +94,15 @@ You need to open three terminals to run the full application:
 
 Launch Arguments:
 
-- `use_sim` (bool, default: false): Set to true to use simulation topics and parameters.
-- `sort_method` (string, default: "closest", on y-axis): Method to sort detected bricks. Options: "closest" and "random".
+- `use_sim` (bool, default: false): Use `use_sim:=true` to run with simulation camera topics and parameters.
+- `sort_method` (string, default: "closest"): Use `sort_method:=random` to shuffle the target order.
 
 ```bash
 ros2 launch color_detection color_detector.launch.py
 ```
+
+> [!IMPORTANT] 
+> **Using Real Hardware:** You need to adjust the **camera topics** and **frames** in the `real_params.yaml` file before running the node.
 
 
 #### Terminal 3: Start the Brick Sorter Application
@@ -156,3 +162,9 @@ ros2 launch workcell_application test_moveit_api.launch.py
   * Single-Pipeline Planning (`PlanRequestParameters`)
   * Multi-Pipeline Planning (`MultiPipelinePlanRequestParameters`)
 * Executing the planned trajectory.
+
+---
+
+## Known Limitations & Future Work
+
+* **Grasping Accuracy:** The Intel RealSense camera is currently mounted horizontally. Depth estimation noise on the camera's Z-axis translates directly into grasping inaccuracies on the robot's X/Y table plane. A top-down (bird's-eye) camera perspective is planned for future iterations to improve pick precision.

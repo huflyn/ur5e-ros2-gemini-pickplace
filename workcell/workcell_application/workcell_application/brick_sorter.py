@@ -15,7 +15,7 @@ from tf_transformations import quaternion_from_euler
 from color_detection_msgs.msg import LegoBrick
 
 # MoveIt 2 Python API
-from moveit.planning import MoveItPy
+from moveit.planning import MoveItPy, PlanRequestParameters
 
 class BrickSorterNode(Node):
     """Handles ROS 2 background subscriptions and publishers."""
@@ -25,14 +25,14 @@ class BrickSorterNode(Node):
         self.accept_new_bricks = True # Flag to control whether we accept new brick data while processing one
 
         # --- Declare Parameters ---
-        self.declare_parameter('hover_height', 0.30)
-        self.declare_parameter('dropoff_height', 0.12)
+        self.declare_parameter('hover_height', 0.25)
+        self.declare_parameter('dropoff_height', 0.10)
         self.declare_parameter('grasp_z_offset', 0.0) # Optional: To ensure a secure grasp by going slightly below the detected Z
 
-        self.declare_parameter('dropoff_yellow', [0.27, 0.558])
-        self.declare_parameter('dropoff_red', [0.27, 0.438])
-        self.declare_parameter('dropoff_green', [0.27, 0.318])
-        self.declare_parameter('dropoff_blue', [0.27, 0.198])
+        self.declare_parameter('dropoff_yellow', [-0.27, 0.450])
+        self.declare_parameter('dropoff_red', [0.27, 0.450])
+        self.declare_parameter('dropoff_green', [-0.27, 0.350])
+        self.declare_parameter('dropoff_blue', [0.27, 0.350])
 
         # --- Read Parameters ---
         self.hover_height = self.get_parameter('hover_height').value
@@ -48,19 +48,10 @@ class BrickSorterNode(Node):
         }
         
         # Subscriber for brick coordinates
-        self.subscription = self.create_subscription(
-            LegoBrick,
-            '/lego_brick_info',
-            self.brick_callback,
-            10
-        )
+        self.subscription = self.create_subscription(LegoBrick, '/lego_brick_info', self.brick_callback, 10)
         
         # Publisher for Webots Vacuum Gripper
-        self.gripper_pub = self.create_publisher(
-            Bool, 
-            '/ur5e/vacuum_gripper/turn_on', 
-            10
-        )
+        self.gripper_pub = self.create_publisher(Bool, '/ur5e/vacuum_gripper/turn_on', 10)
 
     def brick_callback(self, msg):
         # Only accept a new brick if we are not currently processing one
@@ -82,11 +73,10 @@ def plan_and_execute(robot, arm, logger, target):
     """Plans and executes a trajectory to either a named pose or a PoseStamped."""
     arm.set_start_state_to_current_state()
     
+    # If the target is a string, we assume it's a named pose defined in the SRDF, else we treat it as a PoseStamped
     if isinstance(target, str):
-        # Wenn der Target-Wert ein Text ist, nutze die SRDF-Pose
         arm.set_goal_state(configuration_name=target)
     else:
-        # Wenn es eine Koordinate ist, nutze den TCP
         arm.set_goal_state(pose_stamped_msg=target, pose_link="pisoftgrip_tcp")
     
     plan_result = arm.plan()
@@ -110,6 +100,35 @@ def plan_and_execute(robot, arm, logger, target):
     else:
         logger.error("Motion planning failed!")
         return False
+
+def plan_and_execute_cartesian(robot, arm, logger, target_pose):
+    """
+    Plans and executes a purely linear Cartesian path to the target pose 
+    using the Pilz Industrial Motion Planner (LIN).
+    """
+    arm.set_start_state_to_current_state()
+    arm.set_goal_state(pose_stamped_msg=target_pose, pose_link="pisoftgrip_tcp")
+    
+    # -----------------------------------------------------------------
+    # Configure the Pilz LIN planner for this specific move
+    # -----------------------------------------------------------------
+    # We create empty/default plan parameters and override the pipeline
+    plan_params = PlanRequestParameters(robot, "pilz_lin") 
+    plan_params.planning_pipeline = "pilz_industrial_motion_planner"
+    plan_params.planner_id = "LIN"  # 'LIN' for linear Cartesian, 'PTP' for point-to-point
+    
+    # Execute the plan using the specific Pilz parameters
+    plan_result = arm.plan(single_plan_parameters=plan_params)
+    
+    if plan_result:
+        logger.info("Executing Pilz LIN trajectory...")
+        success = robot.execute(plan_result.trajectory, controllers=[])
+        time.sleep(0.1) # Brief pause to let joints settle
+        return success
+    else:
+        logger.error("❌ Pilz LIN planning failed! (Singularity or Unreachable?)")
+        return False
+
 
 
 def main(args=None):
@@ -174,7 +193,9 @@ def main(args=None):
 
                 target_xy = brick_sorter_node.dropoffs[color]
 
+
                 # --- Pose Definitions ---
+
                 # 1. Hover pose above the brick
                 pose_above = PoseStamped()
                 pose_above.header.frame_id = "ur5e_base_link"
@@ -201,81 +222,79 @@ def main(args=None):
                 pose_drop = copy.deepcopy(pose_drop_hover)
                 pose_drop.pose.position.z = brick_sorter_node.dropoff_height # Drop-off height from YAML
 
+
                 # ---------------------------------------------------------
-                # Execution Sequence (with Error Handling)
+                # Execution Sequence (Fluid & Compact Cartesian Moves)
                 # ---------------------------------------------------------
                 try:
-                    # Step 1: Move above the brick
                     logger.info("="*50)
-                    logger.info("Step 1: Moving above the brick")
-                    logger.info("="*50 + "\n")
+                    logger.info("Phase 1: Approach & Grasp (Pilz LIN)")
+                    logger.info("="*50)
+                    
+                    # 1. Linear move directly above the brick
                     if not plan_and_execute(ur5e, ur5e_arm, logger, pose_above):
-                        logger.error("❌ Failed to reach hover pose. Aborting cycle!")
+                        logger.error("❌ Failed to reach hover pose. Aborting!")
                         plan_and_execute(ur5e, ur5e_arm, logger, "ready")
                         continue 
-                    
-                    # Step 2: Lower to grasp pose
-                    logger.info("="*50)
-                    logger.info(f"Step 2: Lowering to grasp position z={brick.position.point.z:.3f} with optional offset {brick_sorter_node.grasp_z_offset:.3f}")
-                    logger.info("="*50 + "\n")
-                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_grasp):
-                        logger.error("❌ Failed to reach grasp pose. Aborting cycle!")
-                        plan_and_execute(ur5e, ur5e_arm, logger, pose_above)
+                        
+                    # 2. Linear move down to the brick
+                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_grasp):
+                        logger.error("❌ Failed to reach grasp pose. Aborting!")
+                        plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_above)
                         plan_and_execute(ur5e, ur5e_arm, logger, "ready")
                         continue
-                    
-                    # Step 3: Activate gripper
-                    logger.info("="*50)
-                    logger.info("Step 3: Activating gripper")
-                    logger.info("="*50 + "\n")
+                        
+                    # 3. Activate gripper
                     brick_sorter_node.set_gripper(turn_on=True)
-                    time.sleep(1.0) # Wait for vacuum to build up
+                    time.sleep(1.0)
                     
-                    # Step 4: Lift the brick
                     logger.info("="*50)
-                    logger.info("Step 4: Lifting the brick")
-                    logger.info("="*50 + "\n")
-                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_above):
+                    logger.info("Phase 2: Lift, Transfer & Drop (Pilz LIN)")
+                    logger.info("="*50)
+                    
+                    # 4. Linear retreat straight up
+                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_above):
                         logger.error("❌ Failed to lift brick. Dropping and aborting!")
                         brick_sorter_node.set_gripper(turn_on=False)
                         plan_and_execute(ur5e, ur5e_arm, logger, "ready")
                         continue
                     
-                    # Step 5: Move to drop-off hover pose
-                    logger.info("="*50)
-                    logger.info(f"Step 5: Moving to {color} drop-off zone")
-                    logger.info("="*50 + "\n")
-                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_drop_hover):
-                        logger.error("❌ Failed to reach drop-off zone. Dropping and aborting!")
-                        brick_sorter_node.set_gripper(turn_on=False)
-                        plan_and_execute(ur5e, ur5e_arm, logger, "ready")
-                        continue
+                    # 5. Transfer to the drop-off hover zone
+                    # Note: If this long horizontal Pilz LIN move fails due to joint limits, 
+                    # you might want to switch this specific step back to standard plan_and_execute (OMPL).
+                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_drop_hover):
+                        logger.warn("⚠️ LIN transfer failed (Singularity?). Attempting OMPL fallback...")
+                        # Optional Fallback: If the straight line is mathematically impossible, 
+                        # let OMPL find a way around the singularity so we don't drop the brick.
+                        if not plan_and_execute(ur5e, ur5e_arm, logger, pose_drop_hover):
+                            logger.error("❌ Failed to reach drop-off zone. Dropping and aborting!")
+                            brick_sorter_node.set_gripper(turn_on=False)
+                            plan_and_execute(ur5e, ur5e_arm, logger, "ready")
+                            continue
                     
-                    # Step 6: Lower to drop-off height
-                    logger.info("="*50)
-                    logger.info("Step 6: Lowering to drop-off height")
-                    logger.info("="*50 + "\n")
-                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_drop):
-                        logger.warn("❌ Failed to lower completely. Dropping from current height.")
+                    # 6. Linear drop down to the box
+                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_drop):
+                        logger.warn("⚠️ Failed to lower completely. Dropping from current height.")
                     
-                    # Step 7: Release the gripper
-                    logger.info("="*50)
-                    logger.info("Step 7: Releasing gripper")
-                    logger.info("="*50 + "\n")
+                    # 7. Deactivate gripper
+                    time.sleep(0.5) # Brief pause to ensure the arm is in position before releasing
                     brick_sorter_node.set_gripper(turn_on=False)
-                    time.sleep(1.0) # Wait for vacuum to release
+                    time.sleep(1.0)
                     
-                    # Step 8: Retreat upwards
                     logger.info("="*50)
-                    logger.info("Step 8: Retreating upwards")
-                    logger.info("="*50 + "\n")
-                    plan_and_execute(ur5e, ur5e_arm, logger, pose_drop_hover)
-
-                    # Step 9: Return to ready pose
+                    logger.info("Phase 3: Retreat & Return")
                     logger.info("="*50)
-                    logger.info("Step 9: Returning to 'ready' pose to clear the camera view")
-                    logger.info("="*50 + "\n")
-                    plan_and_execute(ur5e, ur5e_arm, logger, "ready")
+                    
+                    # 8. Linear retreat straight up from the drop-off zone
+                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_drop_hover):
+                        logger.error("❌ Failed to retreat from drop-off zone. Attempting to return to ready.")
+                        if not plan_and_execute(ur5e, ur5e_arm, logger, "ready"):
+                            logger.error("❌ Failed to return to ready pose after drop-off issue! Robot might be stuck.")
+                            continue
+                    
+                    # 9. Return to ready pose using standard OMPL (joint space is fine here!)
+                    if not plan_and_execute(ur5e, ur5e_arm, logger, "ready"):
+                        logger.error("❌ Failed to return to ready pose! Robot might be stuck.")
 
                 finally:
                     # Step 10: Flush stale data and reset for the next cycle (this runs even if we had an error in the try block)
@@ -301,7 +320,7 @@ def main(args=None):
             # --- Idle / Standby Logic ---
             else:
                 # If no bricks are detected for 5 seconds and we aren't idling yet
-                if (time.time() - last_activity_time) > 5.0 and not is_idling:
+                if (time.time() - last_activity_time) > 3.0 and not is_idling:
                     logger.info("="*50)
                     logger.info("\n--- NO BRICKS DETECTED ---")
                     logger.info("Table is clear. Moving to standby and waiting for new objects...")

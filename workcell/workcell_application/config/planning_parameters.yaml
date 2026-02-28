@@ -29,7 +29,16 @@ pilz_lin:
   plan_request_params:
     planning_attempts: 1
     planning_pipeline: pilz_industrial_motion_planner
-    planner_id: "PTP"
+    planner_id: "LIN"  # <--- HIER WAR PTP, das muss LIN sein für gerade Linien!
+    max_velocity_scaling_factor: 0.2
+    max_acceleration_scaling_factor: 0.2
+    planning_time: 10.0
+
+pilz_ptp:
+  plan_request_params:
+    planning_attempts: 1
+    planning_pipeline: pilz_industrial_motion_planner
+    planner_id: "PTP"  # Für synchrone, vorhersehbare Gelenkbewegungen
     max_velocity_scaling_factor: 0.2
     max_acceleration_scaling_factor: 0.2
     planning_time: 10.0
