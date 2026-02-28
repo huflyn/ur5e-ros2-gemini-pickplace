@@ -1,4 +1,4 @@
-# Robot and Environment Descriptions (URDF / Xacro)
+# Robot and Environment Descriptions (URDF / Xacro) <!-- omit from toc -->
 
 [![jazzy][jazzy-badge]][jazzy]
 [![ubuntu24][ubuntu24-badge]][ubuntu24]
@@ -9,6 +9,11 @@
 [ubuntu24]: https://releases.ubuntu.com/noble/
 
 This folder contains the physical, visual, and collision models for the complete robotic workcell. The architecture is highly modular, allowing individual components (like grippers or the robot arm) to be swapped out easily.
+
+- [Package Overview](#package-overview)
+- [How It Works](#how-it-works)
+- [Viewing the Models](#viewing-the-models)
+
 
 ## Package Overview
 

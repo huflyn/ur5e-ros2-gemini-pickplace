@@ -1,4 +1,4 @@
-# Color Detection Package (`color_detection`)
+# Color Detection Package (`color_detection`) <!-- omit from toc -->
 
 [![jazzy][jazzy-badge]][jazzy]
 [![ubuntu24][ubuntu24-badge]][ubuntu24]
@@ -11,6 +11,17 @@
 
 This package detects colored Lego bricks using a camera stream (RGB + Depth), calculates their 3D coordinates relative to the robot's base frame, and publishes them to the ROS 2 network.
 
+- [Package Structure](#package-structure)
+- [Published Topics \& Custom Messages](#published-topics--custom-messages)
+  - [Message Format (`color_detection_msgs/LegoBrick.msg`)](#message-format-color_detection_msgslegobrickmsg)
+- [Configuration \& Camera Setup (YAML)](#configuration--camera-setup-yaml)
+- [Launch color\_detection](#launch-color_detection)
+  - [Simulation](#simulation)
+  - [Real Camera](#real-camera)
+  - [Sorting Method (Endless Loop Prevention)](#sorting-method-endless-loop-prevention)
+  - [Edge Margin (Safe Zone)](#edge-margin-safe-zone)
+- [Using the HSV Tuner](#using-the-hsv-tuner)
+- [How to Add a New Color (e.g., 'orange')](#how-to-add-a-new-color-eg-orange)
 
 
 ## Package Structure
@@ -26,18 +37,12 @@ The `color_detector.py` node processes the images silently in the background to 
 
 This package requires the **`color_detection_msgs`** package, which defines the custom message structure used for communication.
 
-**Message Format (`color_detection_msgs/LegoBrick.msg`):**
+### Message Format (`color_detection_msgs/LegoBrick.msg`)
 ```text
 geometry_msgs/PointStamped position  # Transformed 3D coordinates in the robot's base frame
 std_msgs/String color                # The detected color name (e.g., "red", "blue")
 float32 camera_distance_mm           # Raw depth distance from the camera lens to the brick
 ```
-
-### Edge Margin (Safe Zone)
-
-To ensure reliable grasping and accurate center-point calculations, the detector implements a **25-pixel safe zone** around the image borders. Bricks that touch or cross this margin (e.g., partially visible bricks at the edge of the camera frame) are deliberately ignored. 
-
-This prevents the robot from calculating faulty TCP coordinates based on incomplete contours or distortion.
 
 ## Configuration & Camera Setup (YAML)
 
@@ -96,6 +101,13 @@ ros2 launch color_detection color_detector.launch.py use_sim:=true sort_method:=
 ```bash
 ros2 launch color_detection color_detector.launch.py sort_method:=random
 ```
+
+### Edge Margin (Safe Zone)
+
+To ensure reliable grasping and accurate center-point calculations, the detector implements a **25-pixel safe zone** around the image borders. Bricks that touch or cross this margin (e.g., partially visible bricks at the edge of the camera frame) are deliberately ignored. 
+
+This prevents the robot from calculating faulty TCP coordinates based on incomplete contours or distortion.
+
 
 ## Using the HSV Tuner
 

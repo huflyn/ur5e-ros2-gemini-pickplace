@@ -16,9 +16,6 @@ This package manages high-level robot control for the Brick Sorter application u
 - [Usage of `brick_sorter.py`](#usage-of-brick_sorterpy)
   - [Workflow](#workflow)
   - [Starting the Application](#starting-the-application)
-    - [Terminal 1: Start the Robot](#terminal-1-start-the-robot)
-    - [Terminal 2: Start the Color Detector](#terminal-2-start-the-color-detector)
-    - [Terminal 3: Start the Brick Sorter Application](#terminal-3-start-the-brick-sorter-application)
 - [Usage of `verify_alignment.py`](#usage-of-verify_alignmentpy)
   - [Workflow](#workflow-1)
   - [Starting the Script](#starting-the-script)
@@ -75,7 +72,7 @@ This is an **advanced replication of the ROS 1 ur5e_moveit_script_erweitert.py**
 
 You need to open three terminals to run the full application:
 
-#### Terminal 1: Start the Robot
+#### Terminal 1: Start the Robot <!-- omit from toc -->
 
 - **Option 1:** Start the **Simulation**  
 
@@ -90,7 +87,7 @@ You need to open three terminals to run the full application:
   ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
   ```
 
-#### Terminal 2: Start the Color Detector
+#### Terminal 2: Start the Color Detector <!-- omit from toc -->
 
 Launch Arguments:
 
@@ -105,7 +102,7 @@ ros2 launch color_detection color_detector.launch.py
 > **Using Real Hardware:** You need to adjust the **camera topics** and **frames** in the `real_params.yaml` file before running the node.
 
 
-#### Terminal 3: Start the Brick Sorter Application
+#### Terminal 3: Start the Brick Sorter Application <!-- omit from toc -->
    
 ```bash
 ros2 launch workcell_application brick_sorter.launch.py
