@@ -91,7 +91,7 @@ You need to open three terminals to run the full application:
 
 Launch Arguments:
 
-- `use_sim` (bool, default: false): Use `use_sim:=true` to run with simulation camera topics and parameters.
+- `use_sim_time` (bool, default: false): Use `use_sim_time:=true` to run with simulation camera topics and parameters, and the simulation clock (`/clock` topic).
 - `sort_method` (string, default: "closest"): Use `sort_method:=random` to shuffle the target order.
 
 ```bash
@@ -103,6 +103,9 @@ ros2 launch color_detection color_detector.launch.py
 
 
 #### Terminal 3: Start the Brick Sorter Application <!-- omit from toc -->
+
+Launch Arguments:
+- `use_sim_time` (bool, default: false): Use `use_sim_time:=true` to run with simulation camera topics and parameters, and the simulation clock (`/clock` topic).
    
 ```bash
 ros2 launch workcell_application brick_sorter.launch.py
@@ -119,20 +122,22 @@ This script is a manual tool used for hardware commissioning. It allows you to m
 1. Start the script via the launch command below.
 2. The robot will wait for a manual trigger before moving to the next test pose.
 3. Open a separate terminal to send the trigger command:
+    ```bash
+    ros2 topic pub --once /next_step std_msgs/msg/Empty
+    ```
 
-```bash
-ros2 topic pub --once /next_step std_msgs/msg/Empty
-```
+    It is recommended to create an alias for quick triggering:
+    ```bash
+    alias next="ros2 topic pub --once /next_step std_msgs/msg/Empty"
+    ```
+    You can then simply execute `next` in the running terminal to move to the next pose without typing the full command each time.
 
-```bash
-# Recommended: Create an alias for quick triggering
-alias next="ros2 topic pub --once /next_step std_msgs/msg/Empty"
-
-# Execute the alias to move to the next pose
-next
-```
 
 ### Starting the Script
+
+Launch Arguments:
+
+- `use_sim_time` (bool, default: false): Use `use_sim_time:=true` to run with simulation camera topics and parameters, and the simulation clock (`/clock` topic).
 
 ```bash
 ros2 launch workcell_application verify_alignment.launch.py
