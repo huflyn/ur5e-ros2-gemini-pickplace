@@ -10,13 +10,13 @@ def generate_launch_description():
     pkg_dir = get_package_share_directory('color_detection')
 
     # Create LaunchConfiguration variable
-    use_sim = LaunchConfiguration('use_sim')
+    use_sim_time = LaunchConfiguration('use_sim_time')
 
-    # Declare the launch argument so it can be passed via terminal
-    use_sim_arg = DeclareLaunchArgument(
-        'use_sim',
+    # Declare the launch argument using the ROS standard naming convention
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
         default_value='false',
-        description='Set to true to use Webots simulation topics'
+        description='Set to true to use Webots simulation topics and clock'
     )
 
     # Paths to the YAML parameter files
@@ -24,24 +24,22 @@ def generate_launch_description():
     real_params = os.path.join(pkg_dir, 'config', 'real_params.yaml')
     hsv_bounds = os.path.join(pkg_dir, 'config', 'hsv_bounds.yaml')
 
-    # Node configuration for simulation
-    sim_node = Node(
-        package='color_detection',
-        executable='hsv_tuner',
-        name='color_detector_node',
-        output='screen',
-        parameters=[sim_params, hsv_bounds],
-        condition=IfCondition(use_sim)
-    )
+    # Evaluate which parameter file to load based on use_sim_time
+    param_file = PythonExpression([
+        "'", sim_params, "' if '", use_sim_time, "'.lower() == 'true' else '", real_params, "'"
+    ])
 
-    # Node configuration for real hardware
-    real_node = Node(
+    # Node configuration
+    hsv_tuner_node = Node(
         package='color_detection',
         executable='hsv_tuner',
-        name='color_detector_node', 
+        name='color_detector_node', # Keeps the namespace so YAMLs map correctly
         output='screen',
-        parameters=[real_params, hsv_bounds],
-        condition=UnlessCondition(use_sim)
+        parameters=[
+            param_file, 
+            hsv_bounds,
+            {'use_sim_time': use_sim_time} # Crucial: pass the simulation time flag
+        ]
     )
 
     # --- Add Terminal Logging Output ---
@@ -49,16 +47,15 @@ def generate_launch_description():
         msg=[
             '\n=========================================\n',
             'Starting HSV-Tuner Node\n',
-            '- Simulation Mode (use_sim): ', use_sim, '\n',
+            '- Simulation Time (use_sim_time): ', use_sim_time, '\n',
             '\nValid Arguments:\n',
-            '- use_sim (default: false) - Set to true to use Webots simulation topics \n',
+            '- use_sim_time (default: false) - Set to true to use Webots simulation topics \n',
             '========================================='
         ]
     )
 
     return LaunchDescription([
-        use_sim_arg,
+        use_sim_time_arg,
         log_launch_info,
-        sim_node,
-        real_node
+        hsv_tuner_node
     ])
