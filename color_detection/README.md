@@ -73,12 +73,12 @@ color_detector_node:
 
 **Launch Arguments**
 
-- `use_sim` (bool, default: false): Set to true to use simulation topics and parameters.
+- `use_sim_time` (bool, default: false): Set to true to use simulation topics and parameters, and the simulation clock (`/clock` topic).
 - `sort_method` (string, default: "closest", on y-axis): Method to sort detected bricks. Options: "closest" and "random".
 
 ### Simulation
 ```bash
-ros2 launch color_detection color_detector.launch.py use_sim:=true
+ros2 launch color_detection color_detector.launch.py use_sim_time:=true
 ```
 
 ### Real Camera
@@ -94,7 +94,7 @@ To prevent this, you can **randomize the sorting order** by using the launch arg
 
 **Launch with randomized sorting (Simulation):**
 ```bash
-ros2 launch color_detection color_detector.launch.py use_sim:=true sort_method:=random
+ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_method:=random
 ```
 
 **Launch with randomized sorting (Real Camera):**
@@ -115,7 +115,12 @@ To find the perfect HSV color thresholds for your environment, use the built-in 
 
 **Run the tuner (Simulation):**
 ```bash
-ros2 launch color_detection hsv_tuner.launch.py use_sim:=true
+ros2 launch color_detection hsv_tuner.launch.py use_sim_time:=true
+```
+
+**Run the tuner (Real Camera):**
+```bash
+ros2 launch color_detection hsv_tuner.launch.py
 ```
 
 **Tuning Workflow:**
