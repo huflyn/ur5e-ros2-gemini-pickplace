@@ -6,6 +6,15 @@ from moveit_configs_utils import MoveItConfigsBuilder
 
 
 def generate_launch_description():
+
+    use_sim_time = LaunchConfiguration('use_sim_time')
+
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='false',
+        description='Use simulation (Webots) clock if true, hardware clock if false'
+    )
+    
     moveit_config = (
         MoveItConfigsBuilder(
             robot_name="ur5e", package_name="workcell_moveit_config"
@@ -25,9 +34,9 @@ def generate_launch_description():
         name="moveit_py_test_node",
         parameters=[
             moveit_config.to_dict(),
-            {"use_sim_time": True}
+            {"use_sim_time": use_sim_time}
         ],
         output="screen",
     )
 
-    return LaunchDescription([test_node])
+    return LaunchDescription([use_sim_time_arg, test_node])

@@ -8,15 +8,14 @@ from moveit_configs_utils import MoveItConfigsBuilder
 
 
 def generate_launch_description():
+    
+    use_sim_time = LaunchConfiguration('use_sim_time')
 
     use_sim_time_arg = DeclareLaunchArgument(
         'use_sim_time',
         default_value='false',
-        description='Use simulation (Gazebo) clock if true'
+        description='Use simulation (Webots) clock if true'
     )
-    
-    use_sim_time = LaunchConfiguration('use_sim_time')
-
 
     moveit_config = (
         MoveItConfigsBuilder(
@@ -36,7 +35,7 @@ def generate_launch_description():
         name="verify_alignment_moveit",
         parameters=[
             moveit_config.to_dict(),
-            {"use_sim_time": True}
+            {"use_sim_time": use_sim_time}
         ],
         output="screen",
     )
