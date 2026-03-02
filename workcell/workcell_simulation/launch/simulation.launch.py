@@ -25,65 +25,66 @@ def generate_launch_description():
     ur5e_xacro = os.path.join(package_dir, 'config', 'ur5e_webots.urdf.xacro')
     ur5e_control_params = os.path.join(ros2_controllers_yaml_dir, 'config', 'ros2_controllers.yaml')
 
-
     # Realsense Webots URDF (für WebotsController)
     realsense_xacro = os.path.join(package_dir, 'config', 'realsense_d415_webots.urdf.xacro')
 
+
     # ===== 2) Nodes =====
 
-    set_sim_time = SetParameter(name='use_sim_time', value=True)
-
-    # TF-Tree + /robot_description Topic (mit ros2_control in workcell.urdf.xacro definiert)
     robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
-        parameters=[{'robot_description': workcell_description}],
+        parameters=[{'robot_description': workcell_description}, {'use_sim_time': True}],
     )
 
     # Spawner
     controller_manager_timeout = ['--controller-manager-timeout', '100']
-    spawner_params = [{'use_sim_time': True}]
-
-    trajectory_spawner = Node(
-        package='controller_manager',
-        executable='spawner',
-        arguments=['scaled_joint_trajectory_controller', '--controller-manager', '/controller_manager'] + controller_manager_timeout,
-        parameters=spawner_params,
-    )
 
     joint_state_spawner = Node(
         package='controller_manager',
         executable='spawner',
         arguments=['joint_state_broadcaster', '--controller-manager', '/controller_manager'] + controller_manager_timeout,
-        parameters=spawner_params,
+        parameters=[{'use_sim_time': True}]
+    )
+
+    trajectory_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['scaled_joint_trajectory_controller', '--controller-manager', '/controller_manager'] + controller_manager_timeout,
+        parameters=[{'use_sim_time': True}]
     )
 
     # Webots starten
     webots = WebotsLauncher(
-        world=os.path.join(package_dir, 'worlds', 'workcell.wbt')
+        world=os.path.join(package_dir, 'worlds', 'workcell.wbt'),
+        ros2_supervisor=True
     )
 
-    # UR5e Controller – XML-String, NICHT Dateipfad!
+    # UR5e Controller
     ur5e_driver = WebotsController(
         robot_name='ur5e',
         parameters=[
             {'robot_description': ur5e_xacro},
-            ur5e_control_params
+            {'use_sim_time': True},
+            ur5e_control_params,
         ],
     )
 
-    # Realsense Controller – XML-String, NICHT Dateipfad!
+    # Realsense Controller
     realsense_driver = WebotsController(
         robot_name='realsense',
-        parameters=[{'robot_description': realsense_xacro}],
+        parameters=[
+            {'robot_description': realsense_xacro},
+            {'use_sim_time': True},
+        ],
     )
 
 
     return LaunchDescription([
 
-        set_sim_time,        
         robot_state_publisher,
         webots,
+        webots._supervisor,
         ur5e_driver,
         realsense_driver,
         joint_state_spawner,
