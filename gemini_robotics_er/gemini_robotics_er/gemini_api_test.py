@@ -4,9 +4,9 @@ import os
 from google import genai
 from google.genai import types
 
-class GeminiTestNode(Node):
+class GeminiApiTestNode(Node):
     def __init__(self):
-        super().__init__('gemini_test')
+        super().__init__('gemini_api_test_node')
         
         # API Key holen (Sicherheitshalber prüfen)
         GOOGLE_API_KEY  = os.environ.get('GEMINI_API_KEY')

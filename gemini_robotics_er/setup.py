@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'gemini_test = gemini_robotics_er.gemini_test:main',
+            'gemini_api_test = gemini_robotics_er.gemini_api_test:main',
         ],
     },
 )
