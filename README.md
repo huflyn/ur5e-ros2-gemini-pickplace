@@ -113,6 +113,8 @@ This will start the ROS 2 node that interfaces with the UR5e, either in real har
 This will launch the Webots simulation of the workcell. 
 
 Make sure you have Webots and the `webots_ros2` package installed. 
+
+### Launch Command <!-- omit from toc -->
   
 ```bash
 ros2 launch workcell_simulation simulation.launch.py
@@ -130,6 +132,8 @@ For details see the [**workcell_control README**](workcell/workcell_control/READ
 > [!CAUTION]
 > Follow all safety precautions when working with real robots.
 
+### Launch Command <!-- omit from toc -->
+
 ```bash
 # You can set the robot_ip either via command line argument or directly in the start_robot.launch.py file
 ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
@@ -143,14 +147,24 @@ This node processes the camera stream and publishes the 3D coordinates of detect
 
 For details see the [**color_detection README**](color_detection/README.md).
 
+### Launch Command <!-- omit from toc -->
+
 ```bash
-ros2 launch color_detection color_detector.launch.py
+ros2 launch color_detection color_detector.launch.py # add launch arguments as needed, see below
 ```
 
 ### Launch Arguments <!-- omit from toc -->
 
-- `use_sim` (bool, default: false): Use `use_sim:=true` to run with simulation camera topics and parameters.
+You can append the following arguments to the launch command to customize the behavior:
+
+- `use_sim_time` (bool, default: false): Set `use_sim_time:=true` to run with simulation camera topics and parameters, and use the `/clock` topic published by Webots.
 - `sort_method` (string, default: "closest"): Use `sort_method:=random` to shuffle the target order.
+
+Example with arguments:
+
+```bash
+ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_method:=random
+```
 
 > [!IMPORTANT] 
 > **Using Real Hardware:** You need to adjust the **camera topics** and **frames** in the `real_params.yaml` file before running the node.
@@ -162,9 +176,17 @@ This will start the high-level state machine utilizing MoveIt 2 to pick and sort
 
 For details see the [**workcell_application README**](workcell/workcell_application/README.md).
 
+### Launch Command <!-- omit from toc -->
+
 ```bash
-ros2 launch workcell_application brick_sorter.launch.py
+ros2 launch workcell_application brick_sorter.launch.py # add launch arguments as needed, see below
 ```
+
+### Launch Arguments <!-- omit from toc -->
+
+You can append the following argument to the launch command to customize the behavior:
+
+- `use_sim_time` (bool, default: false): Set `use_sim_time:=true` to run with simulation camera topics and parameters, and the simulation clock (`/clock` topic).
 
 
 
