@@ -179,7 +179,7 @@ This script is a manual tool used for hardware commissioning. It allows you to m
     ```bash
     alias next="ros2 topic pub --once /next_step std_msgs/msg/Empty"
     ```
-    You can then simply execute `next` in the running terminal to move to the next pose without typing the full command each time.
+    You can then simply execute `next` in the separate terminal to move to the next pose without typing the full command each time.
 
 
 ## Starting the Script
