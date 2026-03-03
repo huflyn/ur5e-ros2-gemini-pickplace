@@ -10,9 +10,8 @@
 
 This package defines the custom ROS 2 interface messages used by the Lego Brick Sorting application. 
 
-## Custom Messages
+## Custom Message `LegoBrick.msg`
 
-### `LegoBrick.msg`
 Used to publish the consolidated data of a detected Lego brick, including its calculated 3D position in the robot's coordinate system, its color, and the raw depth distance from the camera.
 
 **Definition:**
@@ -20,14 +19,4 @@ Used to publish the consolidated data of a detected Lego brick, including its ca
 geometry_msgs/PointStamped position  # Transformed 3D coordinates in the robot's base frame
 std_msgs/String color                # The detected color name (e.g., "red", "blue")
 float32 camera_distance_mm           # Raw depth distance from the camera lens to the brick
-```
-
-## Build Instructions
-
-When modifying the `.msg` files, you must rebuild this package before building any dependent Python packages:
-
-```bash
-cd ros2_ws # Navigate to your ROS 2 workspace
-colcon build --packages-select color_detection_msgs
-source install/setup.bash
 ```
