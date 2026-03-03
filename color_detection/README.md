@@ -119,7 +119,7 @@ To find the perfect HSV color thresholds for your environment, use the built-in 
 
 https://github.com/user-attachments/assets/44e2e830-b13e-4d6b-a43f-a34505b034d1
 
-
+<video src="../docs/videos/hsv_tuner.mp4" width="100%" controls></video>
 
 
 **Run the tuner (Simulation):**
