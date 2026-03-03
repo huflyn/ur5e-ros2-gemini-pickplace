@@ -16,9 +16,6 @@ This package manages high-level robot control for the Brick Sorter application u
 - [Usage of `brick_sorter.py`](#usage-of-brick_sorterpy)
   - [Workflow](#workflow)
   - [Starting the Application](#starting-the-application)
-    - [Step 1: Start the Robot Driver (Real or Simulated)](#step-1-start-the-robot-driver-real-or-simulated)
-    - [Step 2: Start the Perception Pipeline](#step-2-start-the-perception-pipeline)
-    - [Step 3: Start the Application](#step-3-start-the-application)
 - [Usage of `verify_alignment.py`](#usage-of-verify_alignmentpy)
   - [Workflow](#workflow-1)
   - [Starting the Script](#starting-the-script)
@@ -75,7 +72,7 @@ This is an **advanced replication of the ROS 1 ur5e_moveit_script_erweitert.py**
 
 You need to open 3 terminals to run the full application:
 
-### Step 1: Start the Robot Driver (Real or Simulated)
+### Step 1: Start the Robot Driver (Real or Simulated) <!-- omit from toc -->
 
 This will start the ROS 2 node that interfaces with the UR5e, either in real hardware mode or in Webots simulation.
 
@@ -113,7 +110,7 @@ ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
 </details>
 
 
-### Step 2: Start the Perception Pipeline
+### Step 2: Start the Perception Pipeline <!-- omit from toc -->
 
 This node processes the camera stream and publishes the 3D coordinates of detected bricks.
 
@@ -129,8 +126,9 @@ ros2 launch color_detection color_detector.launch.py # add launch arguments as n
 
 You can append the following arguments to the launch command to customize the behavior:
 
-- `use_sim_time` (bool, default: false): Set `use_sim_time:=true` to run with simulation camera topics and parameters, and use the `/clock` topic published by Webots.
-- `sort_method` (string, default: "closest"): Use `sort_method:=random` to shuffle the target order.
+- `use_sim_time` (bool, default: false): Set to true to use simulation topics and parameters, and the simulation clock (`/clock` topic).
+- `sort_method` (string, default: "closest"): Method to select the target brick. By default, it selects the brick closest to the camera lens based on the depth map. Options: "closest" and "random".
+- `verbose` (bool, default: false): Set to true to print detailed logs of detected bricks and their coordinates.
 
 Example with arguments:
 
@@ -142,7 +140,7 @@ ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_met
 > **Using Real Hardware:** You need to adjust the **camera topics** and **frames** in the `real_params.yaml` file before running the node.
 
 
-### Step 3: Start the Application
+### Step 3: Start the Application <!-- omit from toc -->
 
 This will start the brick_sorter node, which listens to the perception data and executes the pick-and-place logic.
 
