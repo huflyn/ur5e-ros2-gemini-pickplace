@@ -48,6 +48,7 @@ class ColorDetectorNode(Node):
         self.declare_parameter('camera_frame', 'camera_color_optical_frame')
         self.declare_parameter('robot_base_frame', 'base_link')        
         self.declare_parameter('sort_method', 'y_axis') # Options: 'y_axis' (default, deterministic) or 'random' (prevents endless loops on edge cases)
+        self.declare_parameter('verbose', False)
 
         # --- Read basic parameters ---
         info_topic = self.get_parameter('camera_info_topic').get_parameter_value().string_value
@@ -227,12 +228,18 @@ class ColorDetectorNode(Node):
                 # Default fallback: Closest - Sort by Y-coordinate
                 sorted_bricks = sorted(self.detected_lego_bricks, key=lambda brick: brick[0].point.y)
 
+            # Fetch the current logging state dynamically
+            verbose = self.get_parameter('verbose').get_parameter_value().bool_value
+            
             # Unpack all 3 values
             for brick_point, brick_color, brick_depth in sorted_bricks:
                 lego_brick_msg = LegoBrick()
                 lego_brick_msg.position = brick_point
                 lego_brick_msg.color.data = brick_color
                 lego_brick_msg.camera_distance_mm = brick_depth
+
+                if verbose:
+                    self.get_logger().info(f"Debug: Publishing {brick_color.upper()} brick at X:{brick_point.point.x:.3f}, Y:{brick_point.point.y:.3f}, Depth:{brick_depth}")
                 
                 self.lego_brick_pub.publish(lego_brick_msg)
                 

@@ -11,6 +11,7 @@ def generate_launch_description():
     # Create LaunchConfiguration variables
     use_sim_time = LaunchConfiguration('use_sim_time')
     sort_method = LaunchConfiguration('sort_method')
+    verbose = LaunchConfiguration('verbose')
 
     # Declare the launch argument using the ROS standard naming convention
     use_sim_time_arg = DeclareLaunchArgument(
@@ -23,6 +24,12 @@ def generate_launch_description():
         'sort_method',
         default_value='closest',
         description='Method to sort detected objects: "closest" (default) or "random"'
+    )
+
+    verbose_arg = DeclareLaunchArgument(
+        'verbose',
+        default_value='false',
+        description='Set to true to print detected brick coordinates to the terminal'
     )
 
     # Paths to the YAML parameter files
@@ -46,7 +53,8 @@ def generate_launch_description():
             hsv_bounds, 
             {
                 'sort_method': sort_method,
-                'use_sim_time': use_sim_time  # Crucial: pass the simulation time flag to the node
+                'use_sim_time': use_sim_time,
+                'verbose': verbose
             }
         ],
     )
@@ -58,9 +66,11 @@ def generate_launch_description():
             'Starting Color Detector Node \n',
             '- Simulation Time (use_sim_time): ', use_sim_time, '\n',
             '- Sorting Method: ', sort_method, '\n',
+            '- Verbose: ', verbose,
             '\nValid Arguments:\n',
             '- use_sim_time (default: false) - Set to true to use Webots simulation topics \n',
             '- sort_method (default: closest) - Can be set to "random" \n',
+            '- verbose (default: false) - Set to true to print detected brick coordinates to the terminal \n',
             '========================================='
         ]
     )
@@ -68,6 +78,7 @@ def generate_launch_description():
     return LaunchDescription([
         use_sim_time_arg,
         sort_method_arg,
+        verbose_arg,
         log_launch_info,
         color_detector_node,
     ])
