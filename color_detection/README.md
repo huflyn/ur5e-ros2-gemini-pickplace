@@ -11,6 +11,8 @@
 
 This package detects colored Lego bricks using a camera stream (RGB + Depth), calculates their 3D coordinates relative to the robot's base frame, and publishes them to the ROS 2 network.
 
+![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes and their coordinates printed in the terminal.](../docs/images/color_detector_terminal.png)
+
 - [Package Structure](#package-structure)
 - [Published Topics \& Custom Messages](#published-topics--custom-messages)
   - [Message Format (`color_detection_msgs/LegoBrick.msg`)](#message-format-color_detection_msgslegobrickmsg)
@@ -44,6 +46,7 @@ std_msgs/String color                # The detected color name (e.g., "red", "bl
 float32 camera_distance_mm           # Raw depth distance from the camera lens to the brick
 ```
 
+
 ## Configuration & Camera Setup (YAML)
 
 We use parameter files in the `config/` directory to seamlessly switch between Webots simulation and real-world hardware, and to manage color thresholds:
@@ -68,6 +71,7 @@ color_detector_node:
     # Target frame for the 3D coordinates
     robot_base_frame: 'ur5e_base_link'
 ```
+
 
 ## Launch color_detection
 
@@ -110,12 +114,13 @@ This prevents the robot from calculating faulty TCP coordinates based on incompl
 
 
 
-
 ## Using the HSV Tuner
 
 To find the perfect HSV color thresholds for your environment, use the built-in tuning tool. It opens a live video feed with trackbars and automatically loads the correct camera topics based on your configuration.
 
 https://github.com/user-attachments/assets/ed28270c-2bec-4f46-aba6-b5a615512782
+
+![Screenshot of the HSV tuner GUI running in Webots simulation, showing the trackbars and live video feed.](../docs/images/hsv_tuner_terminal.png)
 
 **Run the tuner (Simulation):**
 ```bash
