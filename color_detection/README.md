@@ -113,6 +113,8 @@ This prevents the robot from calculating faulty TCP coordinates based on incompl
 
 To find the perfect HSV color thresholds for your environment, use the built-in tuning tool. It opens a live video feed with trackbars and automatically loads the correct camera topics based on your configuration.
 
+https://github.com/user-attachments/assets/1b48f881-9de2-4b7d-8666-e8bfb56635d5
+
 **Run the tuner (Simulation):**
 ```bash
 ros2 launch color_detection hsv_tuner.launch.py use_sim_time:=true
