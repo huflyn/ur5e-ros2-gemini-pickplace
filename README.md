@@ -159,6 +159,7 @@ You can append the following arguments to the launch command to customize the be
 
 - `use_sim_time` (bool, default: false): Set `use_sim_time:=true` to run with simulation camera topics and parameters, and use the `/clock` topic published by Webots.
 - `sort_method` (string, default: "closest"): Use `sort_method:=random` to shuffle the target order.
+- 
 
 Example with arguments:
 

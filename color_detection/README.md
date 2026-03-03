@@ -15,31 +15,36 @@ This package detects colored Lego bricks using a camera stream (RGB + Depth), ca
 
 - [Package Structure](#package-structure)
 - [Published Topics \& Custom Messages](#published-topics--custom-messages)
-  - [Message Format (`color_detection_msgs/LegoBrick.msg`)](#message-format-color_detection_msgslegobrickmsg)
 - [Configuration \& Camera Setup (YAML)](#configuration--camera-setup-yaml)
-- [Launch color\_detection](#launch-color_detection)
-  - [Simulation](#simulation)
-  - [Real Camera](#real-camera)
+- [Launch color\_detector](#launch-color_detector)
+  - [Launch Command](#launch-command)
+  - [Launch Arguments](#launch-arguments)
   - [Sorting Method (Endless Loop Prevention)](#sorting-method-endless-loop-prevention)
   - [Edge Margin (Safe Zone)](#edge-margin-safe-zone)
 - [Using the HSV Tuner](#using-the-hsv-tuner)
+  - [Launch Command](#launch-command-1)
+  - [Launch Arguments](#launch-arguments-1)
+  - [Tuning Workflow](#tuning-workflow)
 - [How to Add a New Color (e.g., 'orange')](#how-to-add-a-new-color-eg-orange)
+  - [Step 1: Add the HSV bounds to your `hsv_bounds.yaml` file](#step-1-add-the-hsv-bounds-to-your-hsv_boundsyaml-file)
+  - [Step 2: Declare and map the parameters in `color_detector.py`](#step-2-declare-and-map-the-parameters-in-color_detectorpy)
+  - [Step 3: Add the color to the processing list](#step-3-add-the-color-to-the-processing-list)
 
 
-## Package Structure
+# Package Structure
 
 * **`color_detector.py`**: The main ROS 2 node. It subscribes to the camera topics, matches the pixel coordinates with the depth image, and uses `tf2` to transform the coordinates into the robot's frame (`ur5e_base_link`).
 * **`color_functions.py`**: A pure Python helper module containing the OpenCV logic for HSV masking and contour detection. It is completely independent of ROS.
 * **`hsv_tuner.py`**: A standalone ROS 2 GUI tool. It opens an OpenCV window with trackbars, allowing you to fine-tune HSV values in real-time. It prints the tuned values directly to the terminal in a YAML-friendly format.
 
 
-## Published Topics & Custom Messages
+# Published Topics & Custom Messages
 
 The `color_detector.py` node processes the images silently in the background to keep the terminal logs clean. It publishes the consolidated data of all detected bricks to the `/lego_brick_info` topic.
 
 This package requires the **`color_detection_msgs`** package, which defines the custom message structure used for communication.
 
-### Message Format (`color_detection_msgs/LegoBrick.msg`)
+**Message Format (`color_detection_msgs/LegoBrick.msg`):**
 ```text
 geometry_msgs/PointStamped position  # Transformed 3D coordinates in the robot's base frame
 std_msgs/String color                # The detected color name (e.g., "red", "blue")
@@ -47,7 +52,7 @@ float32 camera_distance_mm           # Raw depth distance from the camera lens t
 ```
 
 
-## Configuration & Camera Setup (YAML)
+# Configuration & Camera Setup (YAML)
 
 We use parameter files in the `config/` directory to seamlessly switch between Webots simulation and real-world hardware, and to manage color thresholds:
 
@@ -73,24 +78,23 @@ color_detector_node:
 ```
 
 
-## Launch color_detection
+# Launch color_detector
 
-**Launch Arguments**
+## Launch Command
+
+```bash
+ros2 launch color_detection color_detector.launch.py # add launch arguments as needed, see below
+```
+
+## Launch Arguments
+
+You can append the following arguments to the launch command to customize the behavior:
 
 - `use_sim_time` (bool, default: false): Set to true to use simulation topics and parameters, and the simulation clock (`/clock` topic).
 - `sort_method` (string, default: "closest", on y-axis): Method to sort detected bricks. Options: "closest" and "random".
+- `verbose` (bool, default: false): Set to true to print detailed logs of detected bricks and their coordinates.
 
-### Simulation
-```bash
-ros2 launch color_detection color_detector.launch.py use_sim_time:=true
-```
-
-### Real Camera
-```bash
-ros2 launch color_detection color_detector.launch.py
-```
-
-### Sorting Method (Endless Loop Prevention)
+## Sorting Method (Endless Loop Prevention)
 
 By **default**, the detector **sorts bricks deterministically by their Y-coordinate**. If the robot repeatedly fails to grasp a specific brick (e.g., due to camera distortion at the edges), it can get stuck in an endless loop.
 
@@ -98,15 +102,10 @@ To prevent this, you can **randomize the sorting order** by using the launch arg
 
 **Launch with randomized sorting (Simulation):**
 ```bash
-ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_method:=random
+ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_method:=random # add other arguments as needed
 ```
 
-**Launch with randomized sorting (Real Camera):**
-```bash
-ros2 launch color_detection color_detector.launch.py sort_method:=random
-```
-
-### Edge Margin (Safe Zone)
+## Edge Margin (Safe Zone)
 
 To ensure reliable grasping and accurate center-point calculations, the detector implements a **25-pixel safe zone** around the image borders. Bricks that touch or cross this margin (e.g., partially visible bricks at the edge of the camera frame) are deliberately ignored. 
 
@@ -114,7 +113,7 @@ This prevents the robot from calculating faulty TCP coordinates based on incompl
 
 
 
-## Using the HSV Tuner
+# Using the HSV Tuner
 
 To find the perfect HSV color thresholds for your environment, use the built-in tuning tool. It opens a live video feed with trackbars and automatically loads the correct camera topics based on your configuration.
 
@@ -122,27 +121,31 @@ https://github.com/user-attachments/assets/ed28270c-2bec-4f46-aba6-b5a615512782
 
 ![Screenshot of the HSV tuner GUI running in Webots simulation, showing the trackbars and live video feed.](../docs/images/hsv_tuner_terminal.png)
 
-**Run the tuner (Simulation):**
+## Launch Command
+
 ```bash
-ros2 launch color_detection hsv_tuner.launch.py use_sim_time:=true
+ros2 launch color_detection hsv_tuner.launch.py # add launch arguments as needed, see below
 ```
 
-**Run the tuner (Real Camera):**
-```bash
-ros2 launch color_detection hsv_tuner.launch.py
-```
+## Launch Arguments
 
-**Tuning Workflow:**
+You can append the following argument to the launch command to customize the behavior:
+
+- `use_sim_time` (bool, default: false): Set to true to use simulation topics and parameters, and the simulation clock (`/clock` topic).
+
+## Tuning Workflow
 
 1. Adjust the trackbars until the `Pure Mask` window clearly shows your target object in solid white and everything else in black.
 2. The node automatically prints the YAML-formatted values to your terminal every 2 seconds.
-3. Press `Ctrl+C` to stop the tuner, copy the printed array values from the terminal, and paste them into your **`hsv_bounds.yaml`** configuration file.
+3. Copy the printed array values from the terminal, and paste them into your **`hsv_bounds.yaml`** configuration file.
 
-## How to Add a New Color (e.g., 'orange')
+
+
+# How to Add a New Color (e.g., 'orange')
 
 Adding a new color requires exactly three steps, without touching the core image processing logic:
 
-**Step 1: Add the HSV bounds to your `hsv_bounds.yaml` file**
+## Step 1: Add the HSV bounds to your `hsv_bounds.yaml` file
 
 ```yaml
 #   hsv_color_lower: [H, S, V]
@@ -152,7 +155,7 @@ Adding a new color requires exactly three steps, without touching the core image
     hsv_orange_upper: [15, 255, 255]
 ```
 
-**Step 2: Declare and map the parameters in `color_detector.py`**
+## Step 2: Declare and map the parameters in `color_detector.py`
 
 In the `__init__` function, declare the parameters and map them into the dictionary:
 
@@ -170,7 +173,7 @@ In the `__init__` function, declare the parameters and map them into the diction
         }
 ```
 
-**Step 3: Add the color to the processing list**
+## Step 3: Add the color to the processing list
 
 At the bottom of the `image_callback` function in `color_detector.py`, simply add the string to the list:
 
