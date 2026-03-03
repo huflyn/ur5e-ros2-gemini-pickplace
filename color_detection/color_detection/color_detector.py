@@ -214,7 +214,7 @@ class ColorDetectorNode(Node):
 
 
     def publish_bricks_timer_callback(self):
-        """Called by the timer to publish the detected bricks silently."""
+        """Called by the timer to publish the detected brick(s)."""
         if self.detected_lego_bricks:
             
             # Fetch the current sorting method dynamically
@@ -223,25 +223,29 @@ class ColorDetectorNode(Node):
             if sort_method == 'random':
                 # Shuffle the list randomly to break deterministic endless loops on unreachable bricks
                 random.shuffle(self.detected_lego_bricks)
-                sorted_bricks = self.detected_lego_bricks
+                picked_brick = self.detected_lego_bricks[0]
             else:
-                # Default fallback: Closest - Sort by Y-coordinate
-                sorted_bricks = sorted(self.detected_lego_bricks, key=lambda brick: brick[0].point.y)
+                # Sort ascending by camera depth (brick[2]). 
+                # The closest brick will be at index 0.
+                sorted_bricks = sorted(self.detected_lego_bricks, key=lambda brick: brick[2])
+                picked_brick = sorted_bricks[0]
 
             # Fetch the current logging state dynamically
             verbose = self.get_parameter('verbose').get_parameter_value().bool_value
             
             # Unpack all 3 values
-            for brick_point, brick_color, brick_depth in sorted_bricks:
-                lego_brick_msg = LegoBrick()
-                lego_brick_msg.position = brick_point
-                lego_brick_msg.color.data = brick_color
-                lego_brick_msg.camera_distance_mm = brick_depth
+            brick_point, brick_color, brick_depth = picked_brick
 
-                if verbose:
-                    self.get_logger().info(f"Debug: Publishing {brick_color.upper()} brick at X:{brick_point.point.x:.3f}, Y:{brick_point.point.y:.3f}, Depth:{brick_depth}")
-                
-                self.lego_brick_pub.publish(lego_brick_msg)
+            lego_brick_msg = LegoBrick()
+            lego_brick_msg.position = brick_point
+            lego_brick_msg.color.data = brick_color
+            lego_brick_msg.camera_distance_mm = brick_depth
+
+            if verbose:
+                self.get_logger().info(f"\nTargeting {brick_color.upper()} brick at X:{brick_point.point.x:.3f}, Y:{brick_point.point.y:.3f}, Depth:{brick_depth:.1f}mm")
+            
+            # Publish ONLY the best brick
+            self.lego_brick_pub.publish(lego_brick_msg)
                 
             self.detected_lego_bricks.clear()
         
