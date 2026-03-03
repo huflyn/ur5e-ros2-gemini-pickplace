@@ -117,8 +117,6 @@ This prevents the robot from calculating faulty TCP coordinates based on incompl
 
 To find the perfect HSV color thresholds for your environment, use the built-in tuning tool. It opens a live video feed with trackbars and automatically loads the correct camera topics based on your configuration.
 
-https://github.com/user-attachments/assets/ed28270c-2bec-4f46-aba6-b5a615512782
-
 ![Screenshot of the HSV tuner GUI running in Webots simulation, showing the trackbars and live video feed.](../docs/images/hsv_tuner_terminal.png)
 
 ## Launch Command
