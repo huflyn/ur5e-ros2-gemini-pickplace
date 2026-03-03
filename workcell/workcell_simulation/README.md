@@ -11,9 +11,7 @@
 
 This package provides the Webots simulation environment for the Brick Sorter application. It contains the 3D world files (`.wbt`), the simulated sensors (such as the Intel RealSense camera), and the launch files required to spin up the virtual UR5e workcell.
 
-- [Package Structure](#package-structure)
-- [Usage](#usage)
-
+![Screenshot of the Webots simulation environment, showing the UR5e robot, the table with bricks, and the Realsense camera.](/docs/images/webots_world_overlays.png)
 
 # Package Structure
 
