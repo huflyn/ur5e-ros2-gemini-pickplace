@@ -81,6 +81,8 @@ This will start the ROS 2 node that interfaces with the UR5e, either in real har
 
 This will launch the Webots simulation of the workcell. 
 
+![Screenshot of the Webots simulation environment, showing the UR5e robot, the table with bricks, and the Realsense camera.](/docs/images/webots_world_overlays.png)
+
 Make sure you have Webots and the `webots_ros2` package installed. 
 
 #### Launch Command <!-- omit from toc -->
@@ -114,6 +116,8 @@ ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
 
 This node processes the camera stream and publishes the 3D coordinates of detected bricks.
 
+![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes and their coordinates printed in the terminal.](/docs/images/color_detector_terminal.png)
+
 For details see the [**color_detection README**](color_detection/README.md).
 
 #### Launch Command <!-- omit from toc -->
@@ -143,6 +147,8 @@ ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_met
 ### Step 3: Start the Application <!-- omit from toc -->
 
 This will start the brick_sorter node, which listens to the perception data and executes the pick-and-place logic.
+
+![Screenshot of the brick sorter application running in Webots simulation, showing the robot moving to each detected brick and placing it in the correct bin.](/docs/images/brick_sorter_simulation.png)
 
 #### Launch Command <!-- omit from toc -->
 

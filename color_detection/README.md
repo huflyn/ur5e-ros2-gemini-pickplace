@@ -11,8 +11,6 @@
 
 This package detects colored Lego bricks using a camera stream (RGB + Depth), calculates their 3D coordinates relative to the robot's base frame, and publishes them to the ROS 2 network.
 
-![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes and their coordinates printed in the terminal.](../docs/images/color_detector_terminal.png)
-
 - [Package Structure](#package-structure)
 - [Published Topics \& Custom Messages](#published-topics--custom-messages)
 - [Configuration \& Camera Setup (YAML)](#configuration--camera-setup-yaml)
@@ -80,12 +78,13 @@ color_detector_node:
 
 # Launch color_detector
 
+![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes and their coordinates printed in the terminal.](../docs/images/color_detector_terminal.png)
+
 ## Launch Command
 
 ```bash
 ros2 launch color_detection color_detector.launch.py # add launch arguments as needed, see below
 ```
-
 ## Launch Arguments
 
 You can append the following arguments to the launch command to customize the behavior:
@@ -107,7 +106,9 @@ ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_met
 
 ## Edge Margin (Safe Zone)
 
-To ensure reliable grasping and accurate center-point calculations, the detector implements a **25-pixel safe zone** around the image borders. Bricks that touch or cross this margin (e.g., partially visible bricks at the edge of the camera frame) are deliberately ignored. 
+To ensure reliable grasping and accurate center-point calculations, the detector implements **asymmetrical edge margins** on the camera frame. The margins are set to **260 pixels on the left and right edges**, and **1 pixel on the top and bottom edges**. 
+
+Bricks that touch or cross this margin (e.g., partially visible bricks at the edge of the camera frame) are deliberately ignored. 
 
 This prevents the robot from calculating faulty TCP coordinates based on incomplete contours or distortion.
 
