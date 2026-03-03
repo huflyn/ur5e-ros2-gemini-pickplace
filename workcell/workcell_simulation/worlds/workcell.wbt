@@ -10,8 +10,8 @@ WorldInfo {
   basicTimeStep 10
 }
 Viewpoint {
-  orientation -0.27051521299888104 -0.15295236627341194 0.9504878185371626 4.127864974643397
-  position 1.94269723742577 3.0160095059679115 2.0268122512741087
+  orientation -0.27515027644764123 -0.15557311732643261 0.9487303782087525 4.12632234137466
+  position 2.3638805273565713 2.9993844911747556 2.1946112876761354
 }
 TexturedBackground {
 }
@@ -1654,16 +1654,19 @@ DEF bricks Pose {
           children [
             Klemmbaustein_4x2 {
               translation 0 -0.03 0
+              rotation 0 0 1 1.309
               name "Klemmbaustein_4x2(4)"
               color 0 0.333333 0
             }
             Klemmbaustein_4x2 {
               translation 0 0.09 0
+              rotation 0 0 1 0.523599
               name "Klemmbaustein_4x2(5)"
               color 1 0.666667 0
             }
             Klemmbaustein_4x2 {
               translation 0 -0.09 0
+              rotation 0 0 1 2.61799
               name "Klemmbaustein_4x2(6)"
               color 0 0 1
             }
@@ -1679,21 +1682,25 @@ DEF bricks Pose {
           children [
             Klemmbaustein_4x2 {
               translation 0 -0.03 0
+              rotation 0 0 1 2.0944
               name "Klemmbaustein_4x2(2)"
               color 0 0.333333 0
             }
             Klemmbaustein_4x2 {
               translation 0 0.09 0
+              rotation 0 0 1 -2.8797953071795863
               name "Klemmbaustein_4x2(3)"
               color 1 0.666667 0
             }
             Klemmbaustein_4x2 {
               translation 0 -0.09 0
+              rotation 0 0 1 1.5708
               name "Klemmbaustein_4x2(1)"
               color 0 0 1
             }
             Klemmbaustein_4x2 {
               translation 0 0.03 0
+              rotation 0 0 -1 -1.0472053071795866
             }
           ]
         }
