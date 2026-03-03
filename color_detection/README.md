@@ -40,7 +40,7 @@ This package detects colored Lego bricks using a camera stream (RGB + Depth), ca
 
 # Published Topics & Custom Messages
 
-The `color_detector.py` node processes the images silently in the background to keep the terminal logs clean. It publishes the consolidated data of all detected bricks to the `/lego_brick_info` topic.
+The `color_detector.py` node processes the images, evaluates all detected bricks, and publishes only one brick (depending on the `sort_method` parameter) to the `/lego_brick_info` topic per frame to prevent subscriber overload.
 
 This package requires the **`color_detection_msgs`** package, which defines the custom message structure used for communication.
 
@@ -91,14 +91,14 @@ ros2 launch color_detection color_detector.launch.py # add launch arguments as n
 You can append the following arguments to the launch command to customize the behavior:
 
 - `use_sim_time` (bool, default: false): Set to true to use simulation topics and parameters, and the simulation clock (`/clock` topic).
-- `sort_method` (string, default: "closest", on y-axis): Method to sort detected bricks. Options: "closest" and "random".
+- `sort_method` (string, default: "closest"): Method to select the target brick. By default, it selects the brick closest to the camera lens based on the depth map. Options: "closest" and "random".
 - `verbose` (bool, default: false): Set to true to print detailed logs of detected bricks and their coordinates.
 
 ## Sorting Method (Endless Loop Prevention)
 
-By **default**, the detector **sorts bricks deterministically by their Y-coordinate**. If the robot repeatedly fails to grasp a specific brick (e.g., due to camera distortion at the edges), it can get stuck in an endless loop.
+By **default**, the detector evaluates all visible targets and **selects the brick with the shortest camera depth (closest to the lens)**. This ensures the robot always targets the most accessible brick in the front row, minimizing the risk of knocking over other bricks during the approach.
 
-To prevent this, you can **randomize the sorting order** by using the launch argument **`sort_method:=random`**. The node will print a summary of the active configuration to the terminal upon launch.
+However, if the robot repeatedly fails to grasp a specific target (e.g., due to unreachable kinematics or edge distortion), it can get stuck in an endless loop trying to pick up the exact same closest brick. To prevent this, you can **randomize the target selection** by using the launch argument `sort_method:=random`.
 
 **Launch with randomized sorting (Simulation):**
 ```bash

@@ -110,6 +110,8 @@ This will start the ROS 2 node that interfaces with the UR5e, either in real har
 <details>
   <summary><b>Option A: Webots Simulation</b></summary>
 
+![Screenshot of the Webots simulation environment, showing the UR5e robot, the table with bricks, and the Realsense camera.](./docs/images/webots_world_overlays.png)
+
 This will launch the Webots simulation of the workcell. 
 
 Make sure you have Webots and the `webots_ros2` package installed. 
@@ -145,6 +147,8 @@ ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
 
 This node processes the camera stream and publishes the 3D coordinates of detected bricks.
 
+![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes and their coordinates printed in the terminal.](./docs/images/color_detector_terminal.png)
+
 For details see the [**color_detection README**](color_detection/README.md).
 
 ### Launch Command <!-- omit from toc -->
@@ -159,12 +163,12 @@ You can append the following arguments to the launch command to customize the be
 
 - `use_sim_time` (bool, default: false): Set `use_sim_time:=true` to run with simulation camera topics and parameters, and use the `/clock` topic published by Webots.
 - `sort_method` (string, default: "closest"): Use `sort_method:=random` to shuffle the target order.
-- 
+- `verbose` (bool, default: false): Set `verbose:=true` to print detailed logs of detected bricks and their coordinates.
 
 Example with arguments:
 
 ```bash
-ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_method:=random
+ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_method:=random verbose:=true
 ```
 
 > [!IMPORTANT] 
@@ -174,6 +178,8 @@ ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_met
 ## Step 3: Start the Application
 
 This will start the high-level state machine utilizing MoveIt 2 to pick and sort the detected bricks.
+
+![Screenshot of the brick sorter application running in Webots simulation, showing the robot moving to each detected brick and placing it in the correct bin.](./docs/images/brick_sorter_simulation.png)
 
 For details see the [**workcell_application README**](workcell/workcell_application/README.md).
 
