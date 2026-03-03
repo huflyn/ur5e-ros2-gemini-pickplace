@@ -171,7 +171,10 @@ class ColorDetectorNode(Node):
         colors = ['green', 'yellow', 'red', 'blue']
 
         img_h, img_w = cv2_img.shape[:2] # Get image dimensions for edge margin calculation
-        edge_margin = 25 # Margin in pixels to ignore detections near the edges
+
+        # --- Asymmetrical Edge Margins ---
+        edge_margin_x = 260
+        edge_margin_y = 1
 
         for color in colors:
             mask = detect_color(hsv, color, self.color_bounds)
@@ -184,9 +187,9 @@ class ColorDetectorNode(Node):
                 if rel_area > 0.001:
                     x, y, w, h = cv2.boundingRect(cnt)
 
-                    # --- Safe Zone Check: Ignore detections near the edges ---
-                    if (x < edge_margin or y < edge_margin or 
-                        x + w > img_w - edge_margin or y + h > img_h - edge_margin):
+                    # --- Safe Zone Check: Split into X and Y margins ---
+                    if (x < edge_margin_x or y < edge_margin_y or 
+                        x + w > img_w - edge_margin_x or y + h > img_h - edge_margin_y):
                         continue  # Skip this detection as it's too close to the edge
 
                     center_x = x + w // 2
@@ -206,7 +209,7 @@ class ColorDetectorNode(Node):
                                     self.detected_lego_bricks.append((transformed_point, color, brick_depth))
 
         # Draw a red rectangle to indicate the safe zone (optional, for debugging)
-        cv2.rectangle(cv2_img, (edge_margin, edge_margin), (img_w - edge_margin, img_h - edge_margin), (0, 0, 255), 2)
+        cv2.rectangle(cv2_img, (edge_margin_x, edge_margin_y), (img_w - edge_margin_x, img_h - edge_margin_y), (0, 0, 255), 2)
 
         # Display the image with detections (optional, for debugging)
         cv2.imshow('Color Detection', cv2_img)
