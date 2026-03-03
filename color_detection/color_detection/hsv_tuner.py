@@ -47,10 +47,16 @@ class HSVTunerNode(Node):
         sMax = cv2.getTrackbarPos('SMax', 'Trackbars')
         vMax = cv2.getTrackbarPos('VMax', 'Trackbars')
         
-        print("\n--- Copy this into your YAML file ---")
-        print(f"hsv_lower: [{hMin}, {sMin}, {vMin}]")
-        print(f"hsv_upper: [{hMax}, {sMax}, {vMax}]")
-        print("----------------------------------------")
+        yaml_output = (
+            f"\n"
+            f"----------------------------------------\n"
+            f"--- Copy this into your YAML file ---\n"
+            f"hsv_lower: [{hMin}, {sMin}, {vMin}]\n"
+            f"hsv_upper: [{hMax}, {sMax}, {vMax}]\n"
+            f"----------------------------------------"
+        )
+        self.get_logger().info(yaml_output)
+        
 
     def image_callback(self, img_msg):
         frame = self.bridge.imgmsg_to_cv2(img_msg, "bgr8")
