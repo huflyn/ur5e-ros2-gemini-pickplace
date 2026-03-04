@@ -103,6 +103,9 @@ For detailed instructions, please refer to the `README.md` files located inside 
 
 To startup the complete system for automated pick-and-place, you need to start 3 launch files in individual terminals. 
 
+Follow the [**instructions**](workcell/workcell_application/README.md#ii-workflow-of-brick_sorterpy) in the [**workcell_application README**](workcell/workcell_application/README.md) for detailed steps and troubleshooting tips.
+
+---
 
 ## Step 1: Start the Robot Driver (Real or Simulated)
 
