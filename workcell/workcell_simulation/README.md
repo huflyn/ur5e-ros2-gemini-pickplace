@@ -13,7 +13,7 @@ This package provides the Webots simulation environment for the Brick Sorter app
 
 ![Screenshot of the Webots simulation environment, showing the UR5e robot, the table with bricks, and the Realsense camera.](/docs/images/webots_world_overlays.png)
 
-# Package Structure
+# I) Package Structure
 
 * **`worlds/`**: Contains the Webots world file.
 * **`launch/`**: Contains the launch files to start the Webots simulation with the correct world and ROS 2 interfaces.
@@ -21,7 +21,7 @@ This package provides the Webots simulation environment for the Brick Sorter app
 * **`protos/`**: Contains the Webots PROTO files for custom objects like the bricks and the camera.
 * **`meshes/`**: Contains the 3D mesh files used in the simulation, such as the bricks and the camera model.
 
-# Usage
+# II) Usage
 
 To start the complete simulation (robot, environment, and camera):
 

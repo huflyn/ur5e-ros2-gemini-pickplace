@@ -11,32 +11,32 @@
 
 This package detects colored Lego bricks using a camera stream (RGB + Depth), calculates their 3D coordinates relative to the robot's base frame, and publishes them to the ROS 2 network.
 
-- [Package Structure](#package-structure)
-- [Published Topics \& Custom Messages](#published-topics--custom-messages)
-- [Configuration \& Camera Setup (YAML)](#configuration--camera-setup-yaml)
-- [Launch color\_detector](#launch-color_detector)
+- [I) Package Structure](#i-package-structure)
+- [II) Published Topics \& Custom Messages](#ii-published-topics--custom-messages)
+- [III) Configuration \& Camera Setup (YAML)](#iii-configuration--camera-setup-yaml)
+- [IV) Launch color\_detector](#iv-launch-color_detector)
   - [Launch Command](#launch-command)
   - [Launch Arguments](#launch-arguments)
   - [Sorting Method (Endless Loop Prevention)](#sorting-method-endless-loop-prevention)
   - [Edge Margin (Safe Zone)](#edge-margin-safe-zone)
-- [Using the HSV Tuner](#using-the-hsv-tuner)
+- [V) Using the HSV Tuner](#v-using-the-hsv-tuner)
   - [Launch Command](#launch-command-1)
   - [Launch Arguments](#launch-arguments-1)
   - [Tuning Workflow](#tuning-workflow)
-- [How to Add a New Color (e.g., 'orange')](#how-to-add-a-new-color-eg-orange)
+- [VI) How to Add a New Color (e.g., 'orange')](#vi-how-to-add-a-new-color-eg-orange)
   - [Step 1: Add the HSV bounds to your `hsv_bounds.yaml` file](#step-1-add-the-hsv-bounds-to-your-hsv_boundsyaml-file)
   - [Step 2: Declare and map the parameters in `color_detector.py`](#step-2-declare-and-map-the-parameters-in-color_detectorpy)
   - [Step 3: Add the color to the processing list](#step-3-add-the-color-to-the-processing-list)
 
 
-# Package Structure
+# I) Package Structure
 
 * **`color_detector.py`**: The main ROS 2 node. It subscribes to the camera topics, matches the pixel coordinates with the depth image, and uses `tf2` to transform the coordinates into the robot's frame (`ur5e_base_link`).
 * **`color_functions.py`**: A pure Python helper module containing the OpenCV logic for HSV masking and contour detection. It is completely independent of ROS.
 * **`hsv_tuner.py`**: A standalone ROS 2 GUI tool. It opens an OpenCV window with trackbars, allowing you to fine-tune HSV values in real-time. It prints the tuned values directly to the terminal in a YAML-friendly format.
 
 
-# Published Topics & Custom Messages
+# II) Published Topics & Custom Messages
 
 The `color_detector.py` node processes the images, evaluates all detected bricks, and publishes only one brick (depending on the `sort_method` parameter) to the `/lego_brick_info` topic per frame to prevent subscriber overload.
 
@@ -50,7 +50,7 @@ float32 camera_distance_mm           # Raw depth distance from the camera lens t
 ```
 
 
-# Configuration & Camera Setup (YAML)
+# III) Configuration & Camera Setup (YAML)
 
 We use parameter files in the `config/` directory to seamlessly switch between Webots simulation and real-world hardware, and to manage color thresholds:
 
@@ -76,7 +76,7 @@ color_detector_node:
 ```
 
 
-# Launch color_detector
+# IV) Launch color_detector
 
 ![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes and their coordinates printed in the terminal.](../docs/images/color_detector_terminal.png)
 
@@ -114,7 +114,7 @@ This prevents the robot from calculating faulty TCP coordinates based on incompl
 
 
 
-# Using the HSV Tuner
+# V) Using the HSV Tuner
 
 To find the perfect HSV color thresholds for your environment, use the built-in tuning tool. It opens a live video feed with trackbars and automatically loads the correct camera topics based on your configuration.
 
@@ -140,7 +140,7 @@ You can append the following argument to the launch command to customize the beh
 
 
 
-# How to Add a New Color (e.g., 'orange')
+# VI) How to Add a New Color (e.g., 'orange')
 
 Adding a new color requires exactly three steps, without touching the core image processing logic:
 

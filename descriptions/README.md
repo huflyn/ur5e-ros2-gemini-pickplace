@@ -10,12 +10,12 @@
 
 This folder contains the physical, visual, and collision models for the complete robotic workcell. The architecture is highly modular, allowing individual components (like grippers or the robot arm) to be swapped out easily.
 
-- [Package Overview](#package-overview)
-- [How It Works](#how-it-works)
-- [Viewing the Models](#viewing-the-models)
+- [I) Package Overview](#i-package-overview)
+- [II) How It Works](#ii-how-it-works)
+- [III) Viewing the Workcell in RViz](#iii-viewing-the-workcell-in-rviz)
 
 
-## Package Overview
+# I) Package Overview
 
 The models are divided into several independent packages, which are combined into the final assembly:
 
@@ -24,7 +24,7 @@ The models are divided into several independent packages, which are combined int
 * **`environment_description`**: Contains the static environment, such as the table, camera mounts, and collision objects.
 * **`workcell_description`**: **The top-level assembly package.** This package imports all the macros from the packages above and connects them via TF joints (e.g., attaching the EPick to the UR5e's `tool0`, and the UR5e to the table).
 
-## How It Works
+# II) How It Works
 
 The `workcell_description` acts as the master. Its main file (`workcell.urdf.xacro`) includes the components like this:
 
@@ -34,7 +34,7 @@ The `workcell_description` acts as the master. Its main file (`workcell.urdf.xac
 4. Instantiates the piSOFTGRIP and attaches it to the EPick.
 5. Defines the `pisoftgrip_tcp` (Tool Center Point) used by MoveIt for planning.
 
-## Viewing the Models
+# III) Viewing the Workcell in RViz
 
 You can visualize the completely assembled workcell in RViz without starting any simulation or hardware drivers.
 
@@ -44,7 +44,8 @@ You can visualize the completely assembled workcell in RViz without starting any
 ros2 launch workcell_description view_workcell.launch.py
 ```
 
-*(Note: The `view_` launch files start a `joint_state_publisher_gui`, allowing you to manually move the joints with sliders to test the kinematic chain and collision geometries).*
+> [!NOTE]
+> This launch file starts a `joint_state_publisher_gui`, allowing you to manually move the joints with sliders to test the kinematic chain and collision geometries. 
 
 
 

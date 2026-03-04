@@ -11,16 +11,16 @@
 
 This package manages the connection to the physical UR5e hardware. It contains the launch files necessary to start the official `ur_robot_driver` with the correct calibration parameters, network settings, and ROS 2 controllers for this specific workcell.
 
-- [Package Structure](#package-structure)
-- [Usage / Launch](#usage--launch)
+- [I) Package Structure](#i-package-structure)
+- [II) Usage / Launch](#ii-usage--launch)
   - [Option A: Mock Hardware (no Webots, just RViz and MoveIt)](#option-a-mock-hardware-no-webots-just-rviz-and-moveit)
   - [Option B: Real Hardware (UR5e)](#option-b-real-hardware-ur5e)
 
-## Package Structure
+## I) Package Structure
 * **`start_robot.launch.py`**: The main launch file to start the UR5e driver. It includes parameters for both real hardware and mock hardware, allowing you to switch between them easily.
 * `config/` directory: Contains the robots calibration YAML file.
 
-## Usage / Launch
+## II) Usage / Launch
 
 ### Option A: Mock Hardware (no Webots, just RViz and MoveIt)
 

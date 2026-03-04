@@ -11,17 +11,17 @@
 
 This package contains the semantic representation (SRDF), kinematics, and motion planning configurations for the UR5e workcell. It was primarily generated using the MoveIt 2 Setup Assistant and adapted for the specific collision environment and tool setup (gripper).
 
-- [Package Structure](#package-structure)
-- [Usage](#usage)
+- [I) Package Structure](#i-package-structure)
+- [II) Usage](#ii-usage)
   - [Step 1: Start the Robot Driver (Real or Simulated)](#step-1-start-the-robot-driver-real-or-simulated)
   - [Step 2: Start MoveIt](#step-2-start-moveit)
 
-# Package Structure
+# I) Package Structure
 
 * **`config/`**: Contains the SRDF and YAML configuration files.
 * **`launch/`**: Contains the launch files to start the MoveIt 2 move_group node and the RViz setup with the MoveIt plugin. Both launch files were modified to accept a `use_sim_time` argument for proper synchronization with the Webots simulation clock.
 
-# Usage
+# II) Usage
 
 Normally, MoveIt is launched automatically by the higher-level application launch files. For isolated testing, it can be started like this:
 

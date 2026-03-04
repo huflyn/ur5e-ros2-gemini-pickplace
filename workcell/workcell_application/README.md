@@ -11,27 +11,44 @@
 
 This package manages high-level robot control for the Brick Sorter application using the **MoveIt 2 Python API**. It coordinates motion planning, gripper actuation, and sorting logic based on perception data.
 
-- [Package Structure](#package-structure)
-- [Configuration (YAML)](#configuration-yaml)
-- [Usage of `brick_sorter.py`](#usage-of-brick_sorterpy)
+- [I) Package Structure](#i-package-structure)
+- [II) Workflow of `brick_sorter.py`](#ii-workflow-of-brick_sorterpy)
+- [III) Configuration (YAML)](#iii-configuration-yaml)
+- [IV) Starting the `brick_sorter.py` Application](#iv-starting-the-brick_sorterpy-application)
+- [V) Usage of `verify_alignment.py`](#v-usage-of-verify_alignmentpy)
   - [Workflow](#workflow)
-  - [Starting the Application](#starting-the-application)
-- [Usage of `verify_alignment.py`](#usage-of-verify_alignmentpy)
-  - [Workflow](#workflow-1)
   - [Starting the Script](#starting-the-script)
-- [Usage of `test_moveit_api.py`](#usage-of-test_moveit_apipy)
+- [VI) Usage of `test_moveit_api.py`](#vi-usage-of-test_moveit_apipy)
   - [Starting the Script](#starting-the-script-1)
   - [Features Tested](#features-tested)
-- [Known Limitations \& Future Work](#known-limitations--future-work)
+- [VII) Known Limitations \& Future Work](#vii-known-limitations--future-work)
 
 
-# Package Structure
+
+# I) Package Structure
 
 * **`brick_sorter.py`**: The main application node. It handles the pick-and-place state machine, listens to `/lego_brick_info`, and executes trajectories.
 * **`verify_alignment.py`**: A verification and calibration script to manually test workspace coordinates, TCP accuracy, and robot alignment using an interactive ROS topic trigger.
 * **`test_moveit_api.py`**: A verification script used to test basic MoveIt 2 planning and connectivity.
 
-# Configuration (YAML)
+
+
+# II) Workflow of `brick_sorter.py`
+
+This is an **advanced replication of the ROS 1 ur5e_moveit_script_erweitert.py**. It utilizes a hybrid motion planning architecture, seamlessly switching between **OMPL** for joint-space travel and the **Pilz Industrial Motion Planner** (LIN) for strict Cartesian vertical movements. It also features **dynamic fallback logic** to prevent execution failures during singularities.
+
+It continuously sorts detected Lego bricks by executing the following specific workflow:
+
+1. **Clear View:** Moves to a predefined `ready` pose so the camera has an unobstructed view of the workspace.
+2. **Lock Perception:** Once a brick is detected, it locks the incoming ROS message queue to prevent processing stale data ("ghost bricks") during movement.
+3. **Pick:** Moves above the brick's X/Y coordinates, descends to the defined Z-height, and activates the vacuum gripper.
+4. **Place:** Transports the brick to the color-coded drop-off zone (defined in the YAML) and releases the gripper.
+5. **Flush & Reset:** Returns to the `ready` pose, clears all old camera messages from the queue, and unlocks perception for the next brick.
+*(Note: If a trajectory fails due to controller timeouts or collisions, the cycle safely aborts and resets to step 1).*
+
+
+
+# III) Configuration (YAML)
 
 Sorting locations and safe heights are managed via **`config/sorter_params.yaml`**. This allows for layout adjustments without modifying the source code.
 
@@ -51,28 +68,12 @@ brick_sorter_node:
 
 ```
 
----
 
-# Usage of `brick_sorter.py`
-
-This is an **advanced replication of the ROS 1 ur5e_moveit_script_erweitert.py**. It utilizes a hybrid motion planning architecture, seamlessly switching between **OMPL** for joint-space travel and the **Pilz Industrial Motion Planner** (LIN) for strict Cartesian vertical movements. It also features **dynamic fallback logic** to prevent execution failures during singularities.
-
- It continuously sorts detected Lego bricks by executing the following specific workflow:
-
-## Workflow
-
-1. **Clear View:** Moves to a predefined `ready` pose so the camera has an unobstructed view of the workspace.
-2. **Lock Perception:** Once a brick is detected, it locks the incoming ROS message queue to prevent processing stale data ("ghost bricks") during movement.
-3. **Pick:** Moves above the brick's X/Y coordinates, descends to the defined Z-height, and activates the vacuum gripper.
-4. **Place:** Transports the brick to the color-coded drop-off zone (defined in the YAML) and releases the gripper.
-5. **Flush & Reset:** Returns to the `ready` pose, clears all old camera messages from the queue, and unlocks perception for the next brick.
-*(Note: If a trajectory fails due to controller timeouts or collisions, the cycle safely aborts and resets to step 1).*
-
-## Starting the Application
+# IV) Starting the `brick_sorter.py` Application
 
 You need to open 3 terminals to run the full application:
 
-### Step 1: Start the Robot Driver (Real or Simulated) <!-- omit from toc -->
+## Step 1: Start the Robot Driver (Real or Simulated) <!-- omit from toc -->
 
 This will start the ROS 2 node that interfaces with the UR5e, either in real hardware mode or in Webots simulation.
 
@@ -85,7 +86,7 @@ This will launch the Webots simulation of the workcell.
 
 Make sure you have Webots and the `webots_ros2` package installed. 
 
-#### Launch Command <!-- omit from toc -->
+### Launch Command <!-- omit from toc -->
   
 ```bash
 ros2 launch workcell_simulation simulation.launch.py
@@ -98,12 +99,12 @@ ros2 launch workcell_simulation simulation.launch.py
 This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces.
 
 Make sure the **external control** node is **active** on the teach pendant.
-For details see the [**workcell_control README**](workcell/workcell_control/README.md).
+For details see the [**workcell_control README**](/workcell/workcell_control/README.md).
 
 > [!CAUTION]
 > Follow all safety precautions when working with real robots.
 
-#### Launch Command <!-- omit from toc -->
+### Launch Command <!-- omit from toc -->
 
 ```bash
 # You can set the robot_ip either via command line argument or directly in the start_robot.launch.py file
@@ -112,7 +113,7 @@ ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
 </details>
 
 
-### Step 2: Start the Perception Pipeline <!-- omit from toc -->
+## Step 2: Start the Perception Pipeline <!-- omit from toc -->
 
 This node processes the camera stream and publishes the 3D coordinates of detected bricks.
 
@@ -120,13 +121,13 @@ This node processes the camera stream and publishes the 3D coordinates of detect
 
 For details see the [**color_detection README**](color_detection/README.md).
 
-#### Launch Command <!-- omit from toc -->
+### Launch Command <!-- omit from toc -->
 
 ```bash
 ros2 launch color_detection color_detector.launch.py # add launch arguments as needed, see below
 ```
 
-#### Launch Arguments <!-- omit from toc -->
+### Launch Arguments <!-- omit from toc -->
 
 You can append the following arguments to the launch command to customize the behavior:
 
@@ -144,19 +145,19 @@ ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_met
 > **Using Real Hardware:** You need to adjust the **camera topics** and **frames** in the `real_params.yaml` file before running the node.
 
 
-### Step 3: Start the Application <!-- omit from toc -->
+## Step 3: Start the Application <!-- omit from toc -->
 
 This will start the brick_sorter node, which listens to the perception data and executes the pick-and-place logic.
 
 ![Screenshot of the brick sorter application running in Webots simulation, showing the robot moving to each detected brick and placing it in the correct bin.](/docs/images/brick_sorter_simulation.png)
 
-#### Launch Command <!-- omit from toc -->
+### Launch Command <!-- omit from toc -->
 
 ```bash
 ros2 launch workcell_application brick_sorter.launch.py # add launch arguments as needed, see below
 ```
 
-#### Launch Arguments <!-- omit from toc -->
+### Launch Arguments <!-- omit from toc -->
 
 You can append the following argument to the launch command to customize the behavior:
 
@@ -166,7 +167,7 @@ You can append the following argument to the launch command to customize the beh
 
 
 
-# Usage of `verify_alignment.py`
+# V) Usage of `verify_alignment.py`
 
 This script is a manual tool used for hardware commissioning. It allows you to move the robot step-by-step through predefined test poses to verify workspace coordinates and TCP alignment safely.
 
@@ -198,7 +199,7 @@ ros2 launch workcell_application verify_alignment.launch.py
 
 ---
 
-# Usage of `test_moveit_api.py`
+# VI) Usage of `test_moveit_api.py`
 
 This script is designed to verify the connectivity and demonstrate the basic functionality of the MoveIt 2 Python API.
 
@@ -220,6 +221,6 @@ ros2 launch workcell_application test_moveit_api.launch.py
 
 ---
 
-# Known Limitations & Future Work
+# VII) Known Limitations & Future Work
 
 * **Grasping Accuracy:** The Intel RealSense camera is currently mounted horizontally. Depth estimation noise on the camera's Z-axis translates directly into grasping inaccuracies on the robot's X/Y table plane. A top-down (bird's-eye) camera perspective is planned for future iterations to improve pick precision.
