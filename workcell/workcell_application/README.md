@@ -125,7 +125,7 @@ This node processes the camera stream and publishes the 3D coordinates of detect
 
 ![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes and their coordinates printed in the terminal.](/docs/images/color_detector_terminal.png)
 
-For details see the [**color_detection README**](color_detection/README.md).
+For details see the [**color_detection README**](../../color_detection/README.md).
 
 ### Launch Command <!-- omit from toc -->
 
