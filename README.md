@@ -101,7 +101,7 @@ For detailed instructions, please refer to the `README.md` files located inside 
 
 # IV) Starting the Brick Sorter Application with OpenCV-based Perception
 
-To startup the complete system for automated pick-and-place, you need to start 3 launch files in individual terminals. 
+To startup the complete system for automated pick-and-place, you need to start **3 launch files in individual terminals**. 
 
 Follow the [**instructions**](workcell/workcell_application/README.md#ii-workflow-of-brick_sorterpy) in the [**workcell_application README**](workcell/workcell_application/README.md) for detailed steps and troubleshooting tips.
 
@@ -111,47 +111,50 @@ Follow the [**instructions**](workcell/workcell_application/README.md#ii-workflo
 
 This will start the ROS 2 node that interfaces with the UR5e, either in real hardware mode or in Webots simulation.
 
-<details>
-  <summary><b>Option A: Webots Simulation</b></summary>
-
-![Screenshot of the Webots simulation environment, showing the UR5e robot, the table with bricks, and the Realsense camera.](./docs/images/webots_world_overlays.png)
+### Option A: Webots Simulation <!-- omit from toc -->
 
 This will launch the Webots simulation of the workcell. 
 
+![Screenshot of the Webots simulation environment, showing the UR5e robot, the table with bricks, and the Realsense camera.](/docs/images/webots_world_overlays.png)
+
 Make sure you have Webots and the `webots_ros2` package installed. 
 
-### Launch Command <!-- omit from toc -->
+#### Launch Command <!-- omit from toc -->
   
 ```bash
 ros2 launch workcell_simulation simulation.launch.py
 ```
-</details>
 
-<details>
-  <summary><b>Option B: Real Hardware (UR5e)</b></summary>
+
+### Option B: Real Hardware (UR5e) <!-- omit from toc -->
 
 This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces.
 
 Make sure the **external control** node is **active** on the teach pendant.
-For details see the [**workcell_control README**](workcell/workcell_control/README.md).
+For details see the [**workcell_control README**](/workcell/workcell_control/README.md).
 
 > [!CAUTION]
 > Follow all safety precautions when working with real robots.
 
-### Launch Command <!-- omit from toc -->
+#### Launch Command <!-- omit from toc -->
 
 ```bash
 # You can set the robot_ip either via command line argument or directly in the start_robot.launch.py file
 ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
 ```
-</details>
+
+#### Launch Arguments <!-- omit from toc -->
+
+You can append the following arguments to the launch command to customize the behavior:
+- `robot_ip` (string, default: "..."): The IP address of the UR5e robot. Not needed if `use_mock_hardware` is set to true.
+- `use_mock_hardware` (bool, default: false): Set to true to use the ros2_control mock hardware interface instead of real hardware. This allows you to test the application without needing access to physical hardware or the Webots simulation.
 
 
 ## Step 2: Start the Perception Pipeline
 
 This node processes the camera stream and publishes the 3D coordinates of detected bricks.
 
-![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes and their coordinates printed in the terminal.](./docs/images/color_detector_terminal.png)
+![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes and their coordinates printed in the terminal.](/docs/images/color_detector_terminal.png)
 
 For details see the [**color_detection README**](color_detection/README.md).
 
@@ -172,7 +175,7 @@ You can append the following arguments to the launch command to customize the be
 Example with arguments:
 
 ```bash
-ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_method:=random verbose:=true
+ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_method:=random
 ```
 
 > [!IMPORTANT] 
@@ -181,11 +184,9 @@ ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_met
 
 ## Step 3: Start the Application
 
-This will start the high-level state machine utilizing MoveIt 2 to pick and sort the detected bricks.
+This will start the brick_sorter node, which listens to the perception data and executes the pick-and-place logic.
 
-![Screenshot of the brick sorter application running in Webots simulation, showing the robot moving to each detected brick and placing it in the correct bin.](./docs/images/brick_sorter_simulation.png)
-
-For details see the [**workcell_application README**](workcell/workcell_application/README.md).
+![Screenshot of the brick sorter application running in Webots simulation, showing the robot moving to each detected brick and placing it in the correct bin.](/docs/images/brick_sorter_simulation.png)
 
 ### Launch Command <!-- omit from toc -->
 
@@ -198,6 +199,7 @@ ros2 launch workcell_application brick_sorter.launch.py # add launch arguments a
 You can append the following argument to the launch command to customize the behavior:
 
 - `use_sim_time` (bool, default: false): Set `use_sim_time:=true` to run with simulation camera topics and parameters, and the simulation clock (`/clock` topic).
+
 
 
 # X) Starting the Brick Sorter Application with Gemini Robotics-ER 1.5-based Perception

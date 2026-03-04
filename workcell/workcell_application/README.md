@@ -15,6 +15,9 @@ This package manages high-level robot control for the Brick Sorter application u
 - [II) Workflow of `brick_sorter.py`](#ii-workflow-of-brick_sorterpy)
 - [III) Configuration (YAML)](#iii-configuration-yaml)
 - [IV) Starting the `brick_sorter.py` Application](#iv-starting-the-brick_sorterpy-application)
+  - [Step 1: Start the Robot Driver (Real or Simulated)](#step-1-start-the-robot-driver-real-or-simulated)
+  - [Step 2: Start the Perception Pipeline](#step-2-start-the-perception-pipeline)
+  - [Step 3: Start the Application](#step-3-start-the-application)
 - [V) Usage of `verify_alignment.py`](#v-usage-of-verify_alignmentpy)
   - [Workflow](#workflow)
   - [Starting the Script](#starting-the-script)
@@ -73,12 +76,11 @@ brick_sorter_node:
 
 You need to open 3 terminals to run the full application:
 
-## Step 1: Start the Robot Driver (Real or Simulated) <!-- omit from toc -->
+## Step 1: Start the Robot Driver (Real or Simulated)
 
 This will start the ROS 2 node that interfaces with the UR5e, either in real hardware mode or in Webots simulation.
 
-<details>
-  <summary><b>Option A: Webots Simulation</b></summary>
+### Option A: Webots Simulation <!-- omit from toc -->
 
 This will launch the Webots simulation of the workcell. 
 
@@ -86,15 +88,14 @@ This will launch the Webots simulation of the workcell.
 
 Make sure you have Webots and the `webots_ros2` package installed. 
 
-### Launch Command <!-- omit from toc -->
+#### Launch Command <!-- omit from toc -->
   
 ```bash
 ros2 launch workcell_simulation simulation.launch.py
 ```
-</details>
 
-<details>
-  <summary><b>Option B: Real Hardware (UR5e)</b></summary>
+
+### Option B: Real Hardware (UR5e) <!-- omit from toc -->
 
 This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces.
 
@@ -104,16 +105,21 @@ For details see the [**workcell_control README**](/workcell/workcell_control/REA
 > [!CAUTION]
 > Follow all safety precautions when working with real robots.
 
-### Launch Command <!-- omit from toc -->
+#### Launch Command <!-- omit from toc -->
 
 ```bash
 # You can set the robot_ip either via command line argument or directly in the start_robot.launch.py file
 ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
 ```
-</details>
+
+#### Launch Arguments <!-- omit from toc -->
+
+You can append the following arguments to the launch command to customize the behavior:
+- `robot_ip` (string, default: "..."): The IP address of the UR5e robot. Not needed if `use_mock_hardware` is set to true.
+- `use_mock_hardware` (bool, default: false): Set to true to use the ros2_control mock hardware interface instead of real hardware. This allows you to test the application without needing access to physical hardware or the Webots simulation.
 
 
-## Step 2: Start the Perception Pipeline <!-- omit from toc -->
+## Step 2: Start the Perception Pipeline
 
 This node processes the camera stream and publishes the 3D coordinates of detected bricks.
 
@@ -145,7 +151,7 @@ ros2 launch color_detection color_detector.launch.py use_sim_time:=true sort_met
 > **Using Real Hardware:** You need to adjust the **camera topics** and **frames** in the `real_params.yaml` file before running the node.
 
 
-## Step 3: Start the Application <!-- omit from toc -->
+## Step 3: Start the Application
 
 This will start the brick_sorter node, which listens to the perception data and executes the pick-and-place logic.
 
