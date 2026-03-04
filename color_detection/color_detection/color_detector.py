@@ -48,7 +48,8 @@ class ColorDetectorNode(Node):
         self.declare_parameter('camera_frame', 'camera_color_optical_frame')
         self.declare_parameter('robot_base_frame', 'base_link')        
         self.declare_parameter('sort_method', 'y_axis') # Options: 'y_axis' (default, deterministic) or 'random' (prevents endless loops on edge cases)
-        self.declare_parameter('verbose', False)
+        self.declare_parameter('verbose', False) # If True, detailed info about the targeted brick will be printed in the console. Set to False for cleaner output or if you only care about the published messages.
+        self.declare_parameter('brick_width_offset', 0.01) # brick_width_offset since the robot should not aim for the front face of the brick (which the depth sensor detects) but for the center of the brick (beacause camera horizontal, not birds-eye view). Set to 0 if not needed.
 
         # --- Read basic parameters ---
         info_topic = self.get_parameter('camera_info_topic').get_parameter_value().string_value
@@ -232,10 +233,7 @@ class ColorDetectorNode(Node):
                 # The closest brick will be at index 0.
                 sorted_bricks = sorted(self.detected_lego_bricks, key=lambda brick: brick[2])
                 picked_brick = sorted_bricks[0]
-
-            # Fetch the current logging state dynamically
-            verbose = self.get_parameter('verbose').get_parameter_value().bool_value
-            
+           
             # Unpack all 3 values
             brick_point, brick_color, brick_depth = picked_brick
 
@@ -244,9 +242,18 @@ class ColorDetectorNode(Node):
             lego_brick_msg.color.data = brick_color
             lego_brick_msg.camera_distance_mm = brick_depth
 
+            # Fetch the current logging state dynamically
+            verbose = self.get_parameter('verbose').get_parameter_value().bool_value
+
             if verbose:
                 self.get_logger().info(f"\nTargeting {brick_color.upper()} brick at X:{brick_point.point.x:.3f}, Y:{brick_point.point.y:.3f}, Depth:{brick_depth:.1f}mm")
             
+            # brick_width_offset since the robot should not aim for the front face of the brick (which the depth sensor detects) but for the center of the brick (beacause camera horizontal, not birds-eye view)
+            brick_width_offset = self.get_parameter('brick_width_offset').get_parameter_value().double_value
+
+            # Adjust the z-coordinate of the brick position by the offset
+            brick_point.point.z -= brick_width_offset
+
             # Publish ONLY the best brick
             self.lego_brick_pub.publish(lego_brick_msg)
                 
