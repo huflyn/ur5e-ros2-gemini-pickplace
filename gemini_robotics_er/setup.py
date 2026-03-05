@@ -1,16 +1,19 @@
 from setuptools import find_packages, setup
+from glob import glob
 
 package_name = 'gemini_robotics_er'
+
+data_files = []
+data_files.append(('share/ament_index/resource_index/packages', ['resource/' + package_name]))
+data_files.append(('share/' + package_name, ['package.xml']))
+data_files.append(('share/' + package_name + '/launch', glob('launch/*launch.[pxy][yma]*')))
+data_files.append(('share/' + package_name + '/config', glob('config/*.yaml')))
 
 setup(
     name=package_name,
     version='0.0.0',
     packages=find_packages(exclude=['test']),
-    data_files=[
-        ('share/ament_index/resource_index/packages',
-            ['resource/' + package_name]),
-        ('share/' + package_name, ['package.xml']),
-    ],
+    data_files=data_files,
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='daniel',
@@ -25,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'gemini_api_test = gemini_robotics_er.gemini_api_test:main',
+            'gemini_vision = gemini_robotics_er.gemini_vision:main',
         ],
     },
 )
