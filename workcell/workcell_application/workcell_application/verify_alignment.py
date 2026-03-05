@@ -62,7 +62,7 @@ class TriggerNode(Node):
         )
 
     def trigger_callback(self, msg):
-        self.get_logger().info("Trigger received! Moving to the next pose...")
+        self.get_logger().info("Next step trigger received! Moving to the next pose...")
         self.triggered = True
 
 
