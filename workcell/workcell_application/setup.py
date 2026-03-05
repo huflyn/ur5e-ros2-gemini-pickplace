@@ -32,6 +32,7 @@ setup(
             'test_moveit_api = workcell_application.test_moveit_api:main',
             'brick_sorter = workcell_application.brick_sorter:main',
             'verify_alignment = workcell_application.verify_alignment:main',
+            'pick_and_place = workcell_application.pick_and_place:main',
         ],
     },
 )
