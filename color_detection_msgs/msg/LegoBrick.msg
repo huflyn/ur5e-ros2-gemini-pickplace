@@ -1,3 +1,4 @@
 geometry_msgs/PointStamped position
 std_msgs/String color
-float32 camera_distance_mm
+float64 camera_distance_mm
+int32[4] bounding_box_px

@@ -14,6 +14,7 @@ find_package(geometry_msgs REQUIRED)
 # 2. Nachrichten generieren
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/LegoBrick.msg"
+  "srv/DetectBricks.srv"
   DEPENDENCIES std_msgs geometry_msgs
 )
 
