@@ -27,6 +27,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'color_detector_legacy = color_detection.color_detector_legacy:main',
             'color_detector = color_detection.color_detector:main',
             'hsv_tuner = color_detection.hsv_tuner:main',
         ],
