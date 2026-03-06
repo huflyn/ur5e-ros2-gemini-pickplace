@@ -16,6 +16,7 @@ instead of continuous topic subscription.
 import time
 import copy
 import math
+import threading
 import rclpy
 from rclpy.node import Node
 from rclpy.logging import get_logger
@@ -50,17 +51,17 @@ class PickAndPlaceNode(Node):
         self.declare_parameter('planning_group', 'ur_arm')
 
         self.declare_parameter('hover_height', 0.25)
-        self.declare_parameter('grasp_height', 0.005)
+        self.declare_parameter('grasp_height', 0.01)
         self.declare_parameter('dropoff_height', 0.10)
 
         self.declare_parameter('use_sim_gripper', True)
         self.declare_parameter('gripper_topic', '/ur5e/vacuum_gripper/turn_on')
 
+        self.declare_parameter('dropoff_default', [0.27, 0.250])
         self.declare_parameter('dropoff_red',    [0.27, 0.450])
         self.declare_parameter('dropoff_blue',   [0.27, 0.350])
         self.declare_parameter('dropoff_green',  [-0.27, 0.450])
         self.declare_parameter('dropoff_yellow', [-0.27, 0.350])
-        self.declare_parameter('dropoff_default', [0.0, 0.450])
 
         # ── Read Parameters ────────────────────────────────────
         self.base_frame = self.get_parameter('base_frame').value
@@ -75,11 +76,11 @@ class PickAndPlaceNode(Node):
         gripper_topic = self.get_parameter('gripper_topic').value
 
         self.dropoffs = {
+            'default': self.get_parameter('dropoff_default').value,
             'red':     self.get_parameter('dropoff_red').value,
             'blue':    self.get_parameter('dropoff_blue').value,
             'green':   self.get_parameter('dropoff_green').value,
             'yellow':  self.get_parameter('dropoff_yellow').value,
-            'default': self.get_parameter('dropoff_default').value,
         }
 
         # ── Gripper Setup ──────────────────────────────────────
@@ -96,7 +97,10 @@ class PickAndPlaceNode(Node):
 
         # ── Trigger Subscriber ────────────────────────────
         self.start_triggered = False
-        self.trigger_sub = self.create_subscription(Empty, '/scan', self.trigger_callback, 10)
+        self.stop_triggered = False
+
+        self.trigger_sub = self.create_subscription(Empty, '/pick_and_place/scan', self.trigger_callback, 10)
+        self.stop_sub = self.create_subscription(Empty, '/pick_and_place/stop', self.stop_callback, 10)
 
         # ── Initialized message with all parameters for easy debugging ──
         self.get_logger().info("PickAndPlaceNode initialized.")
@@ -138,9 +142,8 @@ class PickAndPlaceNode(Node):
         self.get_logger().info("Calling /detect_bricks service...")
         future = self.detect_client.call_async(DetectBricks.Request())
 
-        # Spin executor while waiting (non-blocking wait pattern)
         while rclpy.ok() and not future.done():
-            executor.spin_once(timeout_sec=0.1)
+            time.sleep(0.1)
 
         result = future.result()
         if result is None:
@@ -155,8 +158,12 @@ class PickAndPlaceNode(Node):
 
     # ── Trigger Callback ──────────────────────────────────
     def trigger_callback(self, msg):
-        self.get_logger().info("Scan trigger received! Waking up from standby...")
+        self.get_logger().info("▶️  Scan trigger received! Waking up from standby...")
         self.start_triggered = True
+    
+    def stop_callback(self, msg):
+        self.get_logger().info("🛑 SOFT STOP trigger received! Will abort batch.")
+        self.stop_triggered = True
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -230,16 +237,18 @@ def main(args=None):
     executor = MultiThreadedExecutor()
     executor.add_node(node)
 
+    # ── Background thread for ROS callbacks
+    spin_thread = threading.Thread(target=executor.spin, daemon=True)
+    spin_thread.start()
+
     ur5e_arm = ur5e.get_planning_component(node.planning_group)
     tcp_link = node.tcp_link
 
-    # ── 3. Gripper orientation: TCP pointing straight down ────
-    q_down = quaternion_from_euler(math.pi, 0.0, 0.0)
-
-    # ── 4. Helper: Create a PoseStamped with downward orientation ──
-    def make_pose(x, y, z):
+    # ── 3. Helper: Create a PoseStamped with downward orientation ──
+    def make_pose(x, y, z, yaw=0.0):
         pose = PoseStamped()
         pose.header.frame_id = node.base_frame
+        q_down = quaternion_from_euler(math.pi, 0.0, yaw) # Gripper orientation: TCP pointing down + optional yaw
         pose.pose.orientation.x = q_down[0]
         pose.pose.orientation.y = q_down[1]
         pose.pose.orientation.z = q_down[2]
@@ -250,9 +259,7 @@ def main(args=None):
         return pose
 
     # ── 5. Initial homing ──────────────────────────────────────
-    logger.info("=" * 60)
-    logger.info("  Initializing: Gripper OFF, moving to 'ready' pose")
-    logger.info("=" * 60)
+    logger.info("Initializing: Gripper OFF, moving to 'ready' pose")
     node.set_gripper(False)
     time.sleep(1.0)
     plan_and_execute(ur5e, ur5e_arm, logger, "ready", tcp_link)
@@ -265,17 +272,25 @@ def main(args=None):
             # ─────────────────────────────────────────────────
             #  MANUELLER TRIGGER (Standby Loop)
             # ─────────────────────────────────────────────────
-            logger.info("=" * 60)
-            logger.info("  🛑 STANDBY: Waiting for '/scan' trigger.")
-            logger.info("  👉 Place bricks and pub to /scan:")
-            logger.info("  ros2 topic pub --once /scan std_msgs/msg/Empty")
-            logger.info("=" * 60)
+            logger.info(
+                "Status:\n" +
+                "="*60 + "\n" +
+                "⏸️  STANDBY: Waiting for SCAN trigger.\n" +
+                "👉 Place bricks and pub to /pick_and_place/scan:\n" +
+                "ros2 topic pub --once /pick_and_place/scan std_msgs/msg/Empty\n\n" +
+                "To manually STOP the Pick and Place process\n" +
+                "and return to STANDBY, pub to /pick_and_place/stop:\n" +
+                "ros2 topic pub --once /pick_and_place/stop std_msgs/msg/Empty\n" +
+                "="*60
+            )
 
-            node.start_triggered = False # Reset für den aktuellen Zyklus
+            # Reset trigger
+            node.start_triggered = False
+            node.stop_triggered = False
             
             # Warten, bis der Trigger via Topic kommt
             while rclpy.ok() and not node.start_triggered:
-                executor.spin_once(timeout_sec=0.1)
+                time.sleep(0.1)
 
             if not rclpy.ok():
                 break # Falls du mit Strg+C abprichst, während er wartet
@@ -284,116 +299,167 @@ def main(args=None):
             #  PHASE 0: SCAN (Nur noch 1 Call pro Tisch!)
             # ─────────────────────────────────────────────────
             logger.info("=" * 60)
-            logger.info("  PHASE 0: Scanning table via perception service...")
+            logger.info("🟢 PHASE 0: Scanning table via perception service...")
             logger.info("=" * 60)
 
             bricks = node.detect_bricks(executor)
             
             if not bricks:
-                logger.warn("  No bricks detected! Returning to standby.")
+                logger.warn("No bricks detected! Returning to standby.")
                 continue # jump back to start of while loop and wait for next trigger
 
             # Sortiere die GANZE Liste einmalig (nächste Steine zuerst)
             bricks_sorted = sorted(bricks, key=lambda b: b.camera_distance_mm)
-            logger.info(f"  Detected {len(bricks_sorted)} brick(s). Starting Batch Processing!")
+            logger.info(f"Detected {len(bricks_sorted)} brick(s). Starting Batch Processing!")
 
             # ─────────────────────────────────────────────────
             #  NEU: BATCH-SCHLEIFE über alle gefundenen Steine
             # ─────────────────────────────────────────────────
             for i, brick in enumerate(bricks_sorted):
-                if not rclpy.ok():
-                    break # Abbrechen, wenn ROS beendet wird
+
+                # NEU: Die Helferfunktion für den sofortigen Abbruch
+                def check_abort():
+                    if node.stop_triggered:
+                        raise RuntimeError("STOP trigger received by operator!")
+
+                # Prüfen, ob vor dem nächsten Stein schon Stop gedrückt wurde
+                if not rclpy.ok() or node.stop_triggered:
+                    logger.warn("⚠️ BATCH ABORTED BY OPERATOR! Skipping remaining bricks.")
+                    break
 
                 color = brick.color.data
                 bx = brick.position.point.x
                 by = brick.position.point.y
                 bz = brick.position.point.z
+                yaw = math.radians(brick.yaw_degrees)
 
                 logger.info("-" * 60)
-                logger.info(f"  BATCH {i+1}/{len(bricks_sorted)} | TARGET: {color.upper()} brick")
-                logger.info(f"    Position : X={bx:.3f}, Y={by:.3f}, Z={bz:.3f}")
+                logger.info(f"BATCH {i+1}/{len(bricks_sorted)} | TARGET: {color.upper()} brick")
+                logger.info(f"Position : X={bx:.3f}, Y={by:.3f}, Z={bz:.3f}")
                 logger.info("-" * 60)
 
                 # Determine drop-off location
                 if color in node.dropoffs:
                     target_xy = node.dropoffs[color]
                 else:
-                    logger.warn(f"  No drop-off for '{color}', using 'default'.")
+                    logger.warn(f"No drop-off for '{color}', using 'default'.")
                     target_xy = node.dropoffs['default']
 
                 # ─────────────────────────────────────────────────
                 #  DEFINE ALL POSES FOR THIS CYCLE
                 # ─────────────────────────────────────────────────
-                pose_hover_pick = make_pose(bx, by, node.hover_height)
-                pose_grasp      = make_pose(bx, by, node.grasp_height)
-                pose_hover_drop = make_pose(target_xy[0], target_xy[1], node.hover_height)
-                pose_drop       = make_pose(target_xy[0], target_xy[1], node.dropoff_height)
+                pose_hover_pick_straight    = make_pose(bx, by, node.hover_height, 0.0)
+                pose_hover_pick_oriented    = make_pose(bx, by, node.hover_height, yaw)
+                pose_grasp                  = make_pose(bx, by, node.grasp_height, yaw)
+                pose_hover_drop             = make_pose(target_xy[0], target_xy[1], node.hover_height, 0.0)
+                pose_drop                   = make_pose(target_xy[0], target_xy[1], node.dropoff_height, 0.0)
 
                 # ─────────────────────────────────────────────────
                 #  EXECUTE PICK-AND-PLACE CYCLE
                 # ─────────────────────────────────────────────────
+                escape_pose = None
+                
                 try:
-                    # ── PHASE 2: APPROACH ──────────────────────
-                    logger.info("  PHASE 2: Approach (OMPL)")
-                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_hover_pick, tcp_link):
+                    check_abort() # Vor Start prüfen
+
+                    # ── PHASE 1: APPROACH (OMPL) ──────────────────
+                    logger.info("🟢 PHASE 1: Approach (OMPL)")
+                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_hover_pick_straight, tcp_link):
                         raise RuntimeError("Failed to reach hover pose")
 
-                    # ── PHASE 3: DESCEND (Pilz LIN) ───────────
-                    logger.info("  PHASE 3: Descend (LIN)")
+                    check_abort() 
+                    escape_pose = pose_hover_pick_straight
+
+                    # ── PHASE 2: DESCEND (Pilz LIN) ───────────
+                    logger.info("🟢 PHASE 2: Descend (LIN)")
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_grasp, tcp_link):
                         raise RuntimeError("Failed to descend")
 
-                    # ── PHASE 4: GRASP ────────────────────────
+                    check_abort() 
+
+                    # ── PHASE 3: GRASP ────────────────────────
+                    logger.info("🟢 PHASE 3: Grasping")
                     node.set_gripper(True)
                     time.sleep(1.0)
 
-                    # ── PHASE 5: LIFT (Pilz LIN) ──────────────
-                    logger.info("  PHASE 5: Lift (LIN)")
-                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_hover_pick, tcp_link):
+                    check_abort() 
+
+                    # ── PHASE 4: LIFT (Pilz LIN) ──────────────
+                    logger.info("🟢 PHASE 4: Lift (LIN)")
+                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_hover_pick_straight, tcp_link):
                         raise RuntimeError("Failed to lift brick")
 
-                    # ── PHASE 6: TRANSPORT ─────────────────────
-                    logger.info(f"  PHASE 6: Transport to {color} drop-off")
+                    check_abort()
+                    escape_pose = None
+
+                    # ── PHASE 5: TRANSPORT (OMPL) ─────────────────
+                    logger.info(f"🟢 PHASE 5: Transport to {color} drop-off")
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
                         logger.warn("  LIN failed, trying OMPL fallback...")
                         if not plan_and_execute(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
                             raise RuntimeError("Failed to reach drop-off zone")
 
-                    # ── PHASE 7: LOWER TO DROP-OFF (Pilz LIN) ─
-                    logger.info("  PHASE 7: Lowering (LIN)")
-                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_drop, tcp_link):
-                        logger.warn("  Failed to lower completely. Releasing from current height.")
+                    check_abort()
+                    escape_pose = pose_hover_drop
 
-                    # ── PHASE 8: RELEASE ──────────────────────
+                    # ── PHASE 6: LOWER TO DROP-OFF (Pilz LIN) ─
+                    logger.info("🟢 PHASE 6: Lowering (LIN)")
+                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_drop, tcp_link):
+                        logger.warn("Failed to lower completely. Releasing from current height.")
+
+                    check_abort()
+
+                    # ── PHASE 7: RELEASE ──────────────────────
+                    logger.info("🟢 Phase 7: Release")
                     time.sleep(0.5)
                     node.set_gripper(False)
                     time.sleep(1.0)
 
-                    # ── PHASE 9: RETREAT ──────────────────────
-                    logger.info("  PHASE 9: Retreat")
+                    check_abort()
+
+                    # ── PHASE 8: RETREAT ──────────────────────
+                    logger.info("🟢 PHASE 8: Retreat")
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
-                        logger.warn("  Vertical retreat failed. Arm might be in a weird state.")
-                        
-                    # HINWEIS: Wir fahren NICHT mehr nach jedem Stein in die "ready" Pose zurück, 
-                    # sondern bleiben in der Luft und fahren von hier direkt zum nächsten Stein 
-                    # in der Batch-Liste! Das spart massiv Zeit!
+                        logger.warn("Vertical retreat failed. Arm might be in a weird state.")
+                    
+                    escape_pose = None
 
                 except RuntimeError as e:
-                    # ── ERROR RECOVERY FÜR DIESEN EINEN STEIN ──
-                    logger.error(f"  CYCLE ABORTED: {e}")
-                    logger.info("  Releasing gripper and skipping to next brick in batch...")
+                    # ── ERROR RECOVERY & SOFT STOP ──
+                    logger.info(
+                        "Status:"
+                        "\n" + "="*60 + "\n" +
+                        f"🛑 CYCLE ABORTED: {e}\n" +
+                        "Releasing gripper and skipping to next brick in batch...\n" +
+                        "="*60
+                    )
+
                     node.set_gripper(False)
                     time.sleep(0.5)
+
+                    # 1. Den sicheren Rückzug ausführen (falls wir in der Gefahrenzone waren)
+                    if escape_pose is not None:
+                        logger.info("Executing vertical retract & untwist to safe hover height...")
+                        plan_and_execute_cartesian(ur5e, ur5e_arm, logger, escape_pose, tcp_link)
+                    else:
+                        logger.info("Arm is already safe. Skipping retract.")
+                        
+                    # 2. Zurück zur Home-Pose
+                    logger.info("Returning to ready pose...")
                     plan_and_execute(ur5e, ur5e_arm, logger, "ready", tcp_link)
-                    # If a brick was physically displaced, remaining
-                    # positions from this scan may be wrong.
-                    # For now: continue with next brick.
-                    # Alternative: break here and re-scan.
+                    
+                    # 3. WICHTIG: Die Batch-Schleife für die restlichen Steine komplett abbrechen!
+                    break
             
             # --- ENDE DER BATCH SCHLEIFE ---
-            logger.info("=" * 60)
-            logger.info("  BATCH COMPLETE: Returning to ready pose.")
-            logger.info("=" * 60 + "\n")
+            logger.info(
+                "Status:"
+                "\n" + "="*60 + "\n" +
+                "🟢🏁 BATCH COMPLETE: Returning to ready pose.\n" +
+                "="*60
+            )
+
+
             plan_and_execute(ur5e, ur5e_arm, logger, "ready", tcp_link)
 
     except KeyboardInterrupt:
