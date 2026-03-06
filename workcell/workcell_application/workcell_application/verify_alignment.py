@@ -56,7 +56,7 @@ class TriggerNode(Node):
         self.triggered = False
         self.subscription = self.create_subscription(
             Empty,
-            '/next_step',
+            '/verify_alignment/next_step',
             self.trigger_callback,
             10
         )
@@ -126,13 +126,21 @@ def main(args=None):
             "q": q_down
         },
         {
-            "name": "TCP Check: 1cm Z-Height, 60cm Y-Offset",
+            "name": "TCP Check: 1cm Z-Height, 50cm Y-Offset",
             "type": "cartesian",
             "x": 0.0,
             "y": 0.5,
             "z": 0.01,
             "q": q_down
-        }
+        },
+        {
+            "name": "TCP Check: 0cm Z-Height, 50cm Y-Offset",
+            "type": "cartesian",
+            "x": 0.0,
+            "y": 0.5,
+            "z": 0.0,
+            "q": q_down
+        },
         # Add additional test poses here as needed
     ]
 
@@ -157,7 +165,7 @@ def main(args=None):
             # --- THE TRIGGER WAIT LOOP ---
             logger.info("="*50)
             logger.info("⏯  Waiting for manual trigger. Run in a separate terminal:")
-            logger.info("ros2 topic pub --once /next_step std_msgs/msg/Empty")
+            logger.info("ros2 topic pub --once /verify_alignment/next_step std_msgs/msg/Empty")
             logger.info("="*50 + "\n")
             
             trigger_node.triggered = False # Reset the flag
