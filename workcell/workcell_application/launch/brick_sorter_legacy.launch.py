@@ -40,10 +40,10 @@ def generate_launch_description():
     )
 
     # 3. Define the main sorting node
-    brick_sorter_node = Node(
+    pick_and_place_node = Node(
         package="workcell_application",
-        executable="brick_sorter",
-        name="brick_sorter_node",
+        executable="brick_sorter_legacy",
+        name="pick_and_place_node",
         parameters=[
             moveit_config.to_dict(),      # Loads URDF, SRDF, Kinematics, etc.
             sorter_params_file,           # Loads your custom drop-off coordinates
@@ -52,4 +52,4 @@ def generate_launch_description():
         output="screen",
     )
 
-    return LaunchDescription([use_sim_time_arg, brick_sorter_node])
+    return LaunchDescription([use_sim_time_arg, pick_and_place_node])

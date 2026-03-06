@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
 
+'''
+Brick Sorter Node (ROS 2) - Old Version adapted from ROS 1 sorting application (Refactored, Universally Compatible and Improved Version is pick_and_place.py)
+
+This node subscribes to the detected brick information published by the color detection node,
+plans pick-and-place trajectories using MoveItPy, and controls the Webots vacuum gripper via a ROS topic.
+The sorting logic is a direct replication of the original ROS 1 application, with improvements in structure and error handling.
+The node also includes an idle/standby behavior when no bricks are detected for a certain period.
+
+This node is meant to be used with color_detector_old.py and is launched via brick_sorter.launch.py.
+'''
+
 import time
 import copy
 import math
@@ -211,7 +222,7 @@ def main(args=None):
                 # 2. Grasp pose
                 pose_grasp = copy.deepcopy(pose_above)
                 #pose_grasp.pose.position.z = brick.position.point.z + brick_sorter_node.grasp_z_offset # Apply optional Z offset for better grasping
-                pose_grasp.pose.position.z = 0.005 # static low Z to ensure a good grip, since the perception Z can be noisy. Adjust as needed based on your tests!
+                pose_grasp.pose.position.z = 0.0 # static low Z to ensure a good grip, since the perception Z can be noisy. Adjust as needed based on your tests!
 
                 # 3. Hover pose above the drop-off zone
                 pose_drop_hover = copy.deepcopy(pose_above)
