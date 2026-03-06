@@ -32,7 +32,7 @@ def generate_launch_description():
     verify_alignment_node = Node(
         package="workcell_application",
         executable="verify_alignment",
-        name="verify_alignment_moveit",
+        name="verify_alignment_node",
         parameters=[
             moveit_config.to_dict(),
             {"use_sim_time": use_sim_time}
