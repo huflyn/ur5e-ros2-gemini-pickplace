@@ -33,7 +33,7 @@ def generate_launch_description():
     test_node = Node(
         package="workcell_application",
         executable="test_moveit_api",
-        name="moveit_py_test_node",
+        name="test_node",
         parameters=[
             moveit_config.to_dict(),
             {"use_sim_time": use_sim_time}
