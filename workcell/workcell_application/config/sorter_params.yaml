@@ -1,11 +1,13 @@
-brick_sorter_node:
+pick_and_place_node:
   ros__parameters:
     # Z-Heights
     hover_height: 0.25
-    dropoff_height: 0.10
-    grasp_z_offset: 0.0 # Optional: To ensure a secure grasp by going slightly below the detected Z
+    grasp_height: 0.0 # table surface
+    dropoff_height: 0.08
+    grasp_z_offset: 0.0 # UNUSED Optional: To ensure a secure grasp by going slightly below the detected Z
     
     # Drop-off coordinates: [X, Y]
+    dropoff_default: [0.27, 0.250]
     dropoff_yellow: [-0.27, 0.450]
     dropoff_red: [0.27, 0.450]
     dropoff_green: [-0.27, 0.350]
