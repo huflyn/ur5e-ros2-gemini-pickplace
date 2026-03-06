@@ -2,7 +2,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, LogInfo
 from launch.substitutions import LaunchConfiguration
 from moveit_configs_utils import MoveItConfigsBuilder
 
@@ -52,4 +52,18 @@ def generate_launch_description():
         output="screen",
     )
 
-    return LaunchDescription([use_sim_time_arg, pick_and_place_node])
+    # --- Add Terminal Logging Output ---
+    log_launch_info = LogInfo(
+        msg=[
+            "\n" + "="*60 + "\n",
+            'Starting Pick and Place Node \n',
+            '- Simulation Time (use_sim_time): ', use_sim_time, '\n',
+            '\nLaunch Arguments:\n',
+            '- use_sim_time (default: false): Set to true to use Simulation Parameters\n',
+            '\nTo manually stop the Pick and Place process execute in new terminal:\n',
+            'ros2 topic pub --once /stop std_msgs/msg/Empty\n',
+            "="*60
+        ]
+    )
+
+    return LaunchDescription([use_sim_time_arg, log_launch_info, pick_and_place_node])
