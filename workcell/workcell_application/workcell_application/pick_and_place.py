@@ -14,7 +14,6 @@ instead of continuous topic subscription.
 """
 
 import time
-import copy
 import math
 import threading
 import rclpy
@@ -25,8 +24,8 @@ from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Bool, Empty
 from tf_transformations import quaternion_from_euler
 
-from color_detection_msgs.msg import LegoBrick
-from color_detection_msgs.srv import DetectBricks
+from brick_interfaces.msg import LegoBrick
+from brick_interfaces.srv import DetectBricks
 
 from moveit.planning import MoveItPy, PlanRequestParameters
 
@@ -187,7 +186,7 @@ def plan_and_execute(robot, arm, logger, target, tcp_link="pisoftgrip_tcp"):
     if plan_result:
         logger.info("  Executing OMPL trajectory...")
         success = robot.execute(plan_result.trajectory, controllers=[])
-        time.sleep(0.5)  # Let joints settle in physics sim
+        time.sleep(0.1)
         if not success:
             logger.error("  Trajectory execution failed!")
         return success
@@ -264,9 +263,6 @@ def main(args=None):
     time.sleep(1.0)
     plan_and_execute(ur5e, ur5e_arm, logger, "ready", tcp_link)
 
-    # ── 6. Main pick-and-place loop ────────────────────────────
-    idle_logged = False
-
     try:
         while rclpy.ok():
             # ─────────────────────────────────────────────────
@@ -275,6 +271,7 @@ def main(args=None):
             logger.info(
                 "Status:\n" +
                 "="*60 + "\n" +
+                "🟢 PickAndPlaceNode (Client Node) ready.\n" +
                 "⏸️  STANDBY: Waiting for SCAN trigger.\n" +
                 "👉 Place bricks and pub to /pick_and_place/scan:\n" +
                 "ros2 topic pub --once /pick_and_place/scan std_msgs/msg/Empty\n\n" +
@@ -313,14 +310,14 @@ def main(args=None):
             logger.info(f"Detected {len(bricks_sorted)} brick(s). Starting Batch Processing!")
 
             # ─────────────────────────────────────────────────
-            #  NEU: BATCH-SCHLEIFE über alle gefundenen Steine
+            #  BATCH-SCHLEIFE über alle gefundenen Steine
             # ─────────────────────────────────────────────────
-            for i, brick in enumerate(bricks_sorted):
 
-                # NEU: Die Helferfunktion für den sofortigen Abbruch
-                def check_abort():
-                    if node.stop_triggered:
-                        raise RuntimeError("STOP trigger received by operator!")
+            def check_abort():
+                if node.stop_triggered:
+                    raise RuntimeError("STOP trigger received by operator!")
+
+            for i, brick in enumerate(bricks_sorted):
 
                 # Prüfen, ob vor dem nächsten Stein schon Stop gedrückt wurde
                 if not rclpy.ok() or node.stop_triggered:
@@ -348,52 +345,67 @@ def main(args=None):
                 # ─────────────────────────────────────────────────
                 #  DEFINE ALL POSES FOR THIS CYCLE
                 # ─────────────────────────────────────────────────
-                pose_hover_pick_straight    = make_pose(bx, by, node.hover_height, 0.0)
-                pose_hover_pick_oriented    = make_pose(bx, by, node.hover_height, yaw)
-                pose_grasp                  = make_pose(bx, by, node.grasp_height, yaw)
-                pose_hover_drop             = make_pose(target_xy[0], target_xy[1], node.hover_height, 0.0)
-                pose_drop                   = make_pose(target_xy[0], target_xy[1], node.dropoff_height, 0.0)
+                pose_hover_pick_straight = make_pose(bx, by, node.hover_height, 0.0)
+                pose_hover_pick_oriented = make_pose(bx, by, node.hover_height, yaw)
+                pose_grasp               = make_pose(bx, by, node.grasp_height, yaw)
+                pose_hover_drop          = make_pose(target_xy[0], target_xy[1], node.hover_height, 0.0)
+                pose_drop                = make_pose(target_xy[0], target_xy[1], node.dropoff_height, 0.0)
 
                 # ─────────────────────────────────────────────────
                 #  EXECUTE PICK-AND-PLACE CYCLE
                 # ─────────────────────────────────────────────────
                 escape_pose = None
-                
+
                 try:
-                    check_abort() # Vor Start prüfen
+                    check_abort()
 
-                    # ── PHASE 1: APPROACH (OMPL) ──────────────────
-                    logger.info("🟢 PHASE 1: Approach (OMPL)")
-                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_hover_pick_straight, tcp_link):
-                        raise RuntimeError("Failed to reach hover pose")
+                    # ── PHASE 1: APPROACH + ORIENT (OMPL) ─────────
+                    # OMPL plans free-space motion including yaw rotation
+                    # Rotation happens safely at hover height, not near the table
+                    logger.info("🟢 PHASE 1: Approach + orient (OMPL)")
+                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
+                        raise RuntimeError("Failed to reach oriented hover pose")
 
-                    check_abort() 
+                    check_abort()
                     escape_pose = pose_hover_pick_straight
 
-                    # ── PHASE 2: DESCEND (Pilz LIN) ───────────
-                    logger.info("🟢 PHASE 2: Descend (LIN)")
+                    # ── PHASE 2: DESCEND (LIN) ────────────────────
+                    # Pure vertical descent, yaw is already set
+                    logger.info("🟢 PHASE 2: Descend to grasp (LIN)")
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_grasp, tcp_link):
-                        raise RuntimeError("Failed to descend")
+                        raise RuntimeError("Failed to descend to grasp")
 
-                    check_abort() 
+                    check_abort()
 
-                    # ── PHASE 3: GRASP ────────────────────────
+                    # ── PHASE 3: GRASP ────────────────────────────
                     logger.info("🟢 PHASE 3: Grasping")
                     node.set_gripper(True)
                     time.sleep(1.0)
 
-                    check_abort() 
+                    check_abort()
 
-                    # ── PHASE 4: LIFT (Pilz LIN) ──────────────
+                    # ── PHASE 4: LIFT (LIN) ───────────────────────
+                    # Straight up, keeping yaw to avoid rotating with brick near table
                     logger.info("🟢 PHASE 4: Lift (LIN)")
-                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_hover_pick_straight, tcp_link):
+                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
                         raise RuntimeError("Failed to lift brick")
 
                     check_abort()
+
+                    """ # ── PHASE 5: UNTWIST (LIN) ────────────────────
+                    # Rotate back to neutral yaw at safe hover height
+                    if yaw != 0.0:
+                        logger.info("🟢 PHASE 5: Untwist at hover height (LIN)")
+                        if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_hover_pick_straight, tcp_link):
+                            raise RuntimeError("Failed to untwist at hover height")
+                    else:
+                        logger.info("🟢 PHASE 5: Skipped (yaw is 0°)")
+
+                    check_abort() """
                     escape_pose = None
 
-                    # ── PHASE 5: TRANSPORT (OMPL) ─────────────────
-                    logger.info(f"🟢 PHASE 5: Transport to {color} drop-off")
+                    # ── PHASE 6: TRANSPORT ────────────────────────
+                    logger.info(f"🟢 PHASE 6: Transport to {color} drop-off")
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
                         logger.warn("  LIN failed, trying OMPL fallback...")
                         if not plan_and_execute(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
@@ -402,26 +414,25 @@ def main(args=None):
                     check_abort()
                     escape_pose = pose_hover_drop
 
-                    # ── PHASE 6: LOWER TO DROP-OFF (Pilz LIN) ─
-                    logger.info("🟢 PHASE 6: Lowering (LIN)")
+                    # ── PHASE 7: LOWER (LIN) ──────────────────────
+                    logger.info("🟢 PHASE 7: Lower to drop-off (LIN)")
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_drop, tcp_link):
                         logger.warn("Failed to lower completely. Releasing from current height.")
 
                     check_abort()
 
-                    # ── PHASE 7: RELEASE ──────────────────────
-                    logger.info("🟢 Phase 7: Release")
-                    time.sleep(0.5)
+                    # ── PHASE 8: RELEASE ──────────────────────────
+                    logger.info("🟢 PHASE 8: Release")
                     node.set_gripper(False)
-                    time.sleep(1.0)
+                    time.sleep(0.5)
 
                     check_abort()
 
-                    # ── PHASE 8: RETREAT ──────────────────────
-                    logger.info("🟢 PHASE 8: Retreat")
+                    # ── PHASE 9: RETREAT (LIN) ────────────────────
+                    logger.info("🟢 PHASE 9: Retreat (LIN)")
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
-                        logger.warn("Vertical retreat failed. Arm might be in a weird state.")
-                    
+                        logger.warn("Vertical retreat failed.")
+
                     escape_pose = None
 
                 except RuntimeError as e:
