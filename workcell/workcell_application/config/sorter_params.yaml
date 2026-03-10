@@ -8,7 +8,7 @@ pick_and_place_node:
     
     # Drop-off coordinates: [X, Y]
     dropoff_default: [0.27, 0.250]
-    dropoff_yellow: [-0.27, 0.450]
-    dropoff_red: [0.27, 0.450]
-    dropoff_green: [-0.27, 0.350]
-    dropoff_blue: [0.27, 0.350]
+    dropoff_yellow: [-0.27, 0.350]
+    dropoff_red: [0.27, 0.350]
+    dropoff_green: [0.27, 0.450]
+    dropoff_blue: [-0.27, 0.450]
