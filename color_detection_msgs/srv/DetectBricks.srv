@@ -1,6 +1,0 @@
-# Request (leer = "scanne jetzt")
----
-# Response
-bool success
-string error_message
-LegoBrick[] bricks

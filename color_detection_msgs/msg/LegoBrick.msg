@@ -1,5 +1,0 @@
-geometry_msgs/PointStamped position
-std_msgs/String color
-float64 camera_distance_mm
-float64 yaw_degrees
-int32[4] bounding_box_px
