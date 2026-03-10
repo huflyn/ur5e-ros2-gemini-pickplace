@@ -266,7 +266,7 @@ def main(args=None):
     try:
         while rclpy.ok():
             # ─────────────────────────────────────────────────
-            #  MANUELLER TRIGGER (Standby Loop)
+            #  MANUAL TRIGGER (Standby Loop)
             # ─────────────────────────────────────────────────
             logger.info(
                 "Status:\n" +
@@ -285,15 +285,15 @@ def main(args=None):
             node.start_triggered = False
             node.stop_triggered = False
             
-            # Warten, bis der Trigger via Topic kommt
+            # wait for trigger to start the pick-and-place cycle
             while rclpy.ok() and not node.start_triggered:
                 time.sleep(0.1)
 
             if not rclpy.ok():
-                break # Falls du mit Strg+C abprichst, während er wartet
+                break # if shutdown signal received while waiting for trigger, exit main loop
 
             # ─────────────────────────────────────────────────
-            #  PHASE 0: SCAN (Nur noch 1 Call pro Tisch!)
+            #  PHASE 0: SCAN
             # ─────────────────────────────────────────────────
             logger.info("=" * 60)
             logger.info("🟢 PHASE 0: Scanning table via perception service...")
@@ -305,21 +305,22 @@ def main(args=None):
                 logger.warn("No bricks detected! Returning to standby.")
                 continue # jump back to start of while loop and wait for next trigger
 
-            # Sortiere die GANZE Liste einmalig (nächste Steine zuerst)
+            # sort bricks by distance to camera (closest first) to optimize pick order and reduce chances of collisions during transport
             bricks_sorted = sorted(bricks, key=lambda b: b.camera_distance_mm)
             logger.info(f"Detected {len(bricks_sorted)} brick(s). Starting Batch Processing!")
 
             # ─────────────────────────────────────────────────
-            #  BATCH-SCHLEIFE über alle gefundenen Steine
+            #  BATCH PROCESSING LOOP
             # ─────────────────────────────────────────────────
 
+            # Helper function to check for soft stop trigger at multiple points in the cycle
             def check_abort():
                 if node.stop_triggered:
                     raise RuntimeError("STOP trigger received by operator!")
 
             for i, brick in enumerate(bricks_sorted):
 
-                # Prüfen, ob vor dem nächsten Stein schon Stop gedrückt wurde
+                # check for soft stop at the start of each cycle before processing the next brick
                 if not rclpy.ok() or node.stop_triggered:
                     logger.warn("⚠️ BATCH ABORTED BY OPERATOR! Skipping remaining bricks.")
                     break
@@ -448,21 +449,22 @@ def main(args=None):
                     node.set_gripper(False)
                     time.sleep(0.5)
 
-                    # 1. Den sicheren Rückzug ausführen (falls wir in der Gefahrenzone waren)
+                    # 1. Retract: only attempt to retreat if we had a defined escape pose (we were in the middle of the cycle)
                     if escape_pose is not None:
                         logger.info("Executing vertical retract & untwist to safe hover height...")
                         plan_and_execute_cartesian(ur5e, ur5e_arm, logger, escape_pose, tcp_link)
                     else:
                         logger.info("Arm is already safe. Skipping retract.")
                         
-                    # 2. Zurück zur Home-Pose
+                    # 2. Return to ready pose before next cycle
                     logger.info("Returning to ready pose...")
                     plan_and_execute(ur5e, ur5e_arm, logger, "ready", tcp_link)
                     
-                    # 3. WICHTIG: Die Batch-Schleife für die restlichen Steine komplett abbrechen!
+                    # 3. Break out of the batch processing loop to return to standby and wait for next trigger
                     break
             
-            # --- ENDE DER BATCH SCHLEIFE ---
+            # --- End of batch loop ---
+
             logger.info(
                 "Status:"
                 "\n" + "="*60 + "\n" +
