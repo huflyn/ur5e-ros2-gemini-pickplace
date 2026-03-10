@@ -47,7 +47,7 @@ def generate_launch_description():
     log_launch_info = LogInfo(
         msg=[
             "\n" + "="*60 + "\n",
-            'Starting Color Detector Node \n',
+            'Color Detector Node \n',
             '- Simulation Time (use_sim_time): ', use_sim_time, '\n',
             '\nLaunch Arguments:\n',
             '- use_sim_time (default: false): Set to true to use Simulation Parameters\n',
