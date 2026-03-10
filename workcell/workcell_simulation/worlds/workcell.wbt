@@ -5,13 +5,14 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/project
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/Floor.proto"
 EXTERNPROTO "../protos/Klemmbaustein_4x2.proto"
 EXTERNPROTO "../protos/IntelRealSenseD415.proto"
+EXTERNPROTO "../protos/BrickContainer.proto"
 
 WorldInfo {
-  basicTimeStep 10
+  basicTimeStep 20
 }
 Viewpoint {
-  orientation -0.27515027644764123 -0.15557311732643261 0.9487303782087525 4.12632234137466
-  position 2.3638805273565713 2.9993844911747556 2.1946112876761354
+  orientation -0.20247127674459087 -0.1205695077588883 0.9718376283578418 4.190856470579093
+  position 1.4971947932623122 1.8839281410871462 1.2313116755567357
 }
 TexturedBackground {
 }
@@ -25,22 +26,198 @@ DEF scene Pose {
     DEF robot_mount Pose {
       translation 0 -0.26 1.15
       children [
-        Solid {
-          translation -0.2 0.7 0.005
+        BrickContainer {
+          translation 0.27 0.25 0
+          rotation 0 1 0 4.692820414042842e-06
+          name "container_1"
+          color 0.603922 0.6 0.588235
+        }
+        BrickContainer {
+          translation 0.27 0.35 0
+          rotation 0 1 0 4.692820414042842e-06
+          name "container_2"
+        }
+        BrickContainer {
+          translation 0.27 0.45 0
+          rotation 0 1 0 4.692820414042842e-06
+          name "container_3"
+          color 0.14902 0.635294 0.411765
+        }
+        BrickContainer {
+          translation -0.27 0.35 0
+          rotation 0 1 0 4.692820414042842e-06
+          name "container_4"
+          color 0.898039 0.647059 0.0392157
+        }
+        BrickContainer {
+          translation -0.27 0.45 0
+          rotation 0 1 0 4.692820414042842e-06
+          name "container_3(1)"
+          color 0.101961 0.372549 0.705882
+        }
+        DEF plate Pose {
+          translation 0 0.61 -0.0004
           children [
-            Shape {
-              appearance PBRAppearance {
-                metalness 0
-              }
-              geometry DEF plate Box {
-                size 0.1 0.1 0.01
-              }
+            Solid {
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.603922 0.6 0.588235
+                    metalness 0
+                  }
+                  geometry DEF plate Box {
+                    size 0.1 0.1 0.001
+                  }
+                }
+              ]
+              name "plate_1"
+              boundingObject USE plate
+            }
+            Solid {
+              translation 0 0.1 0
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.603922 0.6 0.588235
+                    metalness 0
+                  }
+                  geometry DEF plate Box {
+                    size 0.1 0.1 0.001
+                  }
+                }
+              ]
+              name "plate_2"
+              boundingObject USE plate
+            }
+            Solid {
+              translation -0.1 0 0
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.603922 0.6 0.588235
+                    metalness 0
+                  }
+                  geometry DEF plate Box {
+                    size 0.1 0.1 0.001
+                  }
+                }
+              ]
+              name "plate_3"
+              boundingObject USE plate
+            }
+            Solid {
+              translation -0.1 0.1 0
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.603922 0.6 0.588235
+                    metalness 0
+                  }
+                  geometry DEF plate Box {
+                    size 0.1 0.1 0.001
+                  }
+                }
+              ]
+              name "plate_4"
+              boundingObject USE plate
+            }
+            Solid {
+              translation 0.1 0.1 0
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.603922 0.6 0.588235
+                    metalness 0
+                  }
+                  geometry DEF plate Box {
+                    size 0.1 0.1 0.001
+                  }
+                }
+              ]
+              name "plate_5"
+              boundingObject USE plate
+            }
+            Solid {
+              translation 0.1 0 0
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.603922 0.6 0.588235
+                    metalness 0
+                  }
+                  geometry DEF plate Box {
+                    size 0.1 0.1 0.001
+                  }
+                }
+              ]
+              name "plate_6"
+              boundingObject USE plate
+            }
+            Solid {
+              translation 0.2 0 0
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.964706 0.380392 0.317647
+                    metalness 0
+                  }
+                  geometry DEF plate Box {
+                    size 0.1 0.1 0.001
+                  }
+                }
+              ]
+              name "plate_7"
+              boundingObject USE plate
+            }
+            Solid {
+              translation 0.2 0.1 0
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.384314 0.627451 0.917647
+                    metalness 0
+                  }
+                  geometry DEF plate Box {
+                    size 0.1 0.1 0.001
+                  }
+                }
+              ]
+              name "plate_8"
+              boundingObject USE plate
+            }
+            Solid {
+              translation -0.2 0.1 0
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.341176 0.890196 0.537255
+                    metalness 0
+                  }
+                  geometry DEF plate Box {
+                    size 0.1 0.1 0.001
+                  }
+                }
+              ]
+              name "plate_9"
+              boundingObject USE plate
+            }
+            Solid {
+              translation -0.2 0 0
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.972549 0.894118 0.360784
+                    metalness 0
+                  }
+                  geometry DEF plate Box {
+                    size 0.1 0.1 0.001
+                  }
+                }
+              ]
+              name "plate_10"
+              boundingObject USE plate
             }
           ]
-          name "plate"
-          boundingObject USE plate
-          physics Physics {
-          }
         }
       ]
     }
@@ -696,12 +873,12 @@ DEF robot Pose {
                                                   translation 0 0.1 0
                                                   children [
                                                     DEF tcp Pose {
-                                                      translation 0 0.1907 0
+                                                      translation 0 0.194 0
                                                       children [
                                                         Shape {
                                                           appearance PBRAppearance {
                                                             baseColor 0.752941 0.109804 0.156863
-                                                            transparency 0.6
+                                                            transparency 0.3
                                                             metalness 0
                                                           }
                                                           geometry Box {
@@ -731,7 +908,7 @@ DEF robot Pose {
                                                         Group {
                                                           children [
                                                             DEF epick_end_effector Pose {
-                                                              translation 0 0 0.13
+                                                              translation 0 0 0.1334
                                                               children [
                                                                 DEF pisoftgrip Solid {
                                                                   rotation 1 0 0 3.14159
@@ -750,7 +927,7 @@ DEF robot Pose {
                                                                           }
                                                                         }
                                                                         DEF pisoftgrip_tcp Pose {
-                                                                          translation 0 0 -0.06
+                                                                          translation 0 0 -0.0507
                                                                           children [
                                                                             VacuumGripper {
                                                                               translation 0 0 0.005
@@ -1650,7 +1827,7 @@ DEF bricks Pose {
       translation 0.24 0 0
       children [
         DEF brick_distance Pose {
-          translation 0.7 0 0
+          translation 0.72 0 0
           children [
             Klemmbaustein_4x2 {
               translation 0 -0.03 0
@@ -1701,6 +1878,24 @@ DEF bricks Pose {
             Klemmbaustein_4x2 {
               translation 0 0.03 0
               rotation 0 0 -1 -1.0472053071795866
+            }
+          ]
+        }
+        DEF brick_distance Pose {
+          translation 0.66 0 0
+          rotation 0 0 1 3.14159
+          children [
+            Klemmbaustein_4x2 {
+              translation 0 -0.06 0
+              rotation 0 0 1 2.8798
+              name "Klemmbaustein_4x2(8)"
+              color 0.141176 0.121569 0.192157
+            }
+            Klemmbaustein_4x2 {
+              translation 0 0.0454929 0
+              rotation 0 0 -1 1.8326
+              name "Klemmbaustein_4x2(9)"
+              color 0.964706 0.960784 0.956863
             }
           ]
         }
