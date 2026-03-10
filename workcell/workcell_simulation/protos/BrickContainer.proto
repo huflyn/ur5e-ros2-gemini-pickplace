@@ -1,0 +1,129 @@
+#VRML_SIM R2025a utf8
+# template language: javascript
+# Source: Parametric Webots PROTO using JavaScript for dynamic sizing.
+
+PROTO BrickContainer [
+  field SFVec3f    translation    0 0 0
+  field SFRotation rotation       0 0 1 0
+  field SFString   name           "Brick container"
+  field SFColor    color          1 0 0
+  field SFFloat    mass           1.0
+  
+  # --- Adjustable Dimensions ---
+  field SFVec3f    inner_size     0.06 0.06 0.05  # Inner length(X), width(Y), height(Z)
+  field SFFloat    wall_thickness 0.005            # Thickness of the walls and floor
+]
+{
+  %<
+    // Extract values from the fields
+    let ix = fields.inner_size.value.x;
+    let iy = fields.inner_size.value.y;
+    let iz = fields.inner_size.value.z;
+    let wt = fields.wall_thickness.value;
+    
+    // Calculate outer dimensions
+    let outer_x = ix + 2 * wt;
+    let outer_y = iy + 2 * wt;
+    
+    // Calculate translations to keep everything centered and resting on Z=0
+    let floor_z = wt / 2;
+    let wall_z = wt + (iz / 2);
+    let trans_y = (iy + wt) / 2;
+    let trans_x = (ix + wt) / 2;
+  >%
+  Solid {
+    translation IS translation
+    rotation IS rotation
+    name IS name
+    
+    children [
+      DEF CONTAINER_GROUP Group {
+        children [
+          
+          # ==================================
+          # 1. BOTTOM
+          # ==================================
+          Transform {
+            translation 0 0 %<= floor_z >%
+            children [
+              Shape {
+                appearance DEF CONTAINER_APP PBRAppearance {
+                  baseColor IS color
+                  roughness 0.5
+                  metalness 0.1
+                }
+                geometry Box {
+                  size %<= outer_x >% %<= outer_y >% %<= wt >%
+                }
+              }
+            ]
+          }
+          
+          # ==================================
+          # 2. FRONT WALL (-Y)
+          # ==================================
+          Transform {
+            translation 0 %<= -trans_y >% %<= wall_z >%
+            children [
+              Shape {
+                appearance USE CONTAINER_APP
+                geometry Box {
+                  size %<= outer_x >% %<= wt >% %<= iz >%
+                }
+              }
+            ]
+          }
+          
+          # ==================================
+          # 3. BACK WALL (+Y)
+          # ==================================
+          Transform {
+            translation 0 %<= trans_y >% %<= wall_z >%
+            children [
+              Shape {
+                appearance USE CONTAINER_APP
+                geometry Box {
+                  size %<= outer_x >% %<= wt >% %<= iz >%
+                }
+              }
+            ]
+          }
+          
+          # ==================================
+          # 4. LEFT WALL (-X)
+          # ==================================
+          Transform {
+            translation %<= -trans_x >% 0 %<= wall_z >%
+            children [
+              Shape {
+                appearance USE CONTAINER_APP
+                geometry Box {
+                  size %<= wt >% %<= iy >% %<= iz >%
+                }
+              }
+            ]
+          }
+          
+          # ==================================
+          # 5. RIGHT WALL (+X)
+          # ==================================
+          Transform {
+            translation %<= trans_x >% 0 %<= wall_z >%
+            children [
+              Shape {
+                appearance USE CONTAINER_APP
+                geometry Box {
+                  size %<= wt >% %<= iy >% %<= iz >%
+                }
+              }
+            ]
+          }
+          
+        ]
+      }
+    ]
+    
+    boundingObject USE CONTAINER_GROUP
+    
+  }
+}
