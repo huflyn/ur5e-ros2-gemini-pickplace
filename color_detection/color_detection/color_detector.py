@@ -2,12 +2,13 @@
 
 import cv2
 import numpy as np
+import math
 
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy
 from sensor_msgs.msg import Image, CameraInfo
-from geometry_msgs.msg import PointStamped
+from geometry_msgs.msg import PointStamped, TransformStamped
 from cv_bridge import CvBridge, CvBridgeError
 import message_filters
 
@@ -16,9 +17,54 @@ import tf2_geometry_msgs
 from image_geometry import PinholeCameraModel
 
 # Eigene MSG, SRV und Funktionen
-from color_detection_msgs.msg import LegoBrick
-from color_detection_msgs.srv import DetectBricks
-from color_detection.color_functions import detect_color, process_mask, display_information
+from brick_interfaces.msg import LegoBrick
+from brick_interfaces.srv import DetectBricks
+from color_detection.color_functions import detect_color, process_mask
+
+
+def draw_brick_annotation(cv_image, color_name, xmin, ymin, xmax, ymax, pt_x, pt_y, draw_color=(0, 255, 0)):
+    """
+    Draws a bounding box, center point, and multi-line 3D coordinate text 
+    with high-contrast outlines for a detected brick.
+
+    cv_image: The OpenCV image to draw on (BGR format).
+    color_name: The name of the brick color (e.g., "red").
+    xmin, ymin, xmax, ymax: Pixel coordinates of the bounding box.
+    pt_x, pt_y: The 3D coordinates of the brick (for annotation).
+    draw_color: The color to use for drawing (default is green).
+    """
+    center_x = (xmin + xmax) // 2
+    center_y = (ymin + ymax) // 2
+
+    # --- Draw Bounding Box and Center with Outline ---
+    cv2.rectangle(cv_image, (xmin, ymin), (xmax, ymax), (0, 0, 0), 4)
+    cv2.rectangle(cv_image, (xmin, ymin), (xmax, ymax), draw_color, 1)
+
+    cv2.circle(cv_image, (center_x, center_y), 4, (0, 0, 0), -1)
+    cv2.circle(cv_image, (center_x, center_y), 2, draw_color, -1)
+
+    # --- Text Annotation ---
+    FONT_SCALE_COLOR = 0.45  
+    FONT_SCALE_NUMBER = 0.35
+    LINE_SPACING_PX = 15    
+    
+    label_line1 = color_name 
+    label_line2 = f"({pt_x:.2f}, {pt_y:.2f})" 
+    
+    # Calculate safe Y base position
+    safe_top_margin = int(LINE_SPACING_PX + 25)
+    y_base = max(safe_top_margin, ymin - 6) 
+    
+    pos_line1 = (xmin, y_base - LINE_SPACING_PX) 
+    pos_line2 = (xmin, y_base)                 
+    
+    # Draw Line 1 (Color)
+    cv2.putText(cv_image, label_line1, pos_line1, cv2.FONT_HERSHEY_SIMPLEX, FONT_SCALE_COLOR, (0, 0, 0), 3, cv2.LINE_AA)
+    cv2.putText(cv_image, label_line1, pos_line1, cv2.FONT_HERSHEY_SIMPLEX, FONT_SCALE_COLOR, draw_color, 1, cv2.LINE_AA)
+    
+    # Draw Line 2 (Coordinates)
+    cv2.putText(cv_image, label_line2, pos_line2, cv2.FONT_HERSHEY_SIMPLEX, FONT_SCALE_NUMBER, (0, 0, 0), 3, cv2.LINE_AA)
+    cv2.putText(cv_image, label_line2, pos_line2, cv2.FONT_HERSHEY_SIMPLEX, FONT_SCALE_NUMBER, draw_color, 1, cv2.LINE_AA)
 
 
 class ColorDetectorNode(Node):
@@ -28,6 +74,7 @@ class ColorDetectorNode(Node):
         # --- Variables ---
         self.bridge = CvBridge()
         self.camera_model = PinholeCameraModel()
+        self.camera_info_ready = False
         
         self.latest_color_msg = None
         self.latest_depth_msg = None
@@ -35,6 +82,10 @@ class ColorDetectorNode(Node):
         # --- TF2 Setup ---
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
+
+        # --- TF2 Broadcaster ---
+        # Used to publish the 3D position of the bricks to RViz
+        self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
         # --- Parameters ---
         self.declare_parameter('camera_info_topic', '/camera/camera_info')
@@ -84,30 +135,38 @@ class ColorDetectorNode(Node):
         
         # --- Visualization Publisher ---
         self.latest_annotated_msg = None # Stores the last processed image
-        self.annotated_pub = self.create_publisher(Image, '/color_detector/annotated_image', 10)
-        
-        # Publishes the last image at 1 Hz so RQT always has something to display
-        self.vis_timer = self.create_timer(1.0, self.publish_vis_timer)
+        self.annotated_pub = self.create_publisher(Image, '/annotated_image', 10) # Publisher for the annotated image topic
+        PUB_HZ = 5 # Frequency in Hertz for the visualization updates
+        self.vis_timer = self.create_timer(1/PUB_HZ, self.publish_vis_timer) # Timer that triggers the visualization publishing at the specified rate
 
+        # --- Initialization Message ---
         self.get_logger().info(
             "Status:"
             "\n" + "="*60 + "\n" +
-            "ColorDetectorNode (Service Mode) ready. Waiting for /detect_bricks call...\n" +
+            "🟢 ColorDetectorNode (Service Node) ready.\n" +
+            "👂 Waiting for service call from client...\n" +
             "To test functionality, you can call the service in a new terminal:\n" +
-            "ros2 service call /detect_bricks color_detection_msgs/srv/DetectBricks\n" +
+            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks\n" +
             "="*60
         )
 
+    # --- Callbacks ---
 
     def camera_info_callback(self, data):
+        # Print the log only once when the first message arrives
+        if not self.camera_info_ready:
+            self.get_logger().info("Camera intrinsics received.")
+            self.camera_info_ready = True
+            
+        # Safely feed the data into the model
         self.camera_model.fromCameraInfo(data)
-
-
+            
     def image_sync_callback(self, color_msg, depth_msg):
         """Continually caches the latest synchronized image pair."""
         self.latest_color_msg = color_msg
         self.latest_depth_msg = depth_msg
 
+    # --- Helper Functions ---
 
     def transform_point(self, x, y, z):
         point_in_camera_frame = PointStamped()
@@ -144,17 +203,20 @@ class ColorDetectorNode(Node):
             self.latest_annotated_msg.header.stamp = self.get_clock().now().to_msg()
             self.annotated_pub.publish(self.latest_annotated_msg)
 
-
+    # --- Service Handler ---
     def detect_callback(self, request, response):
-        """Triggered by the orchestrator to perform an on-demand scan."""
-        self.get_logger().info("Service /detect_bricks called (OpenCV mode).")
+        """Triggered by the orchestrator to perform an on-demand scan.
+          ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks
+        """
+        self.get_logger().info("Service /detect_bricks called (Color-Detector).")
 
         if self.latest_color_msg is None or self.latest_depth_msg is None:
             response.success = False
             response.error_message = "No images received yet"
             return response
 
-        if not self.camera_model.fx():
+        # --- Camera Info check ---
+        if not self.camera_info_ready:
             response.success = False
             response.error_message = "Camera info not yet received"
             return response
@@ -217,9 +279,6 @@ class ColorDetectorNode(Node):
                     center_x = x + w // 2
                     center_y = y + h // 2
                     
-                    # Call display_information for visual bounding boxes, but ignore its single-pixel depth return
-                    _ = display_information(cv_color, color, x, y, w, h, center_x, center_y, cv_depth, self.get_logger())
-
                     # --- ROBUST MEDIAN DEPTH CALCULATION ---
                     # Extract a 7x7 pixel region around the center
                     region = cv_depth[
@@ -227,50 +286,100 @@ class ColorDetectorNode(Node):
                         max(0, center_x - 3):min(img_w, center_x + 4)
                     ]
                     
-                    # Filter out invalid depth pixels (zeros)
-                    valid_depths = region[region > 0]
+                    # Filter out 0 and inf/NaN values
+                    valid_depth = region[(region > 0) & np.isfinite(region)]
 
-                    if valid_depths.size > 0:
-                        # Get the median depth (filters out studs and noise)
-                        raw_front_depth = float(np.median(valid_depths))
+                    if valid_depth.size == 0:
+                        self.get_logger().warn(f"No valid depth for {color} brick")
+                        cv2.putText(cv_color, f"{color} (no depth)",
+                                    (x, max(20, y - 10)),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
+                        continue
 
-                        # Apply the offset to reach the physical center of the brick
-                        brick_depth = raw_front_depth + (brick_center_offset * 1000.0)
-                        
-                        ray = self.camera_model.projectPixelTo3dRay((center_x, center_y))
-                        transformed_point = self.transform_point(ray[0] * brick_depth, ray[1] * brick_depth, brick_depth)
-                        
-                        if transformed_point is not None:
-                            if not self.is_duplicate(transformed_point, color, detected_bricks):
-                                
-                                msg = LegoBrick()
-                                msg.position = transformed_point
-                                msg.color.data = color
-                                msg.camera_distance_mm = float(brick_depth)
-                                msg.yaw_degrees = yaw_degrees
-                                msg.bounding_box_px = [x, y, x+w, y+h]
-                                
-                                detected_bricks.append(msg)
+                    # Get the median depth (filters out studs and noise)
+                    raw_front_depth = float(np.median(valid_depth))
 
-                                self.get_logger().info(f"{color:>8s}: X={transformed_point.point.x:.3f}, Y={transformed_point.point.y:.3f}, Z={transformed_point.point.z:.3f}, Aspect Ratio={aspect_ratio:.2f}, Yaw={yaw_degrees:.2f} degrees, Depth={brick_depth:.1f}mm")
+                    # Apply the offset to reach the physical center of the brick
+                    brick_depth = raw_front_depth + (brick_center_offset * 1000.0)
+                    
+                    ray = self.camera_model.projectPixelTo3dRay((center_x, center_y))
+                    transformed_point = self.transform_point(ray[0] * brick_depth, ray[1] * brick_depth, brick_depth)
+                    
+                    if transformed_point is not None:
+                        if not self.is_duplicate(transformed_point, color, detected_bricks):
+                            
+                            msg = LegoBrick()
+                            msg.position = transformed_point
+                            msg.color.data = color
+                            msg.camera_distance_mm = float(brick_depth)
+                            msg.yaw_degrees = yaw_degrees
+                            msg.bounding_box_px = [x, y, x+w, y+h]
+                            
+                            detected_bricks.append(msg)
+
+                            # --- Annotation ---
+                            draw_color = (255, 255, 255) # Weiß für die Annotation
+                            draw_brick_annotation(cv_color, color, x, y, x+w, y+h, transformed_point.point.x, transformed_point.point.y, draw_color)
+
+                            self.get_logger().info(
+                                f"""{color:>8s}: X={transformed_point.point.x:.3f}, Y={transformed_point.point.y:.3f}, Z={transformed_point.point.z:.3f}, 
+                                Aspect Ratio={aspect_ratio:.2f}, Yaw={yaw_degrees:.2f} degrees, Depth={brick_depth:.1f}mm"""
+                            )
 
         # Draw safe zone
-        cv2.rectangle(cv_color, (edge_margin_x, edge_margin_y), (img_w - edge_margin_x, img_h - edge_margin_y), (0, 0, 255), 2)
-
-        # Publish the annotated image for rqt_image_view
-        try:
-            annotated_msg = self.bridge.cv2_to_imgmsg(cv_color, encoding='bgr8')
-            annotated_msg.header = self.latest_color_msg.header
-            self.latest_annotated_msg = annotated_msg
-            self.annotated_pub.publish(annotated_msg)
-        except Exception as e:
-            self.get_logger().error(f"Failed to publish image: {e}")
-
+        cv2.rectangle(cv_color, (edge_margin_x, edge_margin_y), (img_w - edge_margin_x, img_h - edge_margin_y), (0, 0, 0), 4)
+        cv2.rectangle(cv_color, (edge_margin_x, edge_margin_y), (img_w - edge_margin_x, img_h - edge_margin_y), (0, 0, 255), 1)
+        
         # Construct and send response
         response.success = True
         response.error_message = ""
         response.bricks = detected_bricks
+
+        # --- Broadcast TF Frames for RViz ---
+        # Iterate through the final list of detected bricks and send a TF for each
+        brick_counter = {}
+        for brick in detected_bricks:
+            color = brick.color.data
+            
+            # Track counts to create unique TF names (e.g., 'brick_red_0')
+            count = brick_counter.get(color, 0)
+            brick_counter[color] = count + 1
+            
+            t = TransformStamped()
+            t.header.stamp = self.get_clock().now().to_msg()
+            t.header.frame_id = self.robot_base_frame
+            t.child_frame_id = f"brick_{color}_{count}"
+            
+            # Apply 3D position
+            t.transform.translation.x = brick.position.point.x
+            t.transform.translation.y = brick.position.point.y
+            t.transform.translation.z = brick.position.point.z
+            
+            # Convert yaw (degrees) to quaternion for Z-axis rotation
+            yaw_rad = math.radians(brick.yaw_degrees)
+            t.transform.rotation.x = 0.0
+            t.transform.rotation.y = 0.0
+            t.transform.rotation.z = math.sin(yaw_rad / 2.0)
+            t.transform.rotation.w = math.cos(yaw_rad / 2.0)
+            
+            # Publish to the tf tree
+            self.tf_broadcaster.sendTransform(t)
+        # ------------------------------------
         
+        # Publish annotated image as ROS topic
+        try:
+            annotated_msg = self.bridge.cv2_to_imgmsg(cv_color, encoding='bgr8')
+            annotated_msg.header.stamp = self.get_clock().now().to_msg()
+            annotated_msg.header.frame_id = self.camera_frame
+            
+            # --- Save the message for the continuous timer ---
+            self.latest_annotated_msg = annotated_msg
+            
+            self.annotated_pub.publish(annotated_msg)
+            self.get_logger().info("Annotated image published on /annotated_image")
+        except Exception as e:
+            self.get_logger().error(f"Failed to publish annotated image: {e}")
+
         self.get_logger().info(f"Returning {len(detected_bricks)} brick(s). Service call complete.")
 
         self.get_logger().info(
@@ -279,6 +388,7 @@ class ColorDetectorNode(Node):
             "ColorDetectorNode (Service Mode) ready. Waiting for new /detect_bricks call...\n" +
             "="*60
         )
+
         return response
 
 
