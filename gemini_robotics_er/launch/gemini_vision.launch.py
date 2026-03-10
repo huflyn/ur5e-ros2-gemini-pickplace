@@ -1,7 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, LogInfo
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
@@ -26,6 +26,7 @@ def generate_launch_description():
         "'", sim_params, "' if '", use_sim_time, "'.lower() == 'true' else '", real_params, "'"
     ])
 
+    # Node configuration
     gemini_vision_node = Node(
         package='gemini_robotics_er',
         executable='gemini_vision', 
@@ -37,7 +38,20 @@ def generate_launch_description():
         output='screen'
     )
 
+    # --- Add Terminal Logging Output ---
+    log_launch_info = LogInfo(
+        msg=[
+            "\n" + "="*60 + "\n",
+            'Gemini Vision Node \n',
+            '- Simulation Time (use_sim_time): ', use_sim_time, '\n',
+            '\nLaunch Arguments:\n',
+            '- use_sim_time (default: false): Set to "true" if you use Simulation\n',
+            "="*60
+        ]
+    )
+
     return LaunchDescription([
         use_sim_time_arg,
+        log_launch_info,
         gemini_vision_node
     ])
