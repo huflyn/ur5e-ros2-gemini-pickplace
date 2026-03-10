@@ -7,7 +7,8 @@ PROTO BrickContainer [
   field SFRotation rotation       0 0 1 0
   field SFString   name           "Brick container"
   field SFColor    color          1 0 0
-  field SFFloat    mass           1.0
+  field SFFloat    transparency   0.3              # 0.0 = solid, 1.0 = invisible
+  field SFFloat    mass           0.2
   
   # --- Adjustable Dimensions ---
   field SFVec3f    inner_size     0.06 0.06 0.05  # Inner length(X), width(Y), height(Z)
@@ -51,6 +52,7 @@ PROTO BrickContainer [
                   baseColor IS color
                   roughness 0.5
                   metalness 0.1
+                  transparency IS transparency
                 }
                 geometry Box {
                   size %<= outer_x >% %<= outer_y >% %<= wt >%
