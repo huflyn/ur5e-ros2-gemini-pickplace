@@ -1,4 +1,5 @@
-# Request (leer = "scanne jetzt")
+# Request
+string custom_prompt  # Optional: Tell Gemini where to place things (e.g., "Put all bricks on the yellow circle")
 ---
 # Response
 bool success
