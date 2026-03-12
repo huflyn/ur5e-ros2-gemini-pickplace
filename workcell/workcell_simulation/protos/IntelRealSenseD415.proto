@@ -38,7 +38,7 @@ PROTO IntelRealSenseD415 [
     var depthHeight = 720;
     
     const rgbFOV = 1.204;
-    const depthFOV = 1.134;
+    const depthFOV = 1.117;
 
     if (resMode === "1080p") {
       rgbWidth = 1920;
@@ -72,14 +72,14 @@ PROTO IntelRealSenseD415 [
         translation 0 0 0
         name %<= '"' + cameraName + '_depth"' >%
         locked TRUE
-        fieldOfView %<= rgbFOV >%
-        width %<= rgbWidth >%
-        height %<= rgbHeight >%
+        fieldOfView %<= depthFOV >%
+        width %<= depthWidth >%
+        height %<= depthHeight >%
         near IS minRange
         minRange IS minRange      
         maxRange IS maxRange     
-        noise 0.01        
-        resolution -1     
+        noise 0.001        
+        resolution 0.001     
       }
 
       Camera {
@@ -89,8 +89,8 @@ PROTO IntelRealSenseD415 [
         fieldOfView %<= rgbFOV >%
         width %<= rgbWidth >%
         height %<= rgbHeight >%
-        near IS minRange
-        far 10.0
+        near 0.1
+        far 10.0 
         antiAliasing TRUE
         noise 0.01
         focus IS focus
@@ -119,8 +119,6 @@ PROTO IntelRealSenseD415 [
          }
        ]
     }
-    
-    physics IS physics
-    
+
   }
 }
