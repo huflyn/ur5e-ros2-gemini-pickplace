@@ -36,6 +36,7 @@
       <frameName>d415_sim_optical_frame</frameName>
       <alwaysOn>true</alwaysOn>
       <enabled>true</enabled>
+      <updateRate>30</updateRate>
     </ros>
   </device>
   <device reference="realsense_depth" type="RangeFinder">
@@ -45,6 +46,7 @@
       <frameName>d415_sim_optical_frame</frameName>
       <alwaysOn>true</alwaysOn>
       <enabled>true</enabled>
+      <updateRate>30</updateRate>
     </ros>
   </device>
 </webots>
