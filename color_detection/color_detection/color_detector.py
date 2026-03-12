@@ -188,10 +188,14 @@ class ColorDetectorNode(Node):
                 color, xmin, ymin, xmax, ymax, pt_x, pt_y = ann
                 draw_brick_annotation(cv_bgr, color, xmin, ymin, xmax, ymax, pt_x, pt_y, (255, 255, 255))
 
-            # Draw "No Depth" warnings (NEUER BLOCK)
+            # Draw "no depth" error markers with red bounding box
             for ann in self.last_no_depth_annotations:
-                color, x, y = ann
-                cv2.putText(cv_bgr, f"{color} (no depth)", (x, max(20, y - 10)), 
+                color, xmin, ymin, xmax, ymax = ann
+                # Red bounding box
+                cv2.rectangle(cv_bgr, (xmin, ymin), (xmax, ymax), (0, 0, 0), 4)
+                cv2.rectangle(cv_bgr, (xmin, ymin), (xmax, ymax), (0, 0, 255), 1)
+                # Red label
+                cv2.putText(cv_bgr, f"{color} (no depth)", (xmin, max(20, ymin - 10)),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
 
             # Draw safe zone
@@ -322,7 +326,7 @@ class ColorDetectorNode(Node):
 
                     if valid_depth.size == 0:
                         self.get_logger().warn(f"No valid depth for {color} brick")
-                        new_no_depth_anns.append((color, x, y)) # <-- NEU
+                        new_no_depth_anns.append((color, x, y, x+w, y+h))
                         continue
 
                     # Get the median depth (filters out studs and noise)
@@ -391,6 +395,7 @@ class ColorDetectorNode(Node):
         # ------------------------------------
 
         self.get_logger().info(f"Returning {len(detected_bricks)} brick(s). Service call complete.")
+
         # Update live stream array
         self.last_brick_annotations = new_brick_anns
         self.last_no_depth_annotations = new_no_depth_anns
