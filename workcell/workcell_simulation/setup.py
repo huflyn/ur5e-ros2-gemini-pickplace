@@ -8,6 +8,7 @@ data_files.append(('share/' + package_name + '/launch', glob('launch/*launch.py'
 data_files.append(('share/' + package_name + '/worlds', ['worlds/workcell.wbt']))
 data_files.append(('share/' + package_name + '/protos', glob('protos/*')))
 data_files.append(('share/' + package_name + '/meshes', glob('meshes/*')))
+data_files.append(('share/' + package_name + '/textures', glob('textures/*')))
 data_files.append(('share/' + package_name + '/config', glob('config/*')))
 data_files.append(('share/' + package_name, ['package.xml']))
 
