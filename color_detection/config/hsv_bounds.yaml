@@ -7,8 +7,8 @@ color_detector_node:
     hsv_yellow_lower: [16, 128, 117]
     hsv_yellow_upper: [53, 255, 255]
 
-    hsv_green_lower: [40, 83, 0]
-    hsv_green_upper: [80, 255, 255]
+    hsv_green_lower: [28, 143, 0]
+    hsv_green_upper: [73, 255, 255]
 
-    hsv_blue_lower: [32, 81, 175]
+    hsv_blue_lower: [86, 168, 175]
     hsv_blue_upper: [147, 255, 255]
