@@ -6,11 +6,14 @@ import math
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy
+from rclpy.qos import QoSProfile, qos_profile_sensor_data
 from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import PointStamped, TransformStamped
 from cv_bridge import CvBridge, CvBridgeError
-import message_filters
+
+# Multi-threading for service handling without blocking the live annotation stream
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 
 import tf2_ros
 import tf2_geometry_msgs
@@ -66,7 +69,6 @@ def draw_brick_annotation(cv_image, color_name, xmin, ymin, xmax, ymax, pt_x, pt
     cv2.putText(cv_image, label_line2, pos_line2, cv2.FONT_HERSHEY_SIMPLEX, FONT_SCALE_NUMBER, (0, 0, 0), 3, cv2.LINE_AA)
     cv2.putText(cv_image, label_line2, pos_line2, cv2.FONT_HERSHEY_SIMPLEX, FONT_SCALE_NUMBER, draw_color, 1, cv2.LINE_AA)
 
-
 class ColorDetectorNode(Node):
     def __init__(self):
         super().__init__('color_detector_node')
@@ -82,9 +84,6 @@ class ColorDetectorNode(Node):
         # --- TF2 Setup ---
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
-
-        # --- TF2 Broadcaster ---
-        # Used to publish the 3D position of the bricks to RViz
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
         # --- Parameters ---
@@ -117,56 +116,97 @@ class ColorDetectorNode(Node):
             'green': {'lower': np.array(self.get_parameter('hsv_green_lower').value), 'upper': np.array(self.get_parameter('hsv_green_upper').value)},
             'blue': {'lower': np.array(self.get_parameter('hsv_blue_lower').value), 'upper': np.array(self.get_parameter('hsv_blue_upper').value)}
         }
+
+        # --- Edge Margin Parameters ---
+        # Defines the safe zone to ignore artifacts at the image borders
+        self.declare_parameter('edge_margin_x', 100)
+        self.declare_parameter('edge_margin_y', 1)
+        
+        self.edge_margin_x = self.get_parameter('edge_margin_x').value
+        self.edge_margin_y = self.get_parameter('edge_margin_y').value
         
         # --- Subscribers (Synchronized) ---
-        self.create_subscription(CameraInfo, info_topic, self.camera_info_callback, 10)
+        self.create_subscription(CameraInfo, info_topic, self.camera_info_callback, 5)
         
-        self.color_sub = message_filters.Subscriber(self, Image, color_topic)
-        self.depth_sub = message_filters.Subscriber(self, Image, depth_topic)
-        self.ts = message_filters.ApproximateTimeSynchronizer(
-            [self.color_sub, self.depth_sub], queue_size=5, slop=0.1
-        )
-        self.ts.registerCallback(self.image_sync_callback)
+        self.color_sub = self.create_subscription(Image, color_topic, self.color_callback, 5) # 5 = Depth: 5, Reliability: reliable (like TCP, ensures we get every frame for the live stream)
+        self.depth_sub = self.create_subscription(Image, depth_topic, self.depth_callback, 5)
+
+        # Visualization: Timer at 10 Hz for fluid RQT updates
+        self.annotated_pub = self.create_publisher(Image, '/annotated_image', 5) # qos_profile=qos_profile_sensor_data = Depth: 5, Reliability: Best effort (like UDP, allows dropping frames if network/CPU can't keep up)
+        self.vis_timer = self.create_timer(0.1, self.annotate_timer_callback)
+
+        # State variables for continuous live annotation
+        self.last_brick_annotations = []
+        self.last_no_depth_annotations = []
         
-        # --- Service Server ---
+        # --- Service Server (Multithreaded) ---
+        # Isolate the service callback into its own group to prevent blocking the image subscriber
+        self.srv_cb_group = MutuallyExclusiveCallbackGroup()
         self.detect_srv = self.create_service(
-            DetectBricks, '/detect_bricks', self.detect_callback
+            DetectBricks, '/detect_bricks', self.detect_callback,
+            callback_group=self.srv_cb_group
         )
-        
-        # --- Visualization Publisher ---
-        self.latest_annotated_msg = None # Stores the last processed image
-        self.annotated_pub = self.create_publisher(Image, '/annotated_image', 10) # Publisher for the annotated image topic
-        PUB_HZ = 5 # Frequency in Hertz for the visualization updates
-        self.vis_timer = self.create_timer(1/PUB_HZ, self.publish_vis_timer) # Timer that triggers the visualization publishing at the specified rate
 
         # --- Initialization Message ---
         self.get_logger().info(
-            "Status:"
-            "\n" + "="*60 + "\n" +
+            "Status:\n" +
+            "="*60 + "\n" +
             "🟢 ColorDetectorNode (Service Node) ready.\n" +
             "👂 Waiting for service call from client...\n" +
-            "To test functionality, you can call the service in a new terminal:\n" +
-            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks\n" +
+            "To test functionality manually, use:\n" +
+            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{custom_prompt: ''}\"\n" +
+            "(Note: The custom_prompt field is ignored in the deterministic OpenCV mode)\n" +
             "="*60
         )
 
-    # --- Callbacks ---
+    def color_callback(self, msg):
+        """Just cache the latest color image."""
+        self.latest_color_msg = msg
+
+    def depth_callback(self, msg):
+        """Just cache the latest depth image."""
+        self.latest_depth_msg = msg
 
     def camera_info_callback(self, data):
         # Print the log only once when the first message arrives
         if not self.camera_info_ready:
             self.get_logger().info("Camera intrinsics received.")
-            self.camera_info_ready = True
-            
+            self.camera_info_ready = True     
         # Safely feed the data into the model
         self.camera_model.fromCameraInfo(data)
             
-    def image_sync_callback(self, color_msg, depth_msg):
-        """Continually caches the latest synchronized image pair."""
-        self.latest_color_msg = color_msg
-        self.latest_depth_msg = depth_msg
+    def annotate_timer_callback(self):
+        """Runs at 5 Hz — publishes live annotated image for rqt."""
+        if self.latest_color_msg is None:
+            return
 
-    # --- Helper Functions ---
+        try:
+            cv_bgr = self.bridge.imgmsg_to_cv2(self.latest_color_msg, "bgr8").copy() # Copy to avoid modifying the original message's data
+
+            # Draw latest known brick detections
+            for ann in self.last_brick_annotations:
+                color, xmin, ymin, xmax, ymax, pt_x, pt_y = ann
+                draw_brick_annotation(cv_bgr, color, xmin, ymin, xmax, ymax, pt_x, pt_y, (255, 255, 255))
+
+            # Draw "No Depth" warnings (NEUER BLOCK)
+            for ann in self.last_no_depth_annotations:
+                color, x, y = ann
+                cv2.putText(cv_bgr, f"{color} (no depth)", (x, max(20, y - 10)), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
+
+            # Draw safe zone
+            img_h, img_w = cv_bgr.shape[:2]
+            cv2.rectangle(cv_bgr, (self.edge_margin_x, self.edge_margin_y),
+                        (img_w - self.edge_margin_x, img_h - self.edge_margin_y), (0, 0, 0), 4)
+            cv2.rectangle(cv_bgr, (self.edge_margin_x, self.edge_margin_y),
+                        (img_w - self.edge_margin_x, img_h - self.edge_margin_y), (0, 0, 255), 1)
+
+            msg = self.bridge.cv2_to_imgmsg(cv_bgr, encoding="bgr8")
+            msg.header = self.latest_color_msg.header
+            self.annotated_pub.publish(msg)
+
+        except Exception as e:
+            self.get_logger().warn(f"Live annotation failed: {e}", throttle_duration_sec=5.0)
 
     def transform_point(self, x, y, z):
         point_in_camera_frame = PointStamped()
@@ -183,8 +223,7 @@ class ColorDetectorNode(Node):
             self.get_logger().warn(f"TF Error: {e}")
             return None
 
-
-    def is_duplicate(self, new_point, new_color, existing_bricks, position_threshold=0.1):
+    def is_duplicate(self, new_point, new_color, existing_bricks, position_threshold=0.02):
         for brick_msg in existing_bricks:
             if new_color == brick_msg.color.data:
                 dist = np.sqrt(
@@ -196,14 +235,6 @@ class ColorDetectorNode(Node):
                     return True
         return False
 
-    def publish_vis_timer(self):
-        """Continuously publishes the last annotated image for rqt_image_view."""
-        if self.latest_annotated_msg is not None:
-            # Update the timestamp to prevent RQT from ignoring "old" messages
-            self.latest_annotated_msg.header.stamp = self.get_clock().now().to_msg()
-            self.annotated_pub.publish(self.latest_annotated_msg)
-
-    # --- Service Handler ---
     def detect_callback(self, request, response):
         """Triggered by the orchestrator to perform an on-demand scan.
           ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks
@@ -211,12 +242,13 @@ class ColorDetectorNode(Node):
         self.get_logger().info("Service /detect_bricks called (Color-Detector).")
 
         if self.latest_color_msg is None or self.latest_depth_msg is None:
+            self.get_logger().error("⚠️ NO IMAGES RECEIVED! Make sure Webots is publishing BOTH color and depth topics.")
             response.success = False
             response.error_message = "No images received yet"
             return response
 
-        # --- Camera Info check ---
         if not self.camera_info_ready:
+            self.get_logger().error("⚠️ NO CAMERA INFO! Waiting for /camera_info topic.")
             response.success = False
             response.error_message = "Camera info not yet received"
             return response
@@ -232,6 +264,7 @@ class ColorDetectorNode(Node):
                 cv_depth = self.bridge.imgmsg_to_cv2(self.latest_depth_msg, desired_encoding="16UC1")
                 
         except CvBridgeError as e:
+            self.get_logger().error(f"⚠️ CV Bridge Error: {e}")
             response.success = False
             response.error_message = f"CV Bridge Error: {e}"
             return response
@@ -239,14 +272,12 @@ class ColorDetectorNode(Node):
         hsv = cv2.cvtColor(cv_color, cv2.COLOR_BGR2HSV)
         colors = ['green', 'yellow', 'red', 'blue']
         img_h, img_w = cv_color.shape[:2]
-
-        # Define a safe margin to avoid edge artifacts (tunable based on your setup)
-        edge_margin_x = 260
-        edge_margin_y = 1
         
         # Add brick width offset to ensure we target the center of the brick rather than the front face
         brick_center_offset = self.get_parameter('brick_center_offset').value
         detected_bricks = []
+        new_brick_anns = []
+        new_no_depth_anns = []
 
         # Find bricks using HSV masks
         for color in colors:
@@ -272,18 +303,18 @@ class ColorDetectorNode(Node):
                         yaw_degrees = 0.0 # Fallback for invalid detections
 
                     # Skip contours that are too close to the edges to avoid false detections
-                    if (x < edge_margin_x or y < edge_margin_y or 
-                        x + w > img_w - edge_margin_x or y + h > img_h - edge_margin_y):
+                    if (x < self.edge_margin_x or y < self.edge_margin_y or 
+                        x + w > img_w - self.edge_margin_x or y + h > img_h - self.edge_margin_y):
                         continue
 
                     center_x = x + w // 2
                     center_y = y + h // 2
                     
                     # --- ROBUST MEDIAN DEPTH CALCULATION ---
-                    # Extract a 7x7 pixel region around the center
+                    # Extract a x pixel region around the center
                     region = cv_depth[
-                        max(0, center_y - 3):min(img_h, center_y + 4),
-                        max(0, center_x - 3):min(img_w, center_x + 4)
+                        max(0, center_y - 5):min(img_h, center_y + 6),
+                        max(0, center_x - 5):min(img_w, center_x + 6)
                     ]
                     
                     # Filter out 0 and inf/NaN values
@@ -291,9 +322,7 @@ class ColorDetectorNode(Node):
 
                     if valid_depth.size == 0:
                         self.get_logger().warn(f"No valid depth for {color} brick")
-                        cv2.putText(cv_color, f"{color} (no depth)",
-                                    (x, max(20, y - 10)),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
+                        new_no_depth_anns.append((color, x, y)) # <-- NEU
                         continue
 
                     # Get the median depth (filters out studs and noise)
@@ -318,17 +347,12 @@ class ColorDetectorNode(Node):
                             detected_bricks.append(msg)
 
                             # --- Annotation ---
-                            draw_color = (255, 255, 255) # Weiß für die Annotation
-                            draw_brick_annotation(cv_color, color, x, y, x+w, y+h, transformed_point.point.x, transformed_point.point.y, draw_color)
+                            new_brick_anns.append((color, x, y, x+w, y+h, transformed_point.point.x, transformed_point.point.y))
 
                             self.get_logger().info(
-                                f"""{color:>8s}: X={transformed_point.point.x:.3f}, Y={transformed_point.point.y:.3f}, Z={transformed_point.point.z:.3f}, 
-                                Aspect Ratio={aspect_ratio:.2f}, Yaw={yaw_degrees:.2f} degrees, Depth={brick_depth:.1f}mm"""
+                                f"{color:>8s}: X={transformed_point.point.x:.3f}, Y={transformed_point.point.y:.3f}, Z={transformed_point.point.z:.3f}, " + 
+                                f"Aspect Ratio={aspect_ratio:.2f}, Yaw={yaw_degrees:.2f} degrees, Depth={brick_depth:.1f}mm"
                             )
-
-        # Draw safe zone
-        cv2.rectangle(cv_color, (edge_margin_x, edge_margin_y), (img_w - edge_margin_x, img_h - edge_margin_y), (0, 0, 0), 4)
-        cv2.rectangle(cv_color, (edge_margin_x, edge_margin_y), (img_w - edge_margin_x, img_h - edge_margin_y), (0, 0, 255), 1)
         
         # Construct and send response
         response.success = True
@@ -365,27 +389,17 @@ class ColorDetectorNode(Node):
             # Publish to the tf tree
             self.tf_broadcaster.sendTransform(t)
         # ------------------------------------
-        
-        # Publish annotated image as ROS topic
-        try:
-            annotated_msg = self.bridge.cv2_to_imgmsg(cv_color, encoding='bgr8')
-            annotated_msg.header.stamp = self.get_clock().now().to_msg()
-            annotated_msg.header.frame_id = self.camera_frame
-            
-            # --- Save the message for the continuous timer ---
-            self.latest_annotated_msg = annotated_msg
-            
-            self.annotated_pub.publish(annotated_msg)
-            self.get_logger().info("Annotated image published on /annotated_image")
-        except Exception as e:
-            self.get_logger().error(f"Failed to publish annotated image: {e}")
 
         self.get_logger().info(f"Returning {len(detected_bricks)} brick(s). Service call complete.")
+        # Update live stream array
+        self.last_brick_annotations = new_brick_anns
+        self.last_no_depth_annotations = new_no_depth_anns
 
         self.get_logger().info(
             "Status:"
             "\n" + "="*60 + "\n" +
-            "ColorDetectorNode (Service Mode) ready. Waiting for new /detect_bricks call...\n" +
+            "🟢 ColorDetectorNode (Service Mode) ready.\n" +
+            "👂 Waiting for service call from client...\n" +
             "="*60
         )
 
@@ -395,8 +409,13 @@ class ColorDetectorNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = ColorDetectorNode()
+    
+    # Use MultiThreadedExecutor instead of standard spin to handle concurrent callbacks
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+    
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:
