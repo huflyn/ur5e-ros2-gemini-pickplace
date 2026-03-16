@@ -3,572 +3,444 @@
 import os
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile
 import cv2
 import numpy as np
 from cv_bridge import CvBridge
-import math
+import textwrap
+import time
+import io
+import random
 
-from sensor_msgs.msg import Image, CameraInfo
-from geometry_msgs.msg import PointStamped, TransformStamped
-from tf2_ros import Buffer, TransformListener, TransformBroadcaster
-from tf2_geometry_msgs import do_transform_point
-from image_geometry import PinholeCameraModel
-
-# For multi-threaded execution
-from rclpy.executors import MultiThreadedExecutor
-from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
-
-# Messages & Services
-from brick_interfaces.msg import LegoBrick
+from sensor_msgs.msg import Image
 from brick_interfaces.srv import DetectBricks
 
-# Gemini API
 from google import genai
 from google.genai import types
 from PIL import Image as PILImage
+from PIL import ImageColor
 
-# for structured output
-import json
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
-
-def draw_brick_annotation(cv_image, color_name, xmin, ymin, xmax, ymax, pt_x, pt_y, draw_color=(0, 255, 0)):
-    """
-    Draws a bounding box, center point, and multi-line 3D coordinate text 
-    with high-contrast outlines for a detected brick.
-    
-    cv_image: The OpenCV image to draw on (BGR format).
-    color_name: The name of the brick color (e.g., "red").
-    xmin, ymin, xmax, ymax: Pixel coordinates of the bounding box.
-    pt_x, pt_y: The 3D coordinates of the brick (for annotation).
-    draw_color: The color to use for drawing (default is green).
-    """
-    center_x = (xmin + xmax) // 2
-    center_y = (ymin + ymax) // 2
-
-    # --- Draw Bounding Box and Center with Outline ---
-    cv2.rectangle(cv_image, (xmin, ymin), (xmax, ymax), (0, 0, 0), 4)
-    cv2.rectangle(cv_image, (xmin, ymin), (xmax, ymax), draw_color, 1)
-
-    cv2.circle(cv_image, (center_x, center_y), 4, (0, 0, 0), -1)
-    cv2.circle(cv_image, (center_x, center_y), 2, draw_color, -1)
-
-    # --- Text Annotation ---
-    FONT_SCALE_COLOR = 0.45  
-    FONT_SCALE_NUMBER = 0.35
-    LINE_SPACING_PX = 15    
-    
-    label_line1 = color_name 
-    label_line2 = f"({pt_x:.2f}, {pt_y:.2f})" 
-    
-    # Calculate safe Y base position
-    safe_top_margin = int(LINE_SPACING_PX + 25)
-    y_base = max(safe_top_margin, ymin - 6) 
-    
-    pos_line1 = (xmin, y_base - LINE_SPACING_PX) 
-    pos_line2 = (xmin, y_base)                 
-    
-    # Draw Line 1 (Color)
-    cv2.putText(cv_image, label_line1, pos_line1, cv2.FONT_HERSHEY_SIMPLEX, FONT_SCALE_COLOR, (0, 0, 0), 3, cv2.LINE_AA)
-    cv2.putText(cv_image, label_line1, pos_line1, cv2.FONT_HERSHEY_SIMPLEX, FONT_SCALE_COLOR, draw_color, 1, cv2.LINE_AA)
-    
-    # Draw Line 2 (Coordinates)
-    cv2.putText(cv_image, label_line2, pos_line2, cv2.FONT_HERSHEY_SIMPLEX, FONT_SCALE_NUMBER, (0, 0, 0), 3, cv2.LINE_AA)
-    cv2.putText(cv_image, label_line2, pos_line2, cv2.FONT_HERSHEY_SIMPLEX, FONT_SCALE_NUMBER, draw_color, 1, cv2.LINE_AA)
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from threading import Lock
 
 
-# ── Pydantic Models for Gemini Structured Output ───────────────────────
+# ──────────────────────────────────────────────
+#  Pydantic Models for Gemini Response 
+# ──────────────────────────────────────────────
+
 class BrickDetection(BaseModel):
-    color: str = Field(description="Brick color, e.g. 'red', 'blue', 'green'")
+    label: str = Field(description="Brick color")
     box_2d: List[int] = Field(description="[ymin, xmin, ymax, xmax] normalized 0-1000")
-    dropoff_point: Optional[List[int]] = Field(default=None, description="Optional: [y, x] normalized 0-1000 center coordinates for the requested drop-off location based on the user prompt.")
+    custom_dropoff: bool = Field(
+        default=False, 
+        description="True ONLY if the user explicitly specified a custom drop-off location or target for this brick. Otherwise False."
+    )
+    dropoff_point_2d: Optional[List[int]] = Field(
+        default=None, 
+        description="[y, x] normalized 0-1000. Use ONLY if the custom drop-off is a visual feature visible in the image."
+    )
+    dropoff_coords_m: Optional[List[float]] = Field(
+        default=None, 
+        description="[x, y] coordinates in meters. Use ONLY if the user explicitly provided numerical metric coordinates in the prompt."
+    )
 
 class DetectionResult(BaseModel):
     bricks: List[BrickDetection]
+
+SYSTEM_PROMPT = textwrap.dedent("""\
+    You are a vision system for a robotic pick-and-place task.
+    Your job is to analyze the image, detect Lego bricks, and determine their bounding boxes, colors, and potential drop-off locations based on user instructions.
+
+    Return a JSON list matching this exact schema:
+    {
+      "bricks": [
+        {
+          "label": "<color>",
+          "box_2d": [ymin, xmin, ymax, xmax],
+          "custom_dropoff": boolean,
+          "dropoff_point_2d": [y, x] | null,
+          "dropoff_coords_m": [x, y] | null
+        }
+      ]
+    }
+
+    JSON Field Instructions:
+    1. label: Simple colors only ("red", "blue", "green"). Do not use modifiers like "dark" or "light".
+    2. box_2d: Bounding box of the brick. Normalized integers 0-1000.
+    3. custom_dropoff: Set to true ONLY if the user explicitly specifies a target destination for this brick. Otherwise false.
+    4. dropoff_point_2d: Use ONLY for visual targets (e.g., "put it on the red mat"). Returns the [y, x] center point in normalized integers 0-1000. Null if not applicable.
+    5. dropoff_coords_m: Use ONLY for metric coordinates provided in the text (e.g., "put it at x=0.4, y=0.5"). Returns [x, y] floats in meters. Null if not applicable.
+
+    General Instructions:
+    1. SELECTION: Only return bricks that match the user's instructions. If no instructions are provided, return all bricks.
+    2. SEQUENCE: Order the array logically by pick sequence (e.g., top-most bricks first).
+    3. LIMIT: Maximum 15 objects per image.
+""")
+
+# ──────────────────────────────────────────────
+#  Pure Helper Functions
+# ──────────────────────────────────────────────
+
+def build_prompt(custom_prompt: Optional[str] = None) -> str:
+    """Builds the Gemini prompt."""
+    prompt = textwrap.dedent("""\
+        Detect all Lego bricks in the image.
+    """)
+
+    if custom_prompt:
+        prompt = textwrap.dedent(f"""\
+            {custom_prompt}
+        """)
+
+    return prompt
+
+
+def resize_image(image: PILImage.Image) -> PILImage.Image:
+    """Resize for Gemini API call maintaining aspect ratio using a target width of 800px."""
+    # Target width
+    width_target = 800
+    # Calculate height based on the original aspect ratio
+    height_target = int(width_target * image.size[1] / image.size[0])
+    # Resizing using LANCZOS for high quality
+    resized_img = image.resize((width_target, height_target), PILImage.Resampling.LANCZOS)
+    
+    return resized_img
+
+
+def normalized_to_pixel(coords: List[int], img_w: int, img_h: int) -> tuple:
+    """
+    Converts normalized coordinates (0-1000) to absolute pixel coordinates.
+    Handles both bounding boxes (4 items) and points (2 items).
+    """
+    if len(coords) == 4:
+        # Bounding Box: [ymin, xmin, ymax, xmax]
+        ymin_n, xmin_n, ymax_n, xmax_n = coords
+
+        # Calculate raw pixels
+        y1 = int(ymin_n / 1000.0 * img_h)
+        x1 = int(xmin_n / 1000.0 * img_w)
+        y2 = int(ymax_n / 1000.0 * img_h)
+        x2 = int(xmax_n / 1000.0 * img_w)
+        
+        # Ensure correct order (ymin, xmin, ymax, xmax)
+        return (
+            min(y1, y2),
+            min(x1, x2),
+            max(y1, y2),
+            max(x1, x2)
+        )
+
+    elif len(coords) == 2:
+        # Point: [y, x]
+        y_n, x_n = coords
+        return (
+            int(y_n / 1000.0 * img_h),
+            int(x_n / 1000.0 * img_w)
+        )
+
+    else:
+        raise ValueError(f"Expected 2 or 4 coordinates, got {len(coords)}")
+
+
+def draw_bbox(image, label, ymin, xmin, ymax, xmax, color=(255, 140, 72)):
+    """Draws a bounding box with label on the image."""
+    cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 0, 0), 4)
+    cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 1)
+
+    cx, cy = (xmin + xmax) // 2, (ymin + ymax) // 2
+    cv2.circle(image, (cx, cy), 4, (0, 0, 0), -1)
+    cv2.circle(image, (cx, cy), 2, color, -1)
+
+    pos = (xmin, max(20, ymin - 8))
+    cv2.putText(image, label, pos, cv2.FONT_HERSHEY_SIMPLEX,
+                0.45, (0, 0, 0), 3, cv2.LINE_AA)
+    cv2.putText(image, label, pos, cv2.FONT_HERSHEY_SIMPLEX,
+                0.45, color, 1, cv2.LINE_AA)
+
+
+def draw_point(image, label, y, x, color=(72, 255, 140)):
+    """Draws a target point marker with a label on the image."""
+    # Draw a crosshair marker (black outline, colored inner)
+    cv2.drawMarker(image, (x, y), (0, 0, 0), markerType=cv2.MARKER_CROSS, markerSize=20, thickness=4)
+    cv2.drawMarker(image, (x, y), color, markerType=cv2.MARKER_CROSS, markerSize=20, thickness=2)
+
+    # Draw text label slightly offset from the point
+    pos = (x + 10, y - 10)
+    cv2.putText(image, label, pos, cv2.FONT_HERSHEY_SIMPLEX,
+                0.45, (0, 0, 0), 3, cv2.LINE_AA)
+    cv2.putText(image, label, pos, cv2.FONT_HERSHEY_SIMPLEX,
+                0.45, color, 1, cv2.LINE_AA)
+
+
+def draw_all_annotations(image: np.ndarray, detections: List[BrickDetection],
+                        img_w: int, img_h: int) -> np.ndarray:
+    """Draws all bounding boxes and dropoff points on the image."""
+    for brick in detections:
+        # Generate a random color for this brick's annotations
+        brick_color = get_color_for_label(brick.label)
+
+        # 1. Draw Brick Box
+        ymin, xmin, ymax, xmax = normalized_to_pixel(brick.box_2d, img_w, img_h)
+        draw_bbox(image, brick.label, ymin, xmin, ymax, xmax, color=brick_color)
+
+        # 2. Draw Dropoff Point (optional)
+        if brick.dropoff_point_2d is not None:
+            py, px = normalized_to_pixel(brick.dropoff_point_2d, img_w, img_h)
+            draw_point(image, f"{brick.label} dropoff", py, px, color=brick_color)
+
+    return image
+
+
+BASE_COLORS = [
+    "red", "green", "blue", "yellow", "orange", "pink", "purple", "brown",
+    "gray", "beige", "turquoise", "cyan", "magenta", "lime", "navy",
+    "maroon", "teal", "olive", "coral", "lavender", "violet", "gold", "silver"
+]
+
+ADDITIONAL_COLORS = [
+    colorname for (colorname, colorcode) in ImageColor.colormap.items()
+]
+
+ALL_COLORS = BASE_COLORS + ADDITIONAL_COLORS
+
+def get_color_for_label(label: str) -> tuple:
+    """
+    Attempts to get the actual BGR color for the label (e.g., 'red' -> red box).
+    Falls back to a deterministic, non-flickering random color if the name is unknown.
+    """
+    try:
+        # getrgb returns (R, G, B)
+        r, g, b = ImageColor.getrgb(label.lower().strip())
+        return (b, g, r) # OpenCV needs BGR
+    except ValueError:
+        # Fallback for hallucinated color names (deterministic, no flickering)
+        random.seed(label) 
+        b = random.randint(50, 255)
+        g = random.randint(50, 255)
+        r = random.randint(50, 255)
+        return (b, g, r)
+
+
+# ──────────────────────────────────────────────
+#  ROS2 Node
+# ──────────────────────────────────────────────
 
 class GeminiVisionNode(Node):
     def __init__(self):
         super().__init__('gemini_vision_node')
 
         # --- Parameters ---
+        # camera topic
         self.declare_parameter('color_image_topic', '/camera/color/image_raw')
-        self.declare_parameter('depth_image_topic', '/camera/aligned_depth_to_color/image_raw')
-        self.declare_parameter('camera_info_topic', '/camera/color/camera_info')
-        self.declare_parameter('camera_frame', 'camera_color_optical_frame')
-        self.declare_parameter('robot_base_frame', 'base_link')
-        self.declare_parameter('max_depth_m', 1)
+        # Gemini API parameters
+        self.declare_parameter('gemini_model', 'gemini-robotics-er-1.5-preview')
+        self.declare_parameter('temperature', 0.5)
+        self.declare_parameter('thinking_budget', 0)
 
-        rgb_topic = self.get_parameter('color_image_topic').value
-        depth_topic = self.get_parameter('depth_image_topic').value
-        info_topic = self.get_parameter('camera_info_topic').value
-        self.camera_frame = self.get_parameter('camera_frame').value
-        self.robot_base_frame = self.get_parameter('robot_base_frame').value
-        self.max_depth = self.get_parameter('max_depth_m').value
+        camera_color_image_topic = self.get_parameter('color_image_topic').value
+        self.model_id = self.get_parameter('gemini_model').value
+        self.temperature = self.get_parameter('temperature').value
+        self.thinking_budget = self.get_parameter('thinking_budget').value
 
-        # --- Edge Margin Parameters (Unified with color_detector) ---
-        self.declare_parameter('edge_margin_x', 100)
-        self.declare_parameter('edge_margin_y', 1)
-        self.edge_margin_x = self.get_parameter('edge_margin_x').value
-        self.edge_margin_y = self.get_parameter('edge_margin_y').value
 
-        # --- TF2 Setup ---
-        self.tf_buffer = Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, self)
-        self.tf_broadcaster = TransformBroadcaster(self)
-
-        # --- Gemini API Setup ---
+        # --- Gemini Client ---
         self.api_key = os.environ.get('GEMINI_API_KEY')
         if not self.api_key:
-            self.get_logger().fatal("GEMINI_API_KEY not set!")
+            self.get_logger().fatal("🔴 GEMINI_API_KEY not set!")
             raise RuntimeError("Missing API key")
-
-        self.declare_parameter('gemini_model', 'gemini-robotics-er-1.5-preview')
-        self.model_id = self.get_parameter('gemini_model').value
-
         self.client = genai.Client(api_key=self.api_key)
-        self.get_logger().info(f"Model: {self.model_id}")
+        self.get_logger().info(f"Model: {self.model_id} — ready.")
 
-        # --- Image Sync & Subscribers ---
+        # --- State ---
         self.bridge = CvBridge()
-        self.camera_model = PinholeCameraModel()
-        self.camera_info_ready = False
-        
-        self.latest_color_msg = None
-        self.latest_depth_msg = None
+        self.latest_color_msg: Optional[Image] = None
+        self.last_detections: List[BrickDetection] = []
+        self._detection_lock = Lock() # Thread safety lock
 
-        self.create_subscription(CameraInfo, info_topic, self.camera_info_callback, 5)
-        self.color_sub = self.create_subscription(Image, rgb_topic, self.color_callback, 5)
-        self.depth_sub = self.create_subscription(Image, depth_topic, self.depth_callback, 5)
-
-        # Visualization: Timer at 10 Hz for fluid RQT/RViz updates
+        # --- ROS Interface ---
+        self.create_subscription(Image, camera_color_image_topic, self._color_image_callback, 5)
         self.annotated_pub = self.create_publisher(Image, '/annotated_image', 5)
-        self.vis_timer = self.create_timer(0.1, self.annotate_timer_callback)
-
-        # State variables for continuous live annotation
-        self.last_brick_annotations = []
-        self.last_no_depth_annotations = []
-        self.last_dropoff_annotations = []
+        self.create_timer(0.1, self._annotation_timer_callback) # 10 Hz for visualization
 
         # --- Service Server (Multithreaded) ---
-        self.srv_cb_group = MutuallyExclusiveCallbackGroup()
-        self.detect_srv = self.create_service(
-            DetectBricks, '/detect_bricks', self.detect_callback,
-            callback_group=self.srv_cb_group
-        )
+        srv_cb_group = MutuallyExclusiveCallbackGroup()
+        self.create_service(DetectBricks, '/detect_bricks', self._on_detect_request, callback_group=srv_cb_group)
 
-        # --- Initialization Message ---
         self.get_logger().info(
             "Status:\n" +
             "="*60 + "\n" +
             "🟢 GeminiVisionNode (Service Node) ready.\n" +
-            "👂 Waiting for service call from client...\n" +
+            "👂 Waiting for service call...\n" +
             "To test functionality manually, use:\n" +
             "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{custom_prompt: ''}\"\n" +
             "Or with AI instruction:\n" +
-            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{custom_prompt: 'Find the nearest red brick'}\"\n" +
+            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{custom_prompt: 'Pick the red bricks'}\"\n" +
             "="*60
         )
 
-    # --- Callbacks ---
 
-    def camera_info_callback(self, msg):
-        if not self.camera_info_ready:
-            self.get_logger().info("Camera intrinsics received.")
-            self.camera_info_ready = True
-            
-        self.camera_model.fromCameraInfo(msg)
+    # ── Callbacks ─────────────────────────────
 
-    def color_callback(self, msg):
-        """Just cache the latest color image."""
+    def _color_image_callback(self, msg: Image):
+        """Saves the latest color image for processing."""
         self.latest_color_msg = msg
 
-    def depth_callback(self, msg):
-        """Just cache the latest depth image."""
-        self.latest_depth_msg = msg
-
-    def annotate_timer_callback(self):
-        """Runs at 10 Hz — publishes live annotated image for RViz/rqt."""
+    def _annotation_timer_callback(self):
+        """Annotates the latest image and publishes it for visualization."""
         if self.latest_color_msg is None:
             return
-
         try:
-            cv_bgr = self.bridge.imgmsg_to_cv2(self.latest_color_msg, "bgr8").copy()
-
-            # Draw detected bricks from last service call
-            for ann in self.last_brick_annotations:
-                color, xmin, ymin, xmax, ymax, pt_x, pt_y = ann
-                draw_brick_annotation(cv_bgr, color, xmin, ymin, xmax, ymax, pt_x, pt_y, (255, 140, 72))
-
-            # Draw "no depth" error markers with red bounding box
-            for ann in self.last_no_depth_annotations:
-                color, xmin, ymin, xmax, ymax = ann
-                # Red bounding box
-                cv2.rectangle(cv_bgr, (xmin, ymin), (xmax, ymax), (0, 0, 0), 4)
-                cv2.rectangle(cv_bgr, (xmin, ymin), (xmax, ymax), (0, 0, 255), 1)
-                # Red label
-                cv2.putText(cv_bgr, f"{color} (no depth)", (xmin, max(20, ymin - 10)),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
-
-            # Draw drop-off targets with bounding box
-            for ann in self.last_dropoff_annotations:
-                color, px_x, px_y = ann
-                # Draw a 60x60 marker rectangle centered on the drop point
-                half = 30
-                cv2.rectangle(cv_bgr, (px_x - half, px_y - half), (px_x + half, px_y + half), (0, 0, 0), 4)
-                cv2.rectangle(cv_bgr, (px_x - half, px_y - half), (px_x + half, px_y + half), (255, 140, 72), 1)
-                cv2.circle(cv_bgr, (px_x, px_y), 4, (255, 140, 72), -1)
-                cv2.putText(cv_bgr, f"{color} drop", (px_x + 5, px_y),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 140, 72), 2)
-
-            # Publish
-            msg = self.bridge.cv2_to_imgmsg(cv_bgr, encoding="bgr8")
+            annotated = self._build_annotated_image()
+            msg = self.bridge.cv2_to_imgmsg(annotated, encoding="bgr8")
             msg.header = self.latest_color_msg.header
             self.annotated_pub.publish(msg)
+        except Exception as e:
+            self.get_logger().error(f"🔴 Annotation error: {e}", throttle_duration_sec=5.0)
+
+    def _on_detect_request(self, request, response):
+        """Service-Handler: Triggers Gemini detection and returns results."""
+        self.get_logger().info("Detection triggered.")
+
+        if self.latest_color_msg is None:
+            response.success = False
+            response.message = "🔴 No image available"
+            return response
+
+        try:
+            image = self._prepare_image_for_gemini(self.latest_color_msg)
+            detections = self._call_gemini(image, request.custom_prompt)
+
+            if detections is not None:
+                with self._detection_lock:
+                    self.last_detections = detections
+                response.success = True
+                response.message = f"🏁 Detected {len(detections)} bricks."
+            else:
+                with self._detection_lock:
+                    self.last_detections = []
+                response.success = False
+                response.message = "🔴 Gemini API call failed"
 
         except Exception as e:
-            self.get_logger().warn(f"Live annotation failed: {e}", throttle_duration_sec=5.0)
-
-    # --- Service Handler ---
-
-    def detect_callback(self, request, response):
-        """Triggered by the orchestrator to perform an on-demand scan.
-          ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks
-        """
-        self.get_logger().info("Service /detect_bricks called (Gemini-Vision).")
-        start_time = self.get_clock().now().to_msg().sec
-
-        if self.latest_color_msg is None or self.latest_depth_msg is None:
-            self.get_logger().error("⚠️ NO IMAGES RECEIVED! Make sure Webots is publishing BOTH color and depth topics.")
+            self.get_logger().error(f"🔴 Detection error: {e}")
+            self.last_detections = []
             response.success = False
-            response.error_message = "No image data received yet"
-            return response
+            response.message = str(e)
 
-        if not self.camera_info_ready:
-            self.get_logger().error("⚠️ NO CAMERA INFO! Waiting for /camera_info topic.")
-            response.success = False
-            response.error_message = "No camera_info received yet"
-            return response
-
-        # convert image
-        cv_color = self.bridge.imgmsg_to_cv2(self.latest_color_msg, 'rgb8')
-        pil_img = PILImage.fromarray(cv_color)
-
-        # --- FIX: Apply Gemini Cookbook Resizing ---
-        # Resizing the image to a max width of 800px prevents Gemini's internal 
-        # scaling issues and returns perfectly aligned normalized coordinates.
-        orig_w, orig_h = pil_img.size
-        new_w = 800
-        new_h = int(new_w * orig_h / orig_w)
-        pil_img_resized = pil_img.resize((new_w, new_h), PILImage.Resampling.LANCZOS)
-
-        # Depth identically to color_detector.py (strictly to mm as float)
-        if self.latest_depth_msg.encoding == '32FC1':
-            depth_meters = self.bridge.imgmsg_to_cv2(self.latest_depth_msg, desired_encoding="32FC1")
-            cv_depth = depth_meters * 1000.0
-        else:
-            cv_depth = self.bridge.imgmsg_to_cv2(self.latest_depth_msg, desired_encoding="16UC1")
-
-        # Call Gemini API
-        bricks_data = self._call_gemini(pil_img_resized, request.custom_prompt)
-
-        # If API fails or finds nothing, clear annotations (Timer will draw empty image with safe zone)
-        if bricks_data is None:
-            response.success = False
-            response.error_message = "Gemini API call failed"
-            self.last_brick_annotations = []
-            self.last_no_depth_annotations = []
-            self.last_dropoff_annotations = []
-            return response
-
-        if bricks_data:
-            detected = self._process_detections(bricks_data, cv_color, cv_depth)
-        else:
-            detected = []
-            self.get_logger().info("No bricks detected.")
-            # Clear annotations when no bricks found
-            self.last_brick_annotations = []
-            self.last_no_depth_annotations = []
-            self.last_dropoff_annotations = []
-
-        response.success = True
-        response.error_message = ""
-        response.bricks = detected
-
-        self.get_logger().info(f"Returning {len(detected)} brick(s). Service call complete.")
-        self.get_logger().info(f"Total processing time: {self.get_clock().now().to_msg().sec - start_time} seconds")
+        self.get_logger().info(f"Detection process finished. Success: {response.success}. Message: {response.message}")
 
         self.get_logger().info(
             "Status:\n" + "="*60 + "\n" +
-            "🟢 GeminiVisionNode ready. Waiting for new /detect_bricks call...\n" +
+            "🟢 GeminiVisionNode (Service Node) ready.\n" +
+            "👂 Waiting for service call...\n" +
             "="*60
         )
 
         return response
 
-    # --- Gemini API ---
+    # ── Private Helpers ───────────────────────
 
-    def _call_gemini(self, pil_img, custom_prompt: Optional[str] = None) -> Optional[List[BrickDetection]]:
-        """ Sends the image to Gemini, returns list of BrickDetection objects. """
-        
-        # System Instruction (Outlines the task for Gemini, can be extended with user prompt)
-        base_prompt = (
-            """Detect all Lego Bricks in the image.
-            Return bounding boxes as a JSON array with labels. Never return masks or
-            code fencing. Limit to 25 objects. Include as many objects as you can
-            identify on the table.
-            The format should be as follows:
-            [{"label": "<color>", "box_2d": [ymin, xmin, ymax, xmax]}]
-            normalized to 0-1000. The values in box_2d must only be integers."""
-        )
+    def _prepare_image_for_gemini(self, ros_msg: Image) -> bytes:
+        """ROS Image → resized PIL Image → JPEG Bytes."""
+        # 1. Convert ROS message to OpenCV (RGB)
+        image_rgb = self.bridge.imgmsg_to_cv2(ros_msg, 'rgb8')
 
-        if custom_prompt:
-            base_prompt += (
-                f"\n\n--- USER INSTRUCTION ---\n{custom_prompt}\n\n"
-                "ACT AS A ROBOTIC TASK PLANNER. Follow these rules strictly:\n"
-                "1. SELECTION: ONLY return bricks that match the user's instruction.\n"
-                "2. SEQUENCE: Order the array in the pick sequence.\n"
-                "3. DROP-OFF: If the user specifies a target location, add a 'dropoff_point' field "
-                "with the exact [y, x] normalized 0-1000 center point of the target area."
-            )
+        # 2. Convert NumPy array to PIL
+        pil = PILImage.fromarray(image_rgb)
 
-        self.get_logger().info(f"Prompt: {base_prompt}")
-        
+        # 3. Resize using your helper function
+        image_resized = resize_image(pil)
+
+        # 4. Convert PIL Image to Bytes (JPEG)
+        img_byte_arr = io.BytesIO()
+        # Using high quality JPEG encoding
+        image_resized.save(img_byte_arr, format='JPEG', quality=95)
+
+        # 5. Extract byte data into a distinct variable before returning
+        image_bytes = img_byte_arr.getvalue()
+
+        return image_bytes
+
+
+    def _build_annotated_image(self) -> np.ndarray:
+        """Builds an annotated image by converting the ROS message and calling the drawing helper."""
+        # Convert ROS image to OpenCV BGR
+        image_bgr = self.bridge.imgmsg_to_cv2(self.latest_color_msg, "bgr8").copy()
+        # Get image dimensions needed for normalization
+        img_h, img_w = image_bgr.shape[:2]
+
+        # Safely copy the list while the lock is acquired
+        with self._detection_lock:
+            current_detections = list(self.last_detections)
+
+        # Pass the image, the detections, and the dimensions to the pure helper function
+        image_annotated = draw_all_annotations(image_bgr, current_detections, img_w, img_h)
+
+        return image_annotated
+
+
+    def _call_gemini(self, img_bytes: bytes, custom_prompt: Optional[str] = None) -> Optional[List[BrickDetection]]:
+        """Calls the Gemini API with the image and prompt, returns list of detections."""
+        start = time.time()
+        prompt = build_prompt(custom_prompt)
+        self.get_logger().info(f"Prompt:\n{prompt}")
+
         try:
-            response = self.client.models.generate_content(
+            # Create the image part separately to ensure it's distinct in memory and not optimized away
+            image_part = types.Part.from_bytes(
+                data=img_bytes,
+                mime_type='image/jpeg'
+            )
+            
+            resp = self.client.models.generate_content(
                 model=self.model_id,
-                contents=[base_prompt, pil_img],
+                contents=[prompt, image_part],
                 config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT,
                     response_mime_type="application/json",
                     response_json_schema=DetectionResult.model_json_schema(),
-                    temperature=0.5,
-                    thinking_config=types.ThinkingConfig(include_thoughts=True, thinking_budget=0), # -1 = dynamic thinking (default), 0 = disable thinking, Range: 0 to 24576
+                    temperature=self.temperature,
+                    thinking_config=types.ThinkingConfig(
+                        thinking_budget=self.thinking_budget,
+                        include_thoughts=True
+                    ),
                 ),
             )
 
-            for part in response.candidates[0].content.parts:
-                if not part.text:
-                    continue
-                if part.thought:
-                    self.get_logger().info(
-                        "="*60 + "\n" +
-                        "Thought summary:\n" +
-                        f"{part.text}"
-                    )
-                else:
-                    self.get_logger().info(
-                        "="*60 + "\n" +
-                        "Answer:\n" +
-                        f"{part.text}"
-                    )
+            self._log_gemini_response(resp)
+            self.get_logger().info(
+                f"Processing time: {time.time() - start:.2f}s"
+            )
 
-            # Gemini returns a JSON string that is parsed into DetectionResult
-            detection_result = DetectionResult.model_validate_json(response.text)
-            return detection_result.bricks
+            result = DetectionResult.model_validate_json(resp.text)
+            return result.bricks
 
         except Exception as e:
-            self.get_logger().error(f"Gemini error: {e}")
+            self.get_logger().error(f"🔴 Gemini error: {e}")
             return None
 
-    # --- 2D → 3D Projection ---
 
-    def _process_detections(self, bricks_data, cv_color, cv_depth):
-        img_h, img_w = cv_color.shape[:2]
-
-        results = []
-        new_brick_annotations = []
-        new_no_depth_annotations = []
-        new_dropoff_annotations = []
-        brick_counter = {}
-
-        for brick in bricks_data:
-            color = brick.color.lower()
-            ymin, xmin, ymax, xmax = brick.box_2d
-
-            # Normalized (0-1000) to pixel coordinates
-            px_xmin = int((xmin / 1000.0) * img_w)
-            px_ymin = int((ymin / 1000.0) * img_h)
-            px_xmax = int((xmax / 1000.0) * img_w)
-            px_ymax = int((ymax / 1000.0) * img_h)
-
-            # Ensure coordinates stay within image boundaries
-            px_xmin = np.clip(px_xmin, 0, img_w - 1)
-            px_xmax = np.clip(px_xmax, 0, img_w - 1)
-            px_ymin = np.clip(px_ymin, 0, img_h - 1)
-            px_ymax = np.clip(px_ymax, 0, img_h - 1)
-
-            # Evaluate aspect ratio to determine orientation (yaw)
-            w = px_xmax - px_xmin
-            h = px_ymax - px_ymin
-
-            # Calculate aspect ratio based on horizontal camera perspective
-            aspect_ratio = w / h if h > 0 else 0.0
-
-            # Orientation logic for 4x2 bricks from side-view:
-            if aspect_ratio >= 1.41:
-                yaw_degrees = 0.0 # Brick is horizontal (parallel to camera plane)
-            elif aspect_ratio > 0:
-                yaw_degrees = 30.0 # Brick is vertical (pointing away from camera)
-            else:
-                yaw_degrees = 0.0 # Fallback for invalid_depth detections
-
-            # Center pixel
-            px_cx = np.clip((px_xmin + px_xmax) // 2, 0, img_w - 1)
-            px_cy = np.clip((px_ymin + px_ymax) // 2, 0, img_h - 1)
-
-            # --- ROBUST MEDIAN DEPTH CALCULATION ---
-            # Depth (median over robust 5x5 region to avoid NaN holes)
-            region = cv_depth[
-                max(0, px_cy - 2):min(img_h, px_cy + 3),
-                max(0, px_cx - 2):min(img_w, px_cx + 3)
-            ]
-
-            # Filter out 0 and inf/NaN values
-            valid_depth = region[(region > 0) & np.isfinite(region)]
-
-            if valid_depth.size == 0:
-                self.get_logger().warn(f"No valid_depth depth for {color} brick")
-                new_no_depth_annotations.append((color, px_xmin, px_ymin, px_xmax, px_ymax))
+    def _log_gemini_response(self, resp):
+        """Logs Thoughts and Answer separately."""
+        for part in resp.candidates[0].content.parts:
+            if not part.text:
                 continue
+            tag = "Thought" if part.thought else "Answer"
+            self.get_logger().info(f"\n{'='*60}\n{tag}:\n{part.text}")
 
-            # Already in mm due to new conversion above
-            depth_mm = float(np.median(valid_depth))
-            z = depth_mm / 1000.0 # Convert back to meters for 3D projection
 
-            if z <= 0.03 or z > self.max_depth:
-                self.get_logger().warn(
-                    f"Skipping {color} brick: Depth z={z:.3f} is out of bounds (allowed: 0.03 to {self.max_depth})"
-                )
-                continue
-
-            # Use the PinholeCameraModel to get the 3D ray, then scale by depth (z)
-            ray = self.camera_model.projectPixelTo3dRay((px_cx, px_cy))
-            x = ray[0] * z
-            y = ray[1] * z
-
-            # Point in camera frame
-            pt_cam = PointStamped()
-            pt_cam.header.frame_id = self.camera_frame
-            pt_cam.header.stamp = self.get_clock().now().to_msg()
-            pt_cam.point.x = x
-            pt_cam.point.y = y
-            pt_cam.point.z = z
-
-            # Transform to robot base frame
-            try:
-                tf = self.tf_buffer.lookup_transform(
-                    self.robot_base_frame, self.camera_frame,
-                    rclpy.time.Time(),
-                    rclpy.duration.Duration(seconds=1.0)
-                )
-                pt_base = do_transform_point(pt_cam, tf)
-
-                msg = LegoBrick()
-                msg.color.data = color
-                msg.position = pt_base
-                msg.camera_distance_mm = z * 1000.0
-                msg.yaw_degrees = yaw_degrees
-                msg.bounding_box_px = [px_xmin, px_ymin, px_xmax, px_ymax]
-                msg.has_dynamic_dropoff = False
-
-                # --- Custom Drop-off ---
-                if brick.dropoff_point and len(brick.dropoff_point) == 2:
-                    drop_y_norm, drop_x_norm = brick.dropoff_point
-                    px_drop_x = np.clip(int((drop_x_norm / 1000.0) * img_w), 0, img_w - 1)
-                    px_drop_y = np.clip(int((drop_y_norm / 1000.0) * img_h), 0, img_h - 1)
-
-                    # Get depth for drop-off location 
-                    drop_region = cv_depth[
-                        max(0, px_drop_y - 5):min(img_h, px_drop_y + 6),
-                        max(0, px_drop_x - 5):min(img_w, px_drop_x + 6)
-                    ]
-                    valid_drop_depth = drop_region[(drop_region > 0) & np.isfinite(drop_region)]
-                    
-                    if valid_drop_depth.size > 0:
-                        drop_depth_mm = float(np.median(valid_drop_depth))
-                        drop_z = drop_depth_mm / 1000.0
-                        drop_ray = self.camera_model.projectPixelTo3dRay((px_drop_x, px_drop_y))
-                        # Project to 3D and transform
-                        drop_pt_cam = PointStamped()
-                        drop_pt_cam.header.frame_id = self.camera_frame
-                        drop_pt_cam.header.stamp = self.get_clock().now().to_msg()
-                        drop_pt_cam.point.x = drop_ray[0] * drop_z
-                        drop_pt_cam.point.y = drop_ray[1] * drop_z
-                        drop_pt_cam.point.z = drop_z
-                        
-                        try:
-                            # Transform to base_link
-                            drop_pt_base = do_transform_point(drop_pt_cam, tf)
-                            msg.has_dynamic_dropoff = True
-                            msg.dynamic_dropoff_position = drop_pt_base.point
-                            self.get_logger().info(f"Target custom Drop-off found at X={drop_pt_base.point.x:.3f}, Y={drop_pt_base.point.y:.3f}")
-                            
-                            # Append to live annotation list instead of drawing directly
-                            new_dropoff_annotations.append((color, px_drop_x, px_drop_y))
-
-                        except Exception as e:
-                            self.get_logger().error(f"TF error for custom drop-off: {e}")
-                    else:
-                        self.get_logger().warn(f"No depth for custom drop-off of {color} brick")
-
-                results.append(msg)
-
-                # --------------------------------------------------
-
-                # --- TF Broadcast ---
-                # Get the current count for this color and increment
-                current_count = brick_counter.get(color, 0)
-                brick_counter[color] = current_count + 1
-                
-                # Create a unique child frame ID, e.g., "brick_red_0"
-                child_frame = f"brick_{color}_{current_count}"
-                
-                t = TransformStamped()
-                t.header.stamp = self.get_clock().now().to_msg()
-                t.header.frame_id = self.robot_base_frame  # Usually 'base_link'
-                t.child_frame_id = child_frame
-                
-                # Apply the 3D translation
-                t.transform.translation.x = pt_base.point.x
-                t.transform.translation.y = pt_base.point.y
-                t.transform.translation.z = pt_base.point.z
-                
-                # Convert yaw from degrees to radians, then to a quaternion (Z-axis rotation)
-                yaw_rad = math.radians(yaw_degrees)
-                t.transform.rotation.x = 0.0
-                t.transform.rotation.y = 0.0
-                t.transform.rotation.z = math.sin(yaw_rad / 2.0)
-                t.transform.rotation.w = math.cos(yaw_rad / 2.0)
-                
-                # Publish the transform to the ROS 2 tf tree
-                self.tf_broadcaster.sendTransform(t)
-                # ------------------------------------
-
-                # Append to live annotation list instead of drawing directly
-                new_brick_annotations.append((color, px_xmin, px_ymin, px_xmax, px_ymax, pt_base.point.x, pt_base.point.y))
-
-                self.get_logger().info(f"{color:>8s}: X={pt_base.point.x:.3f} Y={pt_base.point.y:.3f} Z={pt_base.point.z:.3f}")
-
-            except Exception as e:
-                self.get_logger().error(f"TF error: {e}")
-
-        # Update live stream arrays
-        self.last_brick_annotations = new_brick_annotations
-        self.last_no_depth_annotations = new_no_depth_annotations
-        self.last_dropoff_annotations = new_dropoff_annotations
-
-        return results
-
+# ──────────────────────────────────────────────
+#  Main
+# ──────────────────────────────────────────────
 
 def main(args=None):
     rclpy.init(args=args)
     node = GeminiVisionNode()
-
-    # Use MultiThreadedExecutor instead of standard spin to handle concurrent callbacks
     executor = MultiThreadedExecutor()
     executor.add_node(node)
-
     try:
         executor.spin()
     except KeyboardInterrupt:
