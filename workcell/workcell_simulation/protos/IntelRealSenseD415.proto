@@ -72,7 +72,7 @@ PROTO IntelRealSenseD415 [
         translation 0 0 0
         name %<= '"' + cameraName + '_depth"' >%
         locked TRUE
-        fieldOfView %<= depthFOV >%
+        fieldOfView %<= rgbFOV >%
         width %<= depthWidth >%
         height %<= depthHeight >%
         near IS minRange
