@@ -1,7 +1,7 @@
 color_detector_node:
   ros__parameters:
     # --- Camera Topics ---
-    camera_info_topic: '/webots_realsense/depth/image_rect_raw/camera_info'
+    camera_info_topic: '/webots_realsense/color/image_raw/camera_info'
     depth_image_topic: '/webots_realsense/depth/image_rect_raw/image'
     color_image_topic: '/webots_realsense/color/image_raw/image_color'
 
@@ -10,4 +10,3 @@ color_detector_node:
 
     # Target frame for the 3D coordinates
     robot_base_frame: 'ur5e_base_link'
-
