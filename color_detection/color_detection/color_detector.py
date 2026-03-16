@@ -92,7 +92,7 @@ class ColorDetectorNode(Node):
         self.declare_parameter('color_image_topic', '/camera/color/image_raw')
         self.declare_parameter('camera_frame', 'camera_color_optical_frame')
         self.declare_parameter('robot_base_frame', 'base_link')        
-        self.declare_parameter('brick_center_offset', 0.008) # in m. Offset to reach brick center instead of front face
+        self.declare_parameter('brick_center_offset', 0.0) # in m. Offset to reach brick center instead of front face
 
         info_topic = self.get_parameter('camera_info_topic').value
         depth_topic = self.get_parameter('depth_image_topic').value
@@ -248,13 +248,13 @@ class ColorDetectorNode(Node):
         if self.latest_color_msg is None or self.latest_depth_msg is None:
             self.get_logger().error("⚠️ NO IMAGES RECEIVED! Make sure Webots is publishing BOTH color and depth topics.")
             response.success = False
-            response.error_message = "No images received yet"
+            response.message = "No images received yet"
             return response
 
         if not self.camera_info_ready:
             self.get_logger().error("⚠️ NO CAMERA INFO! Waiting for /camera_info topic.")
             response.success = False
-            response.error_message = "Camera info not yet received"
+            response.message = "Camera info not yet received"
             return response
 
         try:
@@ -270,7 +270,7 @@ class ColorDetectorNode(Node):
         except CvBridgeError as e:
             self.get_logger().error(f"⚠️ CV Bridge Error: {e}")
             response.success = False
-            response.error_message = f"CV Bridge Error: {e}"
+            response.message = f"CV Bridge Error: {e}"
             return response
 
         hsv = cv2.cvtColor(cv_color, cv2.COLOR_BGR2HSV)
@@ -360,7 +360,7 @@ class ColorDetectorNode(Node):
         
         # Construct and send response
         response.success = True
-        response.error_message = ""
+        response.message = ""
         response.bricks = detected_bricks
 
         # --- Broadcast TF Frames for RViz ---
