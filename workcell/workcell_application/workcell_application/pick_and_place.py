@@ -21,7 +21,7 @@ from rclpy.node import Node
 from rclpy.logging import get_logger
 from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import Bool, Empty
+from std_msgs.msg import Bool, Empty, String
 from tf_transformations import quaternion_from_euler
 
 from brick_interfaces.msg import LegoBrick
@@ -97,8 +97,9 @@ class PickAndPlaceNode(Node):
         # ── Trigger Subscriber ────────────────────────────
         self.start_triggered = False
         self.stop_triggered = False
+        self.current_prompt = ""  # Stores the dynamic AI prompt
 
-        self.trigger_sub = self.create_subscription(Empty, '/pick_and_place/scan', self.trigger_callback, 10)
+        self.trigger_sub = self.create_subscription(String, '/pick_and_place/scan', self.trigger_callback, 10) 
         self.stop_sub = self.create_subscription(Empty, '/pick_and_place/stop', self.stop_callback, 10)
 
         # ── Initialized message with all parameters for easy debugging ──
@@ -128,18 +129,20 @@ class PickAndPlaceNode(Node):
 
     # ── Vision Service ─────────────────────────────────────────
 
-    def detect_bricks(self, executor) -> list:
+    def detect_bricks(self, executor, prompt: str) -> list:
         """
         Calls /detect_bricks service synchronously.
-        Spins the executor while waiting for the response.
-        Returns a list of LegoBrick messages.
         """
         if not self.detect_client.wait_for_service(timeout_sec=10.0):
             self.get_logger().error("/detect_bricks service not available!")
             return []
 
         self.get_logger().info("Calling /detect_bricks service...")
-        future = self.detect_client.call_async(DetectBricks.Request())
+
+        # Include the current prompt in the service request for Gemini to use in its response
+        req = DetectBricks.Request()
+        req.custom_prompt = prompt
+        future = self.detect_client.call_async(req)
 
         while rclpy.ok() and not future.done():
             time.sleep(0.1)
@@ -157,7 +160,11 @@ class PickAndPlaceNode(Node):
 
     # ── Trigger Callback ──────────────────────────────────
     def trigger_callback(self, msg):
-        self.get_logger().info("▶️  Scan trigger received! Waking up from standby...")
+        self.current_prompt = msg.data # Store the latest prompt for use in custom Gemini instructions
+        if self.current_prompt:
+            self.get_logger().info(f"▶️  Scan trigger with custom prompt received!\nPrompt: '{self.current_prompt}'")
+        else:
+            self.get_logger().info("▶️  Scan trigger received! Waking up from standby...")
         self.start_triggered = True
     
     def stop_callback(self, msg):
@@ -272,12 +279,14 @@ def main(args=None):
                 "Status:\n" +
                 "="*60 + "\n" +
                 "🟢 PickAndPlaceNode (Client Node) ready.\n" +
-                "⏸️  STANDBY: Waiting for SCAN trigger.\n" +
-                "👉 Place bricks and pub to /pick_and_place/scan:\n" +
-                "ros2 topic pub --once /pick_and_place/scan std_msgs/msg/Empty\n\n" +
+                "⏸️  STANDBY: Waiting for SCAN trigger.\n\n" +
+                "👉 Default Mode (distance sorted) - pub to /pick_and_place/scan:\n" +
+                "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: ''}\"\n\n" +
+                "👉 AI Task Planner Mode - add your instructions to the data field:\n" +
+                "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: 'Pick the red brick and place it somewhere safe.'}\"\n\n" +
                 "To manually STOP the Pick and Place process\n" +
                 "and return to STANDBY, pub to /pick_and_place/stop:\n" +
-                "ros2 topic pub --once /pick_and_place/stop std_msgs/msg/Empty\n" +
+                "   ros2 topic pub --once /pick_and_place/stop std_msgs/msg/Empty\n" +
                 "="*60
             )
 
@@ -299,14 +308,17 @@ def main(args=None):
             logger.info("🟢 PHASE 0: Scanning table via perception service...")
             logger.info("=" * 60)
 
-            bricks = node.detect_bricks(executor)
+            # Call the vision service to detect bricks, passing the current prompt for Gemini to use in its response
+            bricks = node.detect_bricks(executor, node.current_prompt)
             
-            if not bricks:
-                logger.warn("No bricks detected! Returning to standby.")
-                continue # jump back to start of while loop and wait for next trigger
-
-            # sort bricks by distance to camera (closest first) to optimize pick order and reduce chances of collisions during transport
-            bricks_sorted = sorted(bricks, key=lambda b: b.camera_distance_mm)
+            # <--- NEU: Die magische Task-Planner Weiche
+            if node.current_prompt:
+                logger.info("🤖 AI Task Planner mode active. Using Gemini's selection and sequence.")
+                bricks_sorted = bricks # Gemini is responsible for both selecting which bricks to pick and the order in which to pick them, based on the custom prompt provided by the user.
+            else:
+                logger.info("⚙️ Default mode active. Sorting all visible bricks by camera distance.")
+                bricks_sorted = sorted(bricks, key=lambda b: b.camera_distance_mm)
+            
             logger.info(f"Detected {len(bricks_sorted)} brick(s). Starting Batch Processing!")
 
             # ─────────────────────────────────────────────────
@@ -337,10 +349,16 @@ def main(args=None):
                 logger.info("-" * 60)
 
                 # Determine drop-off location
-                if color in node.dropoffs:
+                if brick.has_dynamic_dropoff:
+                    # Dynamic drop-off provided by Gemini's vision analysis
+                    target_xy = [brick.dynamic_dropoff_position.x, brick.dynamic_dropoff_position.y]
+                    logger.info(f"  🤖 DYNAMIC AI Drop-off for '{color}': X={target_xy[0]:.3f}, Y={target_xy[1]:.3f}")
+                elif color in node.dropoffs:
+                    # Fallback to default color-coded drop-offs defined in parameters
                     target_xy = node.dropoffs[color]
+                    logger.info(f"  ⚙️ Default Drop-off for '{color}'.")
                 else:
-                    logger.warn(f"No drop-off for '{color}', using 'default'.")
+                    logger.warn(f"  No drop-off for '{color}', using 'default'.")
                     target_xy = node.dropoffs['default']
 
                 # ─────────────────────────────────────────────────
