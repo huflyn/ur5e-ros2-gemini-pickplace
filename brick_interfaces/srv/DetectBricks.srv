@@ -3,5 +3,5 @@ string custom_prompt  # Optional: Tell Gemini where to place things (e.g., "Put 
 ---
 # Response
 bool success
-string error_message
+string message
 LegoBrick[] bricks
