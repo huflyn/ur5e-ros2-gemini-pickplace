@@ -97,8 +97,8 @@ class PickAndPlaceNode(Node):
         # ── Trigger Subscriber ────────────────────────────
         self.start_triggered = False
         self.stop_triggered = False
-        self.current_prompt = ""  # Stores the dynamic AI prompt
-
+        self.current_prompt = "" 
+        
         self.trigger_sub = self.create_subscription(String, '/pick_and_place/scan', self.trigger_callback, 10) 
         self.stop_sub = self.create_subscription(Empty, '/pick_and_place/stop', self.stop_callback, 10)
 
@@ -141,7 +141,7 @@ class PickAndPlaceNode(Node):
 
         # Include the current prompt in the service request for Gemini to use in its response
         req = DetectBricks.Request()
-        req.custom_prompt = prompt
+        req.user_prompt = prompt
         future = self.detect_client.call_async(req)
 
         while rclpy.ok() and not future.done():
@@ -349,10 +349,10 @@ def main(args=None):
                 logger.info("-" * 60)
 
                 # Determine drop-off location
-                if brick.has_dynamic_dropoff:
-                    # Dynamic drop-off provided by Gemini's vision analysis
-                    target_xy = [brick.dynamic_dropoff_position.x, brick.dynamic_dropoff_position.y]
-                    logger.info(f"  🤖 DYNAMIC AI Drop-off for '{color}': X={target_xy[0]:.3f}, Y={target_xy[1]:.3f}")
+                if brick.has_user_dropoff:
+                    # User drop-off provided by Gemini's vision analysis
+                    target_xy = [brick.user_dropoff_position.x, brick.user_dropoff_position.y]
+                    logger.info(f"  🤖 USER-DEFINED Drop-off for '{color}': X={target_xy[0]:.3f}, Y={target_xy[1]:.3f}")
                 elif color in node.dropoffs:
                     # Fallback to default color-coded drop-offs defined in parameters
                     target_xy = node.dropoffs[color]
