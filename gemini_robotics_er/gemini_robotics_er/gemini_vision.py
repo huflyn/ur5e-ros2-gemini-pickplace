@@ -8,6 +8,7 @@ import textwrap
 import time
 import io
 import random
+import math
 
 import rclpy
 from rclpy.node import Node
@@ -18,6 +19,7 @@ from tf2_geometry_msgs import do_transform_point
 from image_geometry import PinholeCameraModel
 from geometry_msgs.msg import PointStamped, TransformStamped
 
+from brick_interfaces.msg import LegoBrick
 from brick_interfaces.srv import DetectBricks
 
 from rclpy.executors import MultiThreadedExecutor
@@ -37,7 +39,7 @@ from typing import List, Optional
 class BrickDetection(BaseModel):
     label: str = Field(description="Brick color")
     box_2d: List[int] = Field(description="[ymin, xmin, ymax, xmax] normalized 0-1000")
-    custom_dropoff: bool = Field(
+    user_dropoff: bool = Field(
         default=False, 
         description="True ONLY if the user explicitly specified a custom drop-off location or target for this brick. Otherwise False."
     )
@@ -49,6 +51,10 @@ class BrickDetection(BaseModel):
         default=None, 
         description="[x, y] coordinates in meters. Use ONLY if the user explicitly provided numerical metric coordinates in the prompt."
     )
+    # The following fields are not part of the Gemini response but will be filled in later for internal use (excluded from JSON schema)
+    position_3d: Optional[List[float]] = Field(default=None, exclude=True)
+    dropoff_3d: Optional[List[float]] = Field(default=None, exclude=True)
+    yaw_degrees: float = Field(default=0.0, exclude=True)
 
 class DetectionResult(BaseModel):
     bricks: List[BrickDetection]
@@ -64,7 +70,7 @@ SYSTEM_PROMPT = textwrap.dedent("""\
         {
           "label": "<color>",
           "box_2d": [ymin, xmin, ymax, xmax],
-          "custom_dropoff": boolean,
+          "user_dropoff": boolean,
           "dropoff_point_2d": [y, x] | null,
           "dropoff_coords_m": [x, y] | null
         }
@@ -72,9 +78,9 @@ SYSTEM_PROMPT = textwrap.dedent("""\
     }
 
     JSON Field Instructions:
-    1. label: Simple colors only ("red", "blue", "green"). Do not use modifiers like "dark" or "light".
+    1. label: Simple colors only ("red", "blue", "green", "black", ...).
     2. box_2d: Bounding box of the brick. Normalized integers 0-1000.
-    3. custom_dropoff: Set to true ONLY if the user explicitly specifies a target destination for this brick. Otherwise false.
+    3. user_dropoff: Set to true ONLY if the user explicitly specifies a target destination for this brick. Otherwise false.
     4. dropoff_point_2d: Use ONLY for visual targets (e.g., "put it on the red mat"). Returns the [y, x] center point in normalized integers 0-1000. Null if not applicable.
     5. dropoff_coords_m: Use ONLY for metric coordinates provided in the text (e.g., "put it at x=0.4, y=0.5"). Returns [x, y] floats in meters. Null if not applicable.
 
@@ -90,13 +96,11 @@ SYSTEM_PROMPT = textwrap.dedent("""\
 def build_prompt(user_prompt: Optional[str] = None) -> str:
     """Builds the Gemini prompt."""
     prompt = textwrap.dedent("""\
-        Detect all Lego bricks in the image.
-    """)
+        Detect all Lego bricks in the image.""")
 
     if user_prompt:
         prompt = textwrap.dedent(f"""\
-            {user_prompt}
-        """)
+            {user_prompt}""")
 
     return prompt
 
@@ -148,8 +152,42 @@ def normalized_to_pixel(coords: List[int], img_w: int, img_h: int) -> tuple:
         raise ValueError(f"Expected 2 or 4 coordinates, got {len(coords)}")
 
 
-def draw_bbox(image, label, ymin, xmin, ymax, xmax, color=(255, 140, 72)):
-    """Draws a bounding box with label on the image."""
+def get_robust_depth(coords_2d: List[int], cv_depth: np.ndarray, img_w: int, img_h: int) -> Optional[float]:
+    """
+    Extracts the median depth from a 5x5 pixel region around the center of the given 2D coordinates.
+    Works for both bounding boxes (4 items) and single points (2 items).
+    Returns depth in millimeters, or None if no valid depth could be found.
+    """
+    if len(coords_2d) == 4:
+        # Bounding Box: calculate center
+        ymin, xmin, ymax, xmax = normalized_to_pixel(coords_2d, img_w, img_h)
+        cx = np.clip((xmin + xmax) // 2, 0, img_w - 1)
+        cy = np.clip((ymin + ymax) // 2, 0, img_h - 1)
+    elif len(coords_2d) == 2:
+        # Single Point
+        cy, cx = normalized_to_pixel(coords_2d, img_w, img_h)
+    else:
+        return None
+
+    # Extract a 5x5 region around the center to avoid NaN/0 holes
+    region = cv_depth[
+        max(0, cy - 5):min(img_h, cy + 6),
+        max(0, cx - 5):min(img_w, cx + 6)
+    ]
+
+    # Filter out invalid values (0 or infinite/NaN)
+    valid_depth = region[(region > 0) & np.isfinite(region)]
+
+    if valid_depth.size == 0:
+        return None
+
+    # Return the median value of the valid pixels
+    median_depth_mm = float(np.median(valid_depth))
+    return median_depth_mm
+
+
+def draw_bbox(image, label, ymin, xmin, ymax, xmax, pt_3d=None, color=(255, 140, 72)):
+    """Draws a bounding box with label and optional 3D coordinates on the image."""
     cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 0, 0), 4)
     cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 1)
 
@@ -157,11 +195,21 @@ def draw_bbox(image, label, ymin, xmin, ymax, xmax, color=(255, 140, 72)):
     cv2.circle(image, (cx, cy), 4, (0, 0, 0), -1)
     cv2.circle(image, (cx, cy), 2, color, -1)
 
-    pos = (xmin, max(20, ymin - 8))
-    cv2.putText(image, label, pos, cv2.FONT_HERSHEY_SIMPLEX,
-                0.45, (0, 0, 0), 3, cv2.LINE_AA)
-    cv2.putText(image, label, pos, cv2.FONT_HERSHEY_SIMPLEX,
-                0.45, color, 1, cv2.LINE_AA)
+    # Label text
+    pos1 = (xmin, max(35, ymin - 20))
+    cv2.putText(image, label, pos1, cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 3, cv2.LINE_AA)
+    cv2.putText(image, label, pos1, cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1, cv2.LINE_AA)
+
+    # 3D Coordinates text
+    if pt_3d:
+        coord_text = f"X:{pt_3d[0]:.2f} Y:{pt_3d[1]:.2f}"
+        pos2 = (xmin, max(20, ymin - 5))
+        cv2.putText(image, coord_text, pos2, cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 0), 3, cv2.LINE_AA)
+        cv2.putText(image, coord_text, pos2, cv2.FONT_HERSHEY_SIMPLEX, 0.35, color, 1, cv2.LINE_AA)
+    else:
+        # Fallback if depth is missing
+        pos2 = (xmin, max(20, ymin - 5))
+        cv2.putText(image, "(no depth)", pos2, cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 2, cv2.LINE_AA)
 
 
 def draw_point(image, label, y, x, color=(72, 255, 140)):
@@ -178,18 +226,16 @@ def draw_point(image, label, y, x, color=(72, 255, 140)):
                 0.45, color, 1, cv2.LINE_AA)
 
 
-def draw_all_annotations(image: np.ndarray, detections: List[BrickDetection],
-                        img_w: int, img_h: int) -> np.ndarray:
+def draw_all_annotations(image: np.ndarray, detections: List[BrickDetection], img_w: int, img_h: int) -> np.ndarray:
     """Draws all bounding boxes and dropoff points on the image."""
     for brick in detections:
-        # Generate a random color for this brick's annotations
         brick_color = get_color_for_label(brick.label)
 
-        # 1. Draw Brick Box
+        # 1. Draw Brick Box (jetzt mit 3D-Koordinatenübergabe)
         ymin, xmin, ymax, xmax = normalized_to_pixel(brick.box_2d, img_w, img_h)
-        draw_bbox(image, brick.label, ymin, xmin, ymax, xmax, color=brick_color)
+        draw_bbox(image, brick.label, ymin, xmin, ymax, xmax, pt_3d=brick.position_3d, color=brick_color)
 
-        # 2. Draw Dropoff Point (optional)
+        # 2. Draw Dropoff Point
         if brick.dropoff_point_2d is not None:
             py, px = normalized_to_pixel(brick.dropoff_point_2d, img_w, img_h)
             draw_point(image, f"{brick.label} dropoff", py, px, color=brick_color)
@@ -266,8 +312,8 @@ class GeminiVisionNode(Node):
         # 3D & TF2 Parameters
         self.declare_parameter('camera_frame', 'camera_color_optical_frame')
         self.declare_parameter('robot_base_frame', 'base_link')
-        self.declare_parameter('brick_center_offset', 0.008) # Offset from front face to center of brick in meters (for 3D grasping)
-        self.declare_parameter('max_depth_m', 1.5) # Ignore detections beyond this depth (in meters)
+        self.declare_parameter('brick_center_offset', 0.0) # Offset from front face to center of brick in meters (for 3D grasping)
+        self.declare_parameter('max_depth_m', 10.0) # Ignore detections beyond this depth (in meters)
 
         self.camera_frame = self.get_parameter('camera_frame').value
         self.robot_base_frame = self.get_parameter('robot_base_frame').value
@@ -320,20 +366,42 @@ class GeminiVisionNode(Node):
         """Service-Handler: Triggers Gemini detection and returns results."""
         self.get_logger().info("Detection triggered.")
 
-        if self.latest_color_msg is None:
+        if self.latest_color_msg is None or self.latest_depth_msg is None:
             response.success = False
-            response.message = "🔴 No image available"
+            response.message = "🔴 No color or depth image available yet."
+            return response
+
+        if not self.camera_info_ready:
+            response.success = False
+            response.message = "🔴 Camera info not ready yet."
             return response
 
         try:
-            image = self._prepare_image_for_gemini(self.latest_color_msg)
-            detections = self._call_gemini(image, request.user_prompt)
+            # 1. Convert Color Image for Gemini
+            image_bytes = self._prepare_image_for_gemini(self.latest_color_msg)
+
+            # 2. Convert Depth Image for 3D Projection (strictly to mm as float)
+            if self.latest_depth_msg.encoding == '32FC1':
+                depth_meters = self.bridge.imgmsg_to_cv2(self.latest_depth_msg, desired_encoding="32FC1")
+                cv_depth = depth_meters * 1000.0
+            else:
+                cv_depth = self.bridge.imgmsg_to_cv2(self.latest_depth_msg, desired_encoding="16UC1")
+
+            # 3. Call Gemini API
+            detections = self._call_gemini(image_bytes, request.user_prompt)
 
             if detections is not None:
+                # 4. Process 3D Coordinates & build ROS Messages
+                img_h = self.latest_color_msg.height
+                img_w = self.latest_color_msg.width
+                target_brick_msgs = self._process_3d_detections(detections, cv_depth, img_w, img_h)
+
                 with self._detection_lock:
-                    self.last_detections = detections
+                    self.last_detections = detections  # Now contains 3D coords for drawing!
+                
                 response.success = True
-                response.message = f"🏁 Detected {len(detections)} bricks."
+                response.message = f"🏁 Detected {len(target_brick_msgs)} valid 3D bricks."
+                response.bricks = target_brick_msgs # <-- WICHTIG: Pick-and-Place braucht das!
             else:
                 with self._detection_lock:
                     self.last_detections = []
@@ -434,7 +502,7 @@ class GeminiVisionNode(Node):
         """Calls the Gemini API with the image and prompt, returns list of detections."""
         start = time.time()
         prompt = build_prompt(user_prompt)
-        self.get_logger().info(f"Prompt:\n{prompt}")
+        self.get_logger().info(f"Prompt: {prompt}")
 
         try:
             # Create the image part separately to ensure it's distinct in memory and not optimized away
@@ -478,6 +546,108 @@ class GeminiVisionNode(Node):
                 continue
             tag = "Thought" if part.thought else "Answer"
             self.get_logger().info(f"\n{'='*60}\n{tag}:\n{part.text}")
+
+
+    def _process_3d_detections(self, detections: List[BrickDetection], cv_depth: np.ndarray, img_w: int, img_h: int) -> List[LegoBrick]:
+        """Calculates 3D coordinates, updates Pydantic objects, and builds ROS messages."""
+        target_brick_msgs = [] # 
+        brick_counter = {}
+
+        # 1. Look up the TF transform once for the entire batch
+        try:
+            tf_cam_to_base = self.tf_buffer.lookup_transform(
+                self.robot_base_frame, self.camera_frame,
+                rclpy.time.Time(), rclpy.duration.Duration(seconds=1.0)
+            )
+        except Exception as e:
+            self.get_logger().error(f"TF lookup failed: {e}")
+            return []
+
+        for brick in detections:
+            color = brick.label.lower()
+            ymin, xmin, ymax, xmax = normalized_to_pixel(brick.box_2d, img_w, img_h)
+            
+            # --- Aspect Ratio & Yaw ---
+            w = xmax - xmin
+            h = ymax - ymin
+            aspect_ratio = w / h if h > 0 else 0.0
+            brick.yaw_degrees = 30.0 if 0 < aspect_ratio < 1.41 else 0.0
+
+            # --- Robust Depth for Brick ---
+            depth_mm = get_robust_depth(brick.box_2d, cv_depth, img_w, img_h)
+            
+            if depth_mm is not None:
+                z = (depth_mm / 1000.0) + self.brick_center_offset
+                
+                if 0.03 < z <= self.max_depth_m:
+                    # 2D Center to 3D Ray projection
+                    cx = np.clip((xmin + xmax) // 2, 0, img_w - 1)
+                    cy = np.clip((ymin + ymax) // 2, 0, img_h - 1)
+                    ray = self.camera_model.projectPixelTo3dRay((cx, cy))
+                    
+                    # Create Point in Camera Frame
+                    pt_cam = PointStamped()
+                    pt_cam.header.frame_id = self.camera_frame
+                    pt_cam.point.x = ray[0] * z
+                    pt_cam.point.y = ray[1] * z
+                    pt_cam.point.z = z
+
+                    # Transform to Robot Base Frame
+                    pt_base = do_transform_point(pt_cam, tf_cam_to_base)
+                    
+                    # Store in Pydantic for drawing
+                    brick.position_3d = [pt_base.point.x, pt_base.point.y, pt_base.point.z]
+
+                    # --- Build ROS Message ---
+                    msg = LegoBrick()
+                    msg.color.data = color
+                    msg.position = pt_base
+                    msg.camera_distance_mm = z * 1000.0
+                    msg.yaw_degrees = brick.yaw_degrees
+                    msg.bounding_box_px = [ymin, xmin, ymax, xmax]
+                    msg.has_user_dropoff = False
+
+                    # --- Robust Depth for Drop-off (Optional) ---
+                    if brick.dropoff_point_2d:
+                        drop_depth_mm = get_robust_depth(brick.dropoff_point_2d, cv_depth, img_w, img_h)
+                        if drop_depth_mm is not None:
+                            drop_z = drop_depth_mm / 1000.0
+                            dy, dx = normalized_to_pixel(brick.dropoff_point_2d, img_w, img_h)
+                            drop_ray = self.camera_model.projectPixelTo3dRay((dx, dy))
+                            
+                            drop_cam = PointStamped()
+                            drop_cam.header.frame_id = self.camera_frame
+                            drop_cam.point.x = drop_ray[0] * drop_z
+                            drop_cam.point.y = drop_ray[1] * drop_z
+                            drop_cam.point.z = drop_z
+                            
+                            drop_base = do_transform_point(drop_cam, tf_cam_to_base)
+                            brick.dropoff_3d = [drop_base.point.x, drop_base.point.y, drop_base.point.z]
+                            
+                            msg.has_user_dropoff = True
+                            msg.user_dropoff_position = drop_base.point
+
+                    target_brick_msgs.append(msg)
+
+                    # --- TF Broadcasting ---
+                    count = brick_counter.get(color, 0)
+                    brick_counter[color] = count + 1
+                    child_frame = f"brick_{color}_{count}"
+                    
+                    t = TransformStamped()
+                    t.header.stamp = self.get_clock().now().to_msg()
+                    t.header.frame_id = self.robot_base_frame
+                    t.child_frame_id = child_frame
+                    t.transform.translation.x = pt_base.point.x
+                    t.transform.translation.y = pt_base.point.y
+                    t.transform.translation.z = pt_base.point.z
+                    
+                    yaw_rad = math.radians(brick.yaw_degrees)
+                    t.transform.rotation.z = math.sin(yaw_rad / 2.0)
+                    t.transform.rotation.w = math.cos(yaw_rad / 2.0)
+                    self.tf_broadcaster.sendTransform(t)
+
+        return target_brick_msgs
 
 
 
