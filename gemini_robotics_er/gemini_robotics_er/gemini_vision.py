@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import rclpy
-from rclpy.node import Node
 import cv2
 import numpy as np
 from cv_bridge import CvBridge
@@ -11,25 +9,30 @@ import time
 import io
 import random
 
-from sensor_msgs.msg import Image
+import rclpy
+from rclpy.node import Node
+
+from sensor_msgs.msg import Image, CameraInfo
+from tf2_ros import Buffer, TransformListener, TransformBroadcaster
+from tf2_geometry_msgs import do_transform_point
+from image_geometry import PinholeCameraModel
+from geometry_msgs.msg import PointStamped, TransformStamped
+
 from brick_interfaces.srv import DetectBricks
-
-from google import genai
-from google.genai import types
-from PIL import Image as PILImage
-from PIL import ImageColor
-
-from pydantic import BaseModel, Field
-from typing import List, Optional
 
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from threading import Lock
 
+from google import genai
+from google.genai import types
+from PIL import Image as PILImage
+from PIL import ImageColor
+from pydantic import BaseModel, Field
+from typing import List, Optional
 
-# ──────────────────────────────────────────────
-#  Pydantic Models for Gemini Response 
-# ──────────────────────────────────────────────
+
+# --- PYDANTIC MODELS AND SYSTEM PROMPT FOR GEMINI ---
 
 class BrickDetection(BaseModel):
     label: str = Field(description="Brick color")
@@ -49,6 +52,7 @@ class BrickDetection(BaseModel):
 
 class DetectionResult(BaseModel):
     bricks: List[BrickDetection]
+
 
 SYSTEM_PROMPT = textwrap.dedent("""\
     You are a vision system for a robotic pick-and-place task.
@@ -80,19 +84,18 @@ SYSTEM_PROMPT = textwrap.dedent("""\
     3. LIMIT: Maximum 15 objects per image.
 """)
 
-# ──────────────────────────────────────────────
-#  Pure Helper Functions
-# ──────────────────────────────────────────────
 
-def build_prompt(custom_prompt: Optional[str] = None) -> str:
+#  --- HELPER FUNCTIONS ---
+
+def build_prompt(user_prompt: Optional[str] = None) -> str:
     """Builds the Gemini prompt."""
     prompt = textwrap.dedent("""\
         Detect all Lego bricks in the image.
     """)
 
-    if custom_prompt:
+    if user_prompt:
         prompt = textwrap.dedent(f"""\
-            {custom_prompt}
+            {user_prompt}
         """)
 
     return prompt
@@ -224,27 +227,21 @@ def get_color_for_label(label: str) -> tuple:
         return (b, g, r)
 
 
-# ──────────────────────────────────────────────
-#  ROS2 Node
-# ──────────────────────────────────────────────
+
+# --- ROS2 NODE ---
 
 class GeminiVisionNode(Node):
     def __init__(self):
         super().__init__('gemini_vision_node')
 
-        # --- Parameters ---
-        # camera topic
-        self.declare_parameter('color_image_topic', '/camera/color/image_raw')
-        # Gemini API parameters
+        # --- Gemini API Parameters ---
         self.declare_parameter('gemini_model', 'gemini-robotics-er-1.5-preview')
         self.declare_parameter('temperature', 0.5)
         self.declare_parameter('thinking_budget', 0)
 
-        camera_color_image_topic = self.get_parameter('color_image_topic').value
         self.model_id = self.get_parameter('gemini_model').value
         self.temperature = self.get_parameter('temperature').value
         self.thinking_budget = self.get_parameter('thinking_budget').value
-
 
         # --- Gemini Client ---
         self.api_key = os.environ.get('GEMINI_API_KEY')
@@ -254,53 +251,72 @@ class GeminiVisionNode(Node):
         self.client = genai.Client(api_key=self.api_key)
         self.get_logger().info(f"Model: {self.model_id} — ready.")
 
-        # --- State ---
+        
+        # --- ROS Parameters ---
+
+        # Camera Topics
+        self.declare_parameter('camera_info_topic', '/camera/color/camera_info')
+        self.declare_parameter('color_image_topic', '/camera/color/image_raw')
+        self.declare_parameter('depth_image_topic', '/camera/aligned_depth_to_color/image_raw')
+
+        self.camera_info_topic = self.get_parameter('camera_info_topic').value
+        self.camera_color_image_topic = self.get_parameter('color_image_topic').value
+        self.camera_depth_image_topic = self.get_parameter('depth_image_topic').value
+
+        # 3D & TF2 Parameters
+        self.declare_parameter('camera_frame', 'camera_color_optical_frame')
+        self.declare_parameter('robot_base_frame', 'base_link')
+        self.declare_parameter('brick_center_offset', 0.008) # Offset from front face to center of brick in meters (for 3D grasping)
+        self.declare_parameter('max_depth_m', 1.5) # Ignore detections beyond this depth (in meters)
+
+        self.camera_frame = self.get_parameter('camera_frame').value
+        self.robot_base_frame = self.get_parameter('robot_base_frame').value
+        self.brick_center_offset = self.get_parameter('brick_center_offset').value
+        self.max_depth_m = self.get_parameter('max_depth_m').value
+
+        # --- TF2 Setup ---
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+        self.tf_broadcaster = TransformBroadcaster(self)
+
+        # --- Image & Detection State ---
         self.bridge = CvBridge()
+        self.camera_model = PinholeCameraModel()
+        self.camera_info_ready = False
         self.latest_color_msg: Optional[Image] = None
+        self.latest_depth_msg: Optional[Image] = None
         self.last_detections: List[BrickDetection] = []
         self._detection_lock = Lock() # Thread safety lock
 
-        # --- ROS Interface ---
-        self.create_subscription(Image, camera_color_image_topic, self._color_image_callback, 5)
-        self.annotated_pub = self.create_publisher(Image, '/annotated_image', 5)
-        self.create_timer(0.1, self._annotation_timer_callback) # 10 Hz for visualization
+        # --- ROS Interface (Subscriptions & Publishers) ---
+        self.camera_info_sub = self.create_subscription(CameraInfo, camera_info_topic, self._camera_info_callback, 5)
+        self.color_image_sub = self.create_subscription(Image, camera_color_image_topic, self._color_image_callback, 5)
+        self.depth_image_sub = self.create_subscription(Image, camera_depth_image_topic, self._depth_image_callback, 5)
+
+        self.annotated_image_pub = self.create_publisher(Image, '/annotated_image', 5)
+        self.vis_timer = self.create_timer(0.1, self._annotation_timer_callback) # 10 Hz for visualization
 
         # --- Service Server (Multithreaded) ---
-        srv_cb_group = MutuallyExclusiveCallbackGroup()
-        self.create_service(DetectBricks, '/detect_bricks', self._on_detect_request, callback_group=srv_cb_group)
-
+        self.srv_cb_group = MutuallyExclusiveCallbackGroup()
+        self.create_service(DetectBricks, '/detect_bricks', self.execute_detection_pipeline, callback_group=self.srv_cb_group)
+        
+        # --- Startup Status ---
         self.get_logger().info(
             "Status:\n" +
             "="*60 + "\n" +
             "🟢 GeminiVisionNode (Service Node) ready.\n" +
             "👂 Waiting for service call...\n" +
             "To test functionality manually, use:\n" +
-            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{custom_prompt: ''}\"\n" +
-            "Or with AI instruction:\n" +
-            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{custom_prompt: 'Pick the red bricks'}\"\n" +
+            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{user_prompt: ''}\"\n" +
+            "Or with user instruction:\n" +
+            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{user_prompt: 'Pick the red bricks'}\"\n" +
             "="*60
         )
 
 
-    # ── Callbacks ─────────────────────────────
+    # --- MAIN PIPELINE ---
 
-    def _color_image_callback(self, msg: Image):
-        """Saves the latest color image for processing."""
-        self.latest_color_msg = msg
-
-    def _annotation_timer_callback(self):
-        """Annotates the latest image and publishes it for visualization."""
-        if self.latest_color_msg is None:
-            return
-        try:
-            annotated = self._build_annotated_image()
-            msg = self.bridge.cv2_to_imgmsg(annotated, encoding="bgr8")
-            msg.header = self.latest_color_msg.header
-            self.annotated_pub.publish(msg)
-        except Exception as e:
-            self.get_logger().error(f"🔴 Annotation error: {e}", throttle_duration_sec=5.0)
-
-    def _on_detect_request(self, request, response):
+    def execute_detection_pipeline(self, request, response):
         """Service-Handler: Triggers Gemini detection and returns results."""
         self.get_logger().info("Detection triggered.")
 
@@ -311,7 +327,7 @@ class GeminiVisionNode(Node):
 
         try:
             image = self._prepare_image_for_gemini(self.latest_color_msg)
-            detections = self._call_gemini(image, request.custom_prompt)
+            detections = self._call_gemini(image, request.user_prompt)
 
             if detections is not None:
                 with self._detection_lock:
@@ -341,7 +357,39 @@ class GeminiVisionNode(Node):
 
         return response
 
-    # ── Private Helpers ───────────────────────
+
+    # --- CALLBACKS ---
+
+    def _camera_info_callback(self, msg: CameraInfo):
+        """Initializes the PinholeCameraModel with the camera's intrinsic matrix."""
+        if not self.camera_info_ready:
+            self.camera_info_ready = True
+            self.get_logger().info("Camera intrinsics received. 3D projection ready.")
+
+        self.camera_model.fromCameraInfo(msg)
+
+    def _color_image_callback(self, msg: Image):
+        """Saves the latest color image for processing."""
+        self.latest_color_msg = msg
+
+    def _depth_image_callback(self, msg: Image):
+        """Saves the latest depth image for 3D projection."""
+        self.latest_depth_msg = msg
+
+    def _annotation_timer_callback(self):
+        """Annotates the latest image and publishes it for visualization."""
+        if self.latest_color_msg is None:
+            return
+        try:
+            annotated = self._build_annotated_image()
+            msg = self.bridge.cv2_to_imgmsg(annotated, encoding="bgr8")
+            msg.header = self.latest_color_msg.header
+            self.annotated_image_pub.publish(msg)
+        except Exception as e:
+            self.get_logger().error(f"🔴 Annotation error: {e}", throttle_duration_sec=5.0)
+
+
+    # --- HELPER FUNCTIONS ---
 
     def _prepare_image_for_gemini(self, ros_msg: Image) -> bytes:
         """ROS Image → resized PIL Image → JPEG Bytes."""
@@ -382,10 +430,10 @@ class GeminiVisionNode(Node):
         return image_annotated
 
 
-    def _call_gemini(self, img_bytes: bytes, custom_prompt: Optional[str] = None) -> Optional[List[BrickDetection]]:
+    def _call_gemini(self, img_bytes: bytes, user_prompt: Optional[str] = None) -> Optional[List[BrickDetection]]:
         """Calls the Gemini API with the image and prompt, returns list of detections."""
         start = time.time()
-        prompt = build_prompt(custom_prompt)
+        prompt = build_prompt(user_prompt)
         self.get_logger().info(f"Prompt:\n{prompt}")
 
         try:
@@ -432,9 +480,8 @@ class GeminiVisionNode(Node):
             self.get_logger().info(f"\n{'='*60}\n{tag}:\n{part.text}")
 
 
-# ──────────────────────────────────────────────
-#  Main
-# ──────────────────────────────────────────────
+
+# --- Main ---
 
 def main(args=None):
     rclpy.init(args=args)
