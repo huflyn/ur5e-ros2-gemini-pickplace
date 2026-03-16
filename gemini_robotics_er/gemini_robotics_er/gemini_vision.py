@@ -289,9 +289,9 @@ class GeminiVisionNode(Node):
         self._detection_lock = Lock() # Thread safety lock
 
         # --- ROS Interface (Subscriptions & Publishers) ---
-        self.camera_info_sub = self.create_subscription(CameraInfo, camera_info_topic, self._camera_info_callback, 5)
-        self.color_image_sub = self.create_subscription(Image, camera_color_image_topic, self._color_image_callback, 5)
-        self.depth_image_sub = self.create_subscription(Image, camera_depth_image_topic, self._depth_image_callback, 5)
+        self.camera_info_sub = self.create_subscription(CameraInfo, self.camera_info_topic, self._camera_info_callback, 5)
+        self.color_image_sub = self.create_subscription(Image, self.camera_color_image_topic, self._color_image_callback, 5)
+        self.depth_image_sub = self.create_subscription(Image, self.camera_depth_image_topic, self._depth_image_callback, 5)
 
         self.annotated_image_pub = self.create_publisher(Image, '/annotated_image', 5)
         self.vis_timer = self.create_timer(0.1, self._annotation_timer_callback) # 10 Hz for visualization
