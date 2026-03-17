@@ -162,7 +162,7 @@ def main(args=None):
             # --- THE TRIGGER WAIT LOOP ---
             logger.info("="*50)
             logger.info("⏯  Waiting for manual trigger. Run in a separate terminal:")
-            logger.info("ros2 topic pub --once /verify_alignment/next_step std_msgs/msg/Empty")
+            logger.info("ros2 topic pub --once /trigger/next_step std_msgs/msg/Empty")
             logger.info("="*50 + "\n")
             
             trigger_node.triggered = False # Reset the flag
