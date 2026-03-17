@@ -34,6 +34,7 @@ setup(
             'brick_sorter_legacy = workcell_application.brick_sorter_legacy:main',
             'verify_alignment = workcell_application.verify_alignment:main',
             'pick_and_place = workcell_application.pick_and_place:main',
+            'move_to_coords = workcell_application.move_to_coords:main',
         ],
     },
 )
