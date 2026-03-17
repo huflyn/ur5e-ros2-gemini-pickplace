@@ -85,9 +85,10 @@ SYSTEM_PROMPT = textwrap.dedent("""\
     5. dropoff_coords_m: Use ONLY for metric coordinates provided in the text (e.g., "put it at x=0.4, y=0.5"). Returns [x, y] floats in meters. Null if not applicable.
 
     General Instructions:
-    1. SELECTION: Only return bricks that match the user's instructions. If no instructions are provided, return all bricks.
-    2. SEQUENCE: Order the array logically by pick sequence (e.g., top-most bricks first).
-    3. LIMIT: Maximum 15 objects per image.
+    - ONLY SINGLE BRICKS, no builds or groups or stacks.
+    - SELECTION: Only return bricks that match the user's instructions. If no instructions are provided, return all bricks.
+    - SEQUENCE: Order the array logically by pick sequence (e.g., top-most bricks first).
+    - LIMIT: Maximum 15 objects per image.
 """)
 
 
@@ -397,11 +398,26 @@ class GeminiVisionNode(Node):
                 target_brick_msgs = self._process_3d_detections(detections, cv_depth, img_w, img_h)
 
                 with self._detection_lock:
-                    self.last_detections = detections  # Now contains 3D coords for drawing!
+                    self.last_detections = detections
                 
                 response.success = True
-                response.message = f"🏁 Detected {len(target_brick_msgs)} valid 3D bricks."
-                response.bricks = target_brick_msgs # <-- WICHTIG: Pick-and-Place braucht das!
+                response.message = f"Detected {len(target_brick_msgs)} valid 3D bricks."
+                response.bricks = target_brick_msgs
+
+                # --- NEW: Logging the 3D Coordinates ---
+                if len(target_brick_msgs) > 0:
+                    log_msg = f"\n{'='*60}\n"
+                    log_msg += f"🏁 Detected {len(target_brick_msgs)} valid bricks:\n"
+                    for brick in target_brick_msgs:
+                        x = brick.position.point.x
+                        y = brick.position.point.y
+                        z = brick.position.point.z
+                        color = brick.color.data
+                        log_msg += f"   - {color.capitalize()}: [X: {x:.3f}, Y: {y:.3f}, Z: {z:.3f}]\n"
+                    log_msg += f"{'='*60}"
+                    self.get_logger().info(log_msg)
+                # ---------------------------------------
+
             else:
                 with self._detection_lock:
                     self.last_detections = []
