@@ -1,14 +1,12 @@
 Panels:
   - Class: rviz_common/Displays
-    Help Height: 106
+    Help Height: 0
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /CameraInfo1/Topic1
         - /DepthCloud1/Auto Size1
-        - /Image1/Topic1
       Splitter Ratio: 0.5
-    Tree Height: 211
+    Tree Height: 285
   - Class: rviz_common/Help
     Name: Help
   - Class: rviz_common/Views
@@ -185,6 +183,14 @@ Visualization Manager:
         All Enabled: false
         d415_bottom_screw_frame:
           Value: false
+        d415_color_frame:
+          Value: true
+        d415_color_optical_frame:
+          Value: true
+        d415_depth_frame:
+          Value: true
+        d415_depth_optical_frame:
+          Value: true
         d415_link:
           Value: false
         d415_sim_optical_frame:
@@ -244,6 +250,12 @@ Visualization Manager:
             robot_mount:
               d415_bottom_screw_frame:
                 d415_link:
+                  d415_color_frame:
+                    d415_color_optical_frame:
+                      {}
+                  d415_depth_frame:
+                    d415_depth_optical_frame:
+                      {}
                   d415_usb_plug_link:
                     {}
                 d415_sim_optical_frame:
@@ -273,28 +285,6 @@ Visualization Manager:
               {}
       Update Interval: 0
       Value: true
-    - Class: rviz_default_plugins/Camera
-      Enabled: true
-      Far Plane Distance: 100
-      Image Rendering: background and overlay
-      Name: Camera
-      Overlay Alpha: 0.5
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /webots_realsense/color/image_raw/image_color
-      Value: true
-      Visibility:
-        CameraInfo: true
-        DepthCloud: true
-        Grid: true
-        Image: true
-        RobotModel: true
-        TF: true
-        Value: true
-      Zoom Factor: 1
     - Alpha: 0.5
       Class: rviz_default_plugins/CameraInfo
       Color: 85; 255; 255
@@ -311,8 +301,30 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Best Effort
-        Value: /webots_realsense/color/image_raw/camera_info
+        Value: /camera/d415/color/camera_info
       Value: true
+    - Class: rviz_default_plugins/Camera
+      Enabled: true
+      Far Plane Distance: 100
+      Image Rendering: background and overlay
+      Name: Camera
+      Overlay Alpha: 0.5
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /camera/d415/color/image_raw
+      Value: true
+      Visibility:
+        CameraInfo: true
+        DepthCloud: true
+        Grid: true
+        Image: true
+        RobotModel: true
+        TF: true
+        Value: true
+      Zoom Factor: 1
     - Alpha: 1
       Auto Size:
         Auto Size Factor: 1
@@ -323,15 +335,15 @@ Visualization Manager:
         Min Value: -10
         Value: true
       Axis: Z
-      CameraInfo Topic: /webots_realsense/depth/image_rect_raw/camera_info
+      CameraInfo Topic: /camera/d415/aligned_depth_to_color/camera_info
       Channel Name: intensity
       Class: rviz_default_plugins/DepthCloud
       Color: 255; 255; 255
-      Color Image Topic: /webots_realsense/color/image_raw/image_color
+      Color Image Topic: /camera/d415/color/image_raw
       Color Transformer: RGB8
       Color Transport Hint: raw
       Decay Time: 0
-      Depth Map Topic: /webots_realsense/depth/image_rect_raw/image
+      Depth Map Topic: /camera/d415/aligned_depth_to_color/image_raw
       Depth Map Transport Hint: raw
       Enabled: true
       Invert Rainbow: false
@@ -385,7 +397,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 3.2845523357391357
+      Distance: 1.5714669227600098
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -400,26 +412,26 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3949998617172241
+      Pitch: 0.23499996960163116
       Target Frame: world
       Value: Orbit (rviz_default_plugins)
-      Yaw: 0.8720076680183411
+      Yaw: 2.0420074462890625
     Saved: ~
 Window Geometry:
   Camera:
     collapsed: false
   Displays:
     collapsed: false
-  Height: 1019
+  Height: 1011
   Help:
     collapsed: false
   Hide Left Dock: false
   Hide Right Dock: false
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000200000000000002f20000039dfc0200000007fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb000000100044006900730070006c006100790073010000003f0000017d000000cc00fffffffb0000000a0049006d00610067006501000001c2000001ce0000001700fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670100000116000001960000000000000000fb0000000800480065006c0070000000029a0000006e0000006f00fffffffb0000000c00430061006d0065007200610100000396000000460000001700fffffffb0000000c00430061006d0065007200610100000464000000d800000000000000000000000100000299000004fdfc0200000003fb0000000c00430061006d006500720061010000003f000002070000000000000000fb0000000a0049006d006100670065010000024c000002f00000000000000000fb0000000a00560069006500770073000000003f000004fd000000a900ffffff000001a70000039d00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000200000000000002f200000395fc0200000009fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb000000100044006900730070006c006100790073010000003f0000015d000000cc00fffffffb0000000a0049006d0061006700650100000158000000ba0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670100000116000001960000000000000000fb0000000800480065006c0070000000029a0000006e0000006f00fffffffb0000000c00430061006d00650072006101000001c2000000a10000000000000000fb0000000c00430061006d0065007200610100000464000000d80000000000000000fb0000000c00430061006d00650072006101000001a2000000f10000001700fffffffb0000000a0049006d00610067006501000002990000013b0000001700ffffff0000000100000299000004fdfc0200000003fb0000000c00430061006d006500720061010000003f000002070000000000000000fb0000000a0049006d006100670065010000024c000002f00000000000000000fb0000000a00560069006500770073000000003f000004fd000000a900ffffff000004460000039500000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
-  Width: 1183
-  X: 298
-  Y: 117
+  Width: 1854
+  X: 66
+  Y: 32
