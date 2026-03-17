@@ -1,9 +1,9 @@
 color_detector_node:
   ros__parameters:
     # --- Camera Topics ---
-    camera_info_topic: '/camera/aligned_depth_to_color/camera_info'
-    depth_image_topic: '/camera/aligned_depth_to_color/image_raw'
-    color_image_topic: '/camera/color/image_raw'
+    camera_info_topic: '/camera/d415/color/camera_info'
+    color_image_topic: '/camera/d415/color/image_raw'
+    depth_image_topic: '/camera/d415/aligned_depth_to_color/image_raw'
 
     # Frame of the camera for TF transformations
     camera_frame: 'camera_color_optical_frame'
