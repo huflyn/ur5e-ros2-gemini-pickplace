@@ -53,10 +53,12 @@ class TriggerNode(Node):
     """A simple node to listen for a manual trigger message."""
     def __init__(self):
         super().__init__('alignment_trigger_node')
+
+        # --- Trigger Setup ---
         self.triggered = False
         self.subscription = self.create_subscription(
             Empty,
-            '/verify_alignment/next_step',
+            '/trigger/next_step',
             self.trigger_callback,
             10
         )
@@ -112,11 +114,6 @@ def main(args=None):
     # =========================================================================
     
     test_poses = [
-        {
-            "name": "Ready Pose (Home)",
-            "type": "named",
-            "target": "ready"
-        },
         {
             "name": "TCP Check: 10cm Z-Height, 50cm Y-Offset",
             "type": "cartesian",
