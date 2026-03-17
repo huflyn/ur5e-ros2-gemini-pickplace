@@ -7,8 +7,8 @@ pick_and_place_node:
     grasp_z_offset: 0.0 # UNUSED Optional: To ensure a secure grasp by going slightly below the detected Z
     
     # Drop-off coordinates: [X, Y]
-    dropoff_default: [0.27, 0.250]
-    dropoff_yellow: [-0.27, 0.350]
-    dropoff_red: [0.27, 0.350]
-    dropoff_green: [0.27, 0.450]
-    dropoff_blue: [-0.27, 0.450]
+    dropoff_default: [-0.27, 0.48]
+    dropoff_yellow: [0.27, 0.48]
+    dropoff_red: [0.27, 0.37]
+    dropoff_green: [0.27, 0.25]
+    dropoff_blue: [0.27, 0.15]
