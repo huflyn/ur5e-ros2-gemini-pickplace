@@ -413,6 +413,7 @@ class GeminiVisionNode(Node):
                         y = brick.position.point.y
                         z = brick.position.point.z
                         color = brick.color.data
+                        distance = brick.camera_distance_mm
                         log_msg += f"   - {color.capitalize()}: [X: {x:.3f}, Y: {y:.3f}, Z: {z:.3f}]\n"
                     log_msg += f"{'='*60}"
                     self.get_logger().info(log_msg)
