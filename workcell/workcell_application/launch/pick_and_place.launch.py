@@ -47,7 +47,10 @@ def generate_launch_description():
         parameters=[
             moveit_config.to_dict(),      # Loads URDF, SRDF, Kinematics, etc.
             sorter_params_file,           # Loads your custom drop-off coordinates
-            {"use_sim_time": use_sim_time}   # Important to sync with Webots clock
+            {
+                "use_sim_time": use_sim_time,
+                "use_sim_gripper": use_sim_time,  # Use sim gripper if using sim time (Webots)
+            }
         ],
         output="screen",
     )
