@@ -29,6 +29,8 @@ from brick_interfaces.srv import DetectBricks
 
 from moveit.planning import MoveItPy, PlanRequestParameters
 
+from ur_msgs.srv import SetIO
+
 
 # ═══════════════════════════════════════════════════════════════
 #  ROS 2 Node: Handles communication (services, gripper, params)
@@ -44,6 +46,9 @@ class PickAndPlaceNode(Node):
     def __init__(self):
         super().__init__('pick_and_place_node')
 
+        # Robotiq EPick with URCap
+        self.script_pub = self.create_publisher(String, '/urscript_interface/script_command', 10)
+
         # ── Parameters ─────────────────────────────────────────
         self.declare_parameter('base_frame', 'ur5e_base_link')
         self.declare_parameter('tcp_link', 'pisoftgrip_tcp')
@@ -53,8 +58,10 @@ class PickAndPlaceNode(Node):
         self.declare_parameter('grasp_height', 0.01)
         self.declare_parameter('dropoff_height', 0.10)
 
-        self.declare_parameter('use_sim_gripper', True)
+        self.declare_parameter('use_sim_gripper', False)
         self.declare_parameter('gripper_topic', '/ur5e/vacuum_gripper/turn_on')
+
+        self.declare_parameter('brick_center_offset', 0.0) # Offset from front face to center of brick in meters (for 3D grasping)
 
         self.declare_parameter('dropoff_default', [0.27, 0.250])
         self.declare_parameter('dropoff_red',    [0.27, 0.450])
@@ -74,6 +81,8 @@ class PickAndPlaceNode(Node):
         self.use_sim_gripper = self.get_parameter('use_sim_gripper').value
         gripper_topic = self.get_parameter('gripper_topic').value
 
+        self.brick_center_offset = self.get_parameter('brick_center_offset').value
+
         self.dropoffs = {
             'default': self.get_parameter('dropoff_default').value,
             'red':     self.get_parameter('dropoff_red').value,
@@ -85,11 +94,11 @@ class PickAndPlaceNode(Node):
         # ── Gripper Setup ──────────────────────────────────────
         if self.use_sim_gripper:
             self.gripper_pub = self.create_publisher(Bool, gripper_topic, 10)
-            self.get_logger().info(f"Gripper: Webots vacuum via {gripper_topic}")
+            self.get_logger().info(f"🟢 Gripper: Webots vacuum via {gripper_topic}")
         else:
-            # Real hardware: placeholder for UR I/O service client
-            self.get_logger().info("Gripper: Real hardware mode (UR I/O)")
-            # TODO: self.io_client = self.create_client(SetIO, '/io_and_status_controller/set_io')
+            # Real hardware: UR I/O Service (digital_out[0])
+            self.io_client = self.create_client(SetIO, '/io_and_status_controller/set_io')
+            self.get_logger().info("🟢 Gripper: Real hardware mode (UR I/O pin 0 for Robotiq EPick)")
 
         # ── Vision Service Client ──────────────────────────────
         self.detect_client = self.create_client(DetectBricks, '/detect_bricks')
@@ -117,12 +126,25 @@ class PickAndPlaceNode(Node):
             msg.data = activate
             self.gripper_pub.publish(msg)
         else:
-            # TODO: Implement real hardware gripper
-            # io_req = SetIO.Request()
-            # io_req.fun = 1; io_req.pin = 0
-            # io_req.state = 1.0 if activate else 0.0
-            # self.io_client.call_async(io_req)
-            pass
+            # Real hardware I/O service
+            if not self.io_client.wait_for_service(timeout_sec=2.0):
+                self.get_logger().error("🛑 IO Service nicht verfügbar! Greifer kann nicht geschaltet werden.")
+                return
+
+            req = SetIO.Request()
+            req.fun = 1  # 1 = Standard Digital Output
+            req.pin = 0  # digital_out[0]
+            
+            if activate:
+                req.state = 1.0
+                self.io_client.call_async(req)
+                # Wait for vacuum to build up before moving the arm!
+                time.sleep(0.8) 
+            else:
+                req.state = 0.0
+                self.io_client.call_async(req)
+                # Wait for the item to drop
+                time.sleep(0.5)
 
         action = "GRIP (suction ON)" if activate else "RELEASE (suction OFF)"
         self.get_logger().info(f"Gripper: {action}")
@@ -339,7 +361,7 @@ def main(args=None):
 
                 color = brick.color.data
                 bx = brick.position.point.x
-                by = brick.position.point.y
+                by = brick.position.point.y + node.brick_center_offset # Adjust Y to target the center of the brick instead of the front face
                 bz = brick.position.point.z
                 yaw = math.radians(brick.yaw_degrees)
 
