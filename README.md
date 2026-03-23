@@ -23,6 +23,16 @@ This repository demonstrates how to integrate the Google Gemini Robotics-ER 1.5 
   - [Step 2: Start the Perception Pipeline](#step-2-start-the-perception-pipeline)
   - [Step 3: Start the Application](#step-3-start-the-application)
 - [X) Starting the Brick Sorter Application with Gemini Robotics-ER 1.5-based Perception](#x-starting-the-brick-sorter-application-with-gemini-robotics-er-15-based-perception)
+  - [1. Start Realsense](#1-start-realsense)
+  - [2. Start Robot](#2-start-robot)
+  - [3. Start Robot Program via Remote Control](#3-start-robot-program-via-remote-control)
+  - [4. Launch Gemini Vision](#4-launch-gemini-vision)
+  - [5. Launch RVIZ](#5-launch-rviz)
+  - [6. Launch Pick and Place](#6-launch-pick-and-place)
+  - [Test Scripts](#test-scripts)
+    - [Move To Coordinates or Defined Position](#move-to-coordinates-or-defined-position)
+    - [Verify Alignment/Distances](#verify-alignmentdistances)
+    - [Test EPick (Vacuum) with Piab Gripper](#test-epick-vacuum-with-piab-gripper)
 - [XX) Documentation and References](#xx-documentation-and-references)
 
 
@@ -203,6 +213,66 @@ You can append the following argument to the launch command to customize the beh
 
 
 # X) Starting the Brick Sorter Application with Gemini Robotics-ER 1.5-based Perception
+
+## 1. Start Realsense
+
+```bash
+ros2 launch realsense2_camera rs_launch.py depth_module.depth_profile:=1280x720x30 camera_name:=d415 align_depth.enable:=true enable_sync:=true pointcloud.enable:=true
+
+
+```
+
+## 2. Start Robot
+```bash
+ros2 launch workcell_control start_robot.launch.py
+```
+
+## 3. Start Robot Program via Remote Control
+```bash
+ros2 service call /dashboard_client/play std_srvs/srv/Trigger
+```
+
+To Stop:
+```bash
+ros2 service call /dashboard_client/stop std_srvs/srv/Trigger  
+```
+
+## 4. Launch Gemini Vision
+```bash
+ros2 launch gemini_robotics_er gemini_vision.launch.py
+```
+
+## 5. Launch RVIZ
+```bash
+ros2 launch workcell_application rviz.launch.py
+```
+
+## 6. Launch Pick and Place
+```bash
+ros2 launch workcell_application pick_and_place.launch.py 
+```
+
+## Test Scripts
+
+### Move To Coordinates or Defined Position
+```bash
+ros2 launch workcell_application move_to_coords.launch.py coords:="0.1 0.4 0.1" 
+```
+
+```bash
+ros2 launch workcell_application move_to_coords.launch.py named_pose:="ready" 
+```
+
+### Verify Alignment/Distances
+```bash
+ros2 launch workcell_application verify_alignment.launch.py 
+```
+
+### Test EPick (Vacuum) with Piab Gripper
+```bash
+cd workcell//workcell_application/Workcell_application
+python3 test_gripper.py 
+```
 
 
 # XX) Documentation and References
