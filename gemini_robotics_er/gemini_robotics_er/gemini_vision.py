@@ -625,7 +625,7 @@ class GeminiVisionNode(Node):
             w = xmax - xmin
             h = ymax - ymin
             aspect_ratio = w / h if h > 0 else 0.0
-            brick.yaw_degrees = 30.0 if 0 < aspect_ratio < 1.41 else 0.0
+            brick.yaw_degrees = 0.0 if 0 < aspect_ratio < 1.41 else 30.0
 
             # --- Robust Depth for Brick ---
             depth_mm = get_robust_depth(brick.box_2d, cv_depth, img_w, img_h)
