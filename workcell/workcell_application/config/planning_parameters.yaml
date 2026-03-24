@@ -14,8 +14,8 @@ plan_request_params:
   planning_attempts: 2
   planning_pipeline: ompl
   planner_id: "RRTConnectkConfigDefault"
-  max_velocity_scaling_factor: 0.2
-  max_acceleration_scaling_factor: 0.2
+  max_velocity_scaling_factor: 0.4
+  max_acceleration_scaling_factor: 0.4
   planning_time: 10.0   
 
 ompl_rrtc:  # Namespace for individual plan request
@@ -23,8 +23,8 @@ ompl_rrtc:  # Namespace for individual plan request
     planning_attempts: 2  # Number of attempts the planning pipeline tries to solve a given motion planning problem
     planning_pipeline: ompl  # Name of the pipeline that is being used
     planner_id: "RRTConnectkConfigDefault"  # Name of the specific planner to be used by the pipeline
-    max_velocity_scaling_factor: 0.2  # Velocity scaling parameter for the trajectory generation algorithm that is called (if configured) after the path planning
-    max_acceleration_scaling_factor: 0.2  # Acceleration scaling parameter for the trajectory generation algorithm that is called (if configured) after the path planning
+    max_velocity_scaling_factor: 0.4 # Velocity scaling parameter for the trajectory generation algorithm that is called (if configured) after the path planning
+    max_acceleration_scaling_factor: 0.4  # Acceleration scaling parameter for the trajectory generation algorithm that is called (if configured) after the path planning
     planning_time: 10.0  # Time budget for the motion plan request. If the planning problem cannot be solved within this time, an empty solution with error code is returned
 
 pilz_lin:
@@ -32,8 +32,8 @@ pilz_lin:
     planning_attempts: 1
     planning_pipeline: pilz_industrial_motion_planner
     planner_id: "LIN"
-    max_velocity_scaling_factor: 0.2
-    max_acceleration_scaling_factor: 0.2
+    max_velocity_scaling_factor: 0.4
+    max_acceleration_scaling_factor: 0.4
     planning_time: 10.0
 
 pilz_ptp:
@@ -41,8 +41,8 @@ pilz_ptp:
     planning_attempts: 1
     planning_pipeline: pilz_industrial_motion_planner
     planner_id: "PTP"  # Für synchrone, vorhersehbare Gelenkbewegungen
-    max_velocity_scaling_factor: 0.2
-    max_acceleration_scaling_factor: 0.2
+    max_velocity_scaling_factor: 0.4
+    max_acceleration_scaling_factor: 0.4
     planning_time: 10.0
 
 
