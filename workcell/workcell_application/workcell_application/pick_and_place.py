@@ -94,11 +94,11 @@ class PickAndPlaceNode(Node):
         # ── Gripper Setup ──────────────────────────────────────
         if self.use_sim_gripper:
             self.gripper_pub = self.create_publisher(Bool, gripper_topic, 10)
-            self.get_logger().info(f"🟢 Gripper: Webots vacuum via {gripper_topic}")
+            self.gripper_status_str = f"Webots vacuum via {gripper_topic}"
         else:
             # Real hardware: UR I/O Service (digital_out[0])
             self.io_client = self.create_client(SetIO, '/io_and_status_controller/set_io')
-            self.get_logger().info("🟢 Gripper: Real hardware mode (UR I/O pin 0 for Robotiq EPick)")
+            self.gripper_status_str = "Real hardware mode (UR I/O pin 0 for Robotiq EPick)"
 
         # ── Vision Service Client ──────────────────────────────
         self.detect_client = self.create_client(DetectBricks, '/detect_bricks')
@@ -139,7 +139,7 @@ class PickAndPlaceNode(Node):
                 req.state = 1.0
                 self.io_client.call_async(req)
                 # Wait for vacuum to build up before moving the arm!
-                time.sleep(0.8) 
+                time.sleep(0.5) 
             else:
                 req.state = 0.0
                 self.io_client.call_async(req)
@@ -156,10 +156,10 @@ class PickAndPlaceNode(Node):
         Calls /detect_bricks service synchronously.
         """
         if not self.detect_client.wait_for_service(timeout_sec=10.0):
-            self.get_logger().error("/detect_bricks service not available!")
+            self.get_logger().error("🛑 /detect_bricks service not available!")
             return []
 
-        self.get_logger().info("Calling /detect_bricks service...")
+        self.get_logger().info("🟢 Calling /detect_bricks service...")
 
         # Include the current prompt in the service request for Gemini to use in its response
         req = DetectBricks.Request()
@@ -171,11 +171,11 @@ class PickAndPlaceNode(Node):
 
         result = future.result()
         if result is None:
-            self.get_logger().error("Service call returned None!")
+            self.get_logger().error("🛑 Service call returned None!")
             return []
 
         if not result.success:
-            self.get_logger().error(f"Detection failed: {result.error_message}")
+            self.get_logger().error(f"🛑 Detection failed: {result.error_message}")
             return []
 
         return list(result.bricks)
@@ -198,7 +198,7 @@ class PickAndPlaceNode(Node):
 #  Motion Planning Functions (identical patterns to brick_sorter)
 # ═══════════════════════════════════════════════════════════════
 
-def plan_and_execute(robot, arm, logger, target, tcp_link="pisoftgrip_tcp"):
+def plan_and_execute_ompl(robot, arm, logger, target, tcp_link="pisoftgrip_tcp"):
     """
     Plans and executes a trajectory using OMPL (free-space motion).
     Target can be a named pose (str) or a PoseStamped.
@@ -210,42 +210,119 @@ def plan_and_execute(robot, arm, logger, target, tcp_link="pisoftgrip_tcp"):
     else:
         arm.set_goal_state(pose_stamped_msg=target, pose_link=tcp_link)
 
-    plan_result = arm.plan()
-
-    if plan_result:
-        logger.info("  Executing OMPL trajectory...")
-        success = robot.execute(plan_result.trajectory, controllers=[])
-        time.sleep(0.1)
-        if not success:
-            logger.error("  Trajectory execution failed!")
-        return success
-    else:
-        logger.error("  OMPL planning failed!")
-        return False
-
-
-def plan_and_execute_cartesian(robot, arm, logger, target_pose, tcp_link="pisoftgrip_tcp"):
-    """
-    Plans and executes a linear Cartesian path using Pilz LIN planner.
-    Used for precise vertical and horizontal moves near objects.
-    """
-    arm.set_start_state_to_current_state()
-    arm.set_goal_state(pose_stamped_msg=target_pose, pose_link=tcp_link)
-
-    plan_params = PlanRequestParameters(robot, "pilz_lin")
-    plan_params.planning_pipeline = "pilz_industrial_motion_planner"
-    plan_params.planner_id = "LIN"
+    plan_params = PlanRequestParameters(robot, "ompl_rrtc")
 
     plan_result = arm.plan(single_plan_parameters=plan_params)
 
     if plan_result:
-        logger.info("  Executing Pilz LIN trajectory...")
+        logger.info("🟢 Executing OMPL trajectory...")
         success = robot.execute(plan_result.trajectory, controllers=[])
         time.sleep(0.1)
+        if not success:
+            logger.error("🛑 Trajectory execution failed!")
         return success
     else:
-        logger.error("  Pilz LIN planning failed! (singularity or unreachable?)")
+        logger.error("🛑 OMPL planning failed!")
         return False
+
+def plan_and_execute_travel(robot, arm, logger, target, tcp_link="pisoftgrip_tcp"):
+    """
+    Plans and executes a free-space motion to the target pose, trying Pilz PTP first and falling back to OMPL if it fails.
+    """
+    # Try 1: Pilz PTP for direct point-to-point motion (ideal for most cases)
+    try:
+        arm.set_start_state_to_current_state()
+
+        if isinstance(target, str):
+            arm.set_goal_state(configuration_name=target)
+        else:
+            arm.set_goal_state(pose_stamped_msg=target, pose_link=tcp_link)
+
+        plan_params = PlanRequestParameters(robot, "pilz_ptp")
+        plan_result = arm.plan(single_plan_parameters=plan_params)
+
+        if plan_result:
+            logger.info("🟢 Executing Pilz PTP trajectory...")
+            success = robot.execute(plan_result.trajectory, controllers=[])
+            time.sleep(0.1)
+            return success
+    except Exception as e:
+        logger.warn(f"🛑 Pilz PTP exception: {e}")
+
+    logger.warn("🛑 Pilz PTP failed → trying OMPL fallback...")
+
+    # Try 2: OMPL free-space as fallback if Pilz fails (e.g. due to collision in tight spaces)
+    try:
+        arm.set_start_state_to_current_state()
+        if isinstance(target, str):
+            arm.set_goal_state(configuration_name=target)
+        else:
+            arm.set_goal_state(pose_stamped_msg=target, pose_link=tcp_link)
+
+        plan_params = PlanRequestParameters(robot, "ompl_rrtc")
+        plan_result = arm.plan(single_plan_parameters=plan_params)
+
+        if plan_result:
+            logger.info("🟢 Executing OMPL trajectory...")
+            success = robot.execute(plan_result.trajectory, controllers=[])
+            time.sleep(0.1)
+            return success
+    except Exception as e:
+        logger.warn(f"🛑 OMPL exception: {e}")
+
+    logger.warn("🛑 Planning failed...")
+    return False
+
+
+def plan_and_execute_pilz(robot, arm, logger, target, tcp_link="pisoftgrip_tcp"):
+    """
+    Plans and executes a linear Cartesian path using Pilz LIN planner.
+    Used for precise vertical and horizontal moves near objects.
+    """
+    # Try 1: Pilz LIN for Cartesian straight-line motion (ideal for approach and descent)
+    try:
+        arm.set_start_state_to_current_state()
+
+        if isinstance(target, str):
+            arm.set_goal_state(configuration_name=target)
+        else:
+            arm.set_goal_state(pose_stamped_msg=target, pose_link=tcp_link)
+
+        plan_params = PlanRequestParameters(robot, "pilz_lin")
+        plan_result = arm.plan(single_plan_parameters=plan_params)
+
+        if plan_result:
+            logger.info("🟢 Executing Pilz LIN trajectory...")
+            success = robot.execute(plan_result.trajectory, controllers=[])
+            time.sleep(0.1)
+            return success
+    except Exception as e:
+        logger.warn(f"🛑 Pilz LIN exception: {e}")
+
+    logger.warn("🛑 Pilz LIN failed → trying Pilz PTP fallback...")
+
+    # Try 2: Pilz PTP as fallback if LIN fails (e.g. due to singularities or unreachable poses)
+    try:
+        arm.set_start_state_to_current_state()
+
+        if isinstance(target, str):
+            arm.set_goal_state(configuration_name=target)
+        else:
+            arm.set_goal_state(pose_stamped_msg=target, pose_link=tcp_link)
+
+        plan_params = PlanRequestParameters(robot, "pilz_ptp")
+        plan_result = arm.plan(single_plan_parameters=plan_params)
+
+        if plan_result:
+            logger.info("🟢 Executing Pilz PTP trajectory...")
+            success = robot.execute(plan_result.trajectory, controllers=[])
+            time.sleep(0.1)
+            return success
+    except Exception as e:
+        logger.warn(f"🛑Pilz PTP exception: {e}")
+
+    logger.warn("🛑 Pilz PTP failed...")
+    return False
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -257,7 +334,7 @@ def main(args=None):
     logger = get_logger("pick_and_place")
 
     # ── 1. Initialize MoveItPy ─────────────────────────────────
-    logger.info("Initializing MoveItPy...")
+    logger.info("🟢 Initializing MoveItPy...")
     ur5e = MoveItPy(node_name="pick_place_moveit")
 
     # ── 2. Start communication node ───────────────────────────
@@ -276,7 +353,11 @@ def main(args=None):
     def make_pose(x, y, z, yaw=0.0):
         pose = PoseStamped()
         pose.header.frame_id = node.base_frame
-        q_down = quaternion_from_euler(math.pi, 0.0, yaw) # Gripper orientation: TCP pointing down + optional yaw
+
+        # Kleiner Pitch-Offset (2°) um Wrist-Singularität zu vermeiden
+        pitch_offset = math.radians(2.0)
+        q_down = quaternion_from_euler(math.pi + pitch_offset, 0.0, yaw)
+
         pose.pose.orientation.x = q_down[0]
         pose.pose.orientation.y = q_down[1]
         pose.pose.orientation.z = q_down[2]
@@ -287,10 +368,11 @@ def main(args=None):
         return pose
 
     # ── 5. Initial homing ──────────────────────────────────────
-    logger.info("Initializing: Gripper OFF, moving to 'ready' pose")
+    logger.info("🟢 Initializing: Gripper OFF, moving to 'ready' pose")
     node.set_gripper(False)
     time.sleep(1.0)
-    plan_and_execute(ur5e, ur5e_arm, logger, "ready", tcp_link)
+    if not plan_and_execute_travel(ur5e, ur5e_arm, logger, "ready", tcp_link):
+        logger.warn("⚠️ Homing failed. Robot might already be in 'ready' pose. Proceeding to standby...")
 
     try:
         while rclpy.ok():
@@ -301,6 +383,7 @@ def main(args=None):
                 "Status:\n" +
                 "="*60 + "\n" +
                 "🟢 PickAndPlaceNode (Client Node) ready.\n" +
+                f"🤜 Gripper: {node.gripper_status_str}\n" +
                 "⏸️  STANDBY: Waiting for SCAN trigger.\n\n" +
                 "👉 Default Mode (distance sorted) - pub to /pick_and_place/scan:\n" +
                 "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: ''}\"\n\n" +
@@ -335,13 +418,13 @@ def main(args=None):
             
             # <--- NEU: Die magische Task-Planner Weiche
             if node.current_prompt:
-                logger.info("🤖 AI Task Planner mode active. Using Gemini's selection and sequence.")
+                logger.info("AI Task Planner mode active. Using Gemini's selection and sequence.")
                 bricks_sorted = bricks # Gemini is responsible for both selecting which bricks to pick and the order in which to pick them, based on the custom prompt provided by the user.
             else:
-                logger.info("⚙️ Default mode active. Sorting all visible bricks by camera distance.")
+                logger.info("Default mode active. Sorting all visible bricks by camera distance.")
                 bricks_sorted = sorted(bricks, key=lambda b: b.camera_distance_mm)
             
-            logger.info(f"Detected {len(bricks_sorted)} brick(s). Starting Batch Processing!")
+            logger.info(f"🟢 Detected {len(bricks_sorted)} brick(s). Starting Batch Processing!")
 
             # ─────────────────────────────────────────────────
             #  BATCH PROCESSING LOOP
@@ -350,7 +433,7 @@ def main(args=None):
             # Helper function to check for soft stop trigger at multiple points in the cycle
             def check_abort():
                 if node.stop_triggered:
-                    raise RuntimeError("STOP trigger received by operator!")
+                    raise RuntimeError("🛑 STOP trigger received by operator!")
 
             for i, brick in enumerate(bricks_sorted):
 
@@ -361,7 +444,7 @@ def main(args=None):
 
                 color = brick.color.data
                 bx = brick.position.point.x
-                by = brick.position.point.y + node.brick_center_offset # Adjust Y to target the center of the brick instead of the front face
+                by = brick.position.point.y + node.brick_center_offset
                 bz = brick.position.point.z
                 yaw = math.radians(brick.yaw_degrees)
 
@@ -374,13 +457,13 @@ def main(args=None):
                 if brick.has_user_dropoff:
                     # User drop-off provided by Gemini's vision analysis
                     target_xy = [brick.user_dropoff_position.x, brick.user_dropoff_position.y]
-                    logger.info(f"  🤖 USER-DEFINED Drop-off for '{color}': X={target_xy[0]:.3f}, Y={target_xy[1]:.3f}")
+                    logger.info(f"USER-DEFINED Drop-off for '{color}': X={target_xy[0]:.3f}, Y={target_xy[1]:.3f}")
                 elif color in node.dropoffs:
                     # Fallback to default color-coded drop-offs defined in parameters
                     target_xy = node.dropoffs[color]
-                    logger.info(f"  ⚙️ Default Drop-off for '{color}'.")
+                    logger.info(f"Default Drop-off for '{color}'.")
                 else:
-                    logger.warn(f"  No drop-off for '{color}', using 'default'.")
+                    logger.warn(f"No drop-off for '{color}', using 'default'.")
                     target_xy = node.dropoffs['default']
 
                 # ─────────────────────────────────────────────────
@@ -404,75 +487,67 @@ def main(args=None):
                     # OMPL plans free-space motion including yaw rotation
                     # Rotation happens safely at hover height, not near the table
                     logger.info("🟢 PHASE 1: Approach + orient (OMPL)")
-                    if not plan_and_execute(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
-                        raise RuntimeError("Failed to reach oriented hover pose")
+                    if not plan_and_execute_travel(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
+                        raise RuntimeError("🛑 Failed to reach oriented hover pose")
 
                     check_abort()
                     escape_pose = pose_hover_pick_straight
 
-                    # ── PHASE 2: DESCEND (LIN) ────────────────────
+                    # ── PHASE 2: DESCEND (Pilz) ────────────────────
                     # Pure vertical descent, yaw is already set
-                    logger.info("🟢 PHASE 2: Descend to grasp (LIN)")
-                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_grasp, tcp_link):
-                        raise RuntimeError("Failed to descend to grasp")
+                    logger.info("🟢 PHASE 2: Descend to grasp (Pilz)")
+                    if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_grasp, tcp_link):
+                        logger.warn("🛑 Pilz failed, trying OMPL fallback...")
+                        if not plan_and_execute_ompl(ur5e, ur5e_arm, logger, pose_grasp, tcp_link):
+                            raise RuntimeError("🛑 Failed to descend to grasp")
 
                     check_abort()
 
                     # ── PHASE 3: GRASP ────────────────────────────
                     logger.info("🟢 PHASE 3: Grasping")
                     node.set_gripper(True)
-                    time.sleep(1.0)
 
                     check_abort()
 
-                    # ── PHASE 4: LIFT (LIN) ───────────────────────
+                    # ── PHASE 4: LIFT (Pilz) ───────────────────────
                     # Straight up, keeping yaw to avoid rotating with brick near table
-                    logger.info("🟢 PHASE 4: Lift (LIN)")
-                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
-                        raise RuntimeError("Failed to lift brick")
+                    logger.info("🟢 PHASE 4: Lift (Pilz)")
+                    if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
+                        logger.warn("🛑 Pilz failed, trying OMPL fallback...")
+                        if not plan_and_execute_ompl(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
+                            raise RuntimeError("F🛑 ailed to lift brick")
 
                     check_abort()
 
-                    """ # ── PHASE 5: UNTWIST (LIN) ────────────────────
-                    # Rotate back to neutral yaw at safe hover height
-                    if yaw != 0.0:
-                        logger.info("🟢 PHASE 5: Untwist at hover height (LIN)")
-                        if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_hover_pick_straight, tcp_link):
-                            raise RuntimeError("Failed to untwist at hover height")
-                    else:
-                        logger.info("🟢 PHASE 5: Skipped (yaw is 0°)")
-
-                    check_abort() """
-                    escape_pose = None
-
-                    # ── PHASE 6: TRANSPORT ────────────────────────
-                    logger.info(f"🟢 PHASE 6: Transport to {color} drop-off")
-                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
-                        logger.warn("  LIN failed, trying OMPL fallback...")
-                        if not plan_and_execute(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
-                            raise RuntimeError("Failed to reach drop-off zone")
+                    # ── PHASE 5: TRANSPORT ────────────────────────
+                    logger.info(f"🟢 PHASE 5: Transport to {color} drop-off (OMPL)")
+                    if not plan_and_execute_travel(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
+                        raise RuntimeError("🛑 Failed to reach drop-off zone")
 
                     check_abort()
                     escape_pose = pose_hover_drop
 
-                    # ── PHASE 7: LOWER (LIN) ──────────────────────
-                    logger.info("🟢 PHASE 7: Lower to drop-off (LIN)")
-                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_drop, tcp_link):
-                        logger.warn("Failed to lower completely. Releasing from current height.")
+                    # ── PHASE 6: LOWER (Pilz) ──────────────────────
+                    logger.info("🟢 PHASE 6: Lower to drop-off (Pilz)")
+                    if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_drop, tcp_link):
+                        logger.warn("🛑 Pilz failed, trying OMPL fallback...")
+                        if not plan_and_execute_ompl(ur5e, ur5e_arm, logger, pose_drop, tcp_link):
+                            logger.warn("🛑 Failed to lower completely. Releasing from current height.")
 
                     check_abort()
 
-                    # ── PHASE 8: RELEASE ──────────────────────────
-                    logger.info("🟢 PHASE 8: Release")
+                    # ── PHASE 7: RELEASE ──────────────────────────
+                    logger.info("🟢 PHASE 7: Release")
                     node.set_gripper(False)
-                    time.sleep(0.5)
 
                     check_abort()
 
-                    # ── PHASE 9: RETREAT (LIN) ────────────────────
-                    logger.info("🟢 PHASE 9: Retreat (LIN)")
-                    if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
-                        logger.warn("Vertical retreat failed.")
+                    # ── PHASE 8: RETREAT (Pilz) ────────────────────
+                    logger.info("🟢 PHASE 8: Retreat (Pilz)")
+                    if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
+                        logger.warn("🛑 Pilz failed, trying OMPL fallback...")
+                        if not plan_and_execute_ompl(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
+                            logger.warn("🛑 Retreat failed.")
 
                     escape_pose = None
 
@@ -492,13 +567,13 @@ def main(args=None):
                     # 1. Retract: only attempt to retreat if we had a defined escape pose (we were in the middle of the cycle)
                     if escape_pose is not None:
                         logger.info("Executing vertical retract & untwist to safe hover height...")
-                        plan_and_execute_cartesian(ur5e, ur5e_arm, logger, escape_pose, tcp_link)
+                        plan_and_execute_pilz(ur5e, ur5e_arm, logger, escape_pose, tcp_link)
                     else:
                         logger.info("Arm is already safe. Skipping retract.")
                         
                     # 2. Return to ready pose before next cycle
                     logger.info("Returning to ready pose...")
-                    plan_and_execute(ur5e, ur5e_arm, logger, "ready", tcp_link)
+                    plan_and_execute_travel(ur5e, ur5e_arm, logger, "ready", tcp_link)
                     
                     # 3. Break out of the batch processing loop to return to standby and wait for next trigger
                     break
@@ -513,7 +588,7 @@ def main(args=None):
             )
 
 
-            plan_and_execute(ur5e, ur5e_arm, logger, "ready", tcp_link)
+            plan_and_execute_travel(ur5e, ur5e_arm, logger, "ready", tcp_link)
 
     except KeyboardInterrupt:
         logger.info("Application stopped by user.")
