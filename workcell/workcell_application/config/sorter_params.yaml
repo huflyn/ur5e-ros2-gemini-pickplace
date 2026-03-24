@@ -8,8 +8,8 @@ pick_and_place_node:
     brick_center_offset: 0.01 # Offset from front face to center of brick in meters (for 3D grasping)
 
     # Drop-off coordinates: [X, Y]
-    dropoff_default: [-0.27, 0.48]
-    dropoff_yellow: [0.27, 0.48]
-    dropoff_red: [0.27, 0.37]
-    dropoff_green: [0.27, 0.25]
-    dropoff_blue: [0.27, 0.15]
+    dropoff_default: [-0.22, 0.31]
+    dropoff_yellow: [0.275, 0.5]
+    dropoff_red: [0.275, 0.38]
+    dropoff_green: [0.275, 0.26]
+    dropoff_blue: [0.275, 0.11]
