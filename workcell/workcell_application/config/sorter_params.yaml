@@ -5,7 +5,7 @@ pick_and_place_node:
     grasp_height: 0.0 # 0.00 = table surface
     dropoff_height: 0.08
     grasp_z_offset: 0.0 # UNUSED Optional: To ensure a secure grasp by going slightly below the detected Z
-    brick_center_offset: 0.02 # Offset from front face to center of brick in meters (for 3D grasping)
+    brick_center_offset: 0.01 # Offset from front face to center of brick in meters (for 3D grasping)
 
     # Drop-off coordinates: [X, Y]
     dropoff_default: [-0.27, 0.48]
