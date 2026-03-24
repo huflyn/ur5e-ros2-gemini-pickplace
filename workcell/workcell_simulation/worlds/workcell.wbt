@@ -11,7 +11,7 @@ WorldInfo {
   basicTimeStep 20
 }
 Viewpoint {
-  orientation -0.20778529328000897 -0.10090955048958682 0.9729555665684484 4.024435178186777
+  orientation -0.20838713116640625 -0.10120183440221793 0.972796480399606 4.0243088585644236
   position 2.1811466271185984 2.2368360303230785 1.535515830539661
 }
 TexturedBackground {
@@ -50,7 +50,7 @@ DEF scene Pose {
           color 0.898039 0.647059 0.0392157
         }
         BrickContainer {
-          translation 0.275 0.11 0
+          translation -0.205 0.475 0
           rotation 0 1 0 4.692820414042842e-06
           name "container_3(1)"
           color 0.101961 0.372549 0.705882
