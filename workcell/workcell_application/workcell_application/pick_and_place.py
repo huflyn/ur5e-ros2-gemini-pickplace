@@ -139,7 +139,7 @@ class PickAndPlaceNode(Node):
                 req.state = 1.0
                 self.io_client.call_async(req)
                 # Wait for vacuum to build up before moving the arm!
-                time.sleep(1.0) 
+                time.sleep(0.5) 
             else:
                 req.state = 0.0
                 self.io_client.call_async(req)
@@ -354,8 +354,8 @@ def main(args=None):
         pose = PoseStamped()
         pose.header.frame_id = node.base_frame
 
-        # Kleiner Pitch-Offset (2°) um Wrist-Singularität zu vermeiden
-        pitch_offset = math.radians(2.0)
+        # Pitch offset to ensure the gripper faces downwards, can be adjusted if needed
+        pitch_offset = math.radians(0.0)
         q_down = quaternion_from_euler(math.pi + pitch_offset, 0.0, yaw)
 
         pose.pose.orientation.x = q_down[0]
@@ -487,8 +487,10 @@ def main(args=None):
                     # OMPL plans free-space motion including yaw rotation
                     # Rotation happens safely at hover height, not near the table
                     logger.info("🟢 PHASE 1: Approach + orient (OMPL)")
-                    if not plan_and_execute_travel(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
-                        raise RuntimeError("🛑 Failed to reach oriented hover pose")
+                    if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
+                        logger.warn("🛑 Pilz failed, trying OMPL fallback...")
+                        if not plan_and_execute_ompl(ur5e, ur5e_arm, logger, pose_grasp, tcp_link):
+                            raise RuntimeError("🛑 Failed to reach oriented hover pose")
 
                     check_abort()
                     escape_pose = pose_hover_pick_straight
@@ -506,6 +508,7 @@ def main(args=None):
                     # ── PHASE 3: GRASP ────────────────────────────
                     logger.info("🟢 PHASE 3: Grasping")
                     node.set_gripper(True)
+                    time.sleep(0.5) # Ensure gripper has time to activate before lifting the arm
 
                     check_abort()
 
@@ -515,14 +518,16 @@ def main(args=None):
                     if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
                         logger.warn("🛑 Pilz failed, trying OMPL fallback...")
                         if not plan_and_execute_ompl(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
-                            raise RuntimeError("F🛑 ailed to lift brick")
+                            raise RuntimeError("🛑 Failed to lift brick")
 
                     check_abort()
 
                     # ── PHASE 5: TRANSPORT ────────────────────────
                     logger.info(f"🟢 PHASE 5: Transport to {color} drop-off (OMPL)")
-                    if not plan_and_execute_travel(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
-                        raise RuntimeError("🛑 Failed to reach drop-off zone")
+                    if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
+                        logger.warn("🛑 Pilz failed, trying OMPL fallback...")
+                        if not plan_and_execute_ompl(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
+                            raise RuntimeError("🛑 Failed to reach drop-off zone")
 
                     check_abort()
                     escape_pose = pose_hover_drop
@@ -539,6 +544,7 @@ def main(args=None):
                     # ── PHASE 7: RELEASE ──────────────────────────
                     logger.info("🟢 PHASE 7: Release")
                     node.set_gripper(False)
+                    time.sleep(0.5) # Ensure gripper has time to release before moving the arm
 
                     check_abort()
 
