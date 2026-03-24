@@ -154,8 +154,8 @@ class ColorDetectorNode(Node):
             "🟢 ColorDetectorNode (Service Node) ready.\n" +
             "👂 Waiting for service call from client...\n" +
             "To test functionality manually, use:\n" +
-            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{custom_prompt: ''}\"\n" +
-            "(Note: The custom_prompt field is ignored in the deterministic OpenCV mode)\n" +
+            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{user_prompt: ''}\"\n" +
+            "(Note: The user_prompt field is ignored in the deterministic OpenCV mode)\n" +
             "="*60
         )
 
