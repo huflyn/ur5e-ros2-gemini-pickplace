@@ -44,3 +44,9 @@ pilz_ptp:
     max_velocity_scaling_factor: 0.2
     max_acceleration_scaling_factor: 0.2
     planning_time: 10.0
+
+
+# --- Tolerances for executing the movement (duration) ---
+trajectory_execution:
+  allowed_execution_duration_scaling: 2.0  # miltiplyer for the expected trajectory duration to get the allowed execution duration (Standard: 1.2)
+  allowed_goal_duration_margin: 2.0        # Additional time margin added to the expected trajectory duration to get the allowed execution duration (Standard: 0.5s)Zusätzlicher Puffer in Sekunden (Standard: 0.5)
