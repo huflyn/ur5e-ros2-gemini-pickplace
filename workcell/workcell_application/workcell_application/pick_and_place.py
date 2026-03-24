@@ -139,7 +139,7 @@ class PickAndPlaceNode(Node):
                 req.state = 1.0
                 self.io_client.call_async(req)
                 # Wait for vacuum to build up before moving the arm!
-                time.sleep(0.5) 
+                time.sleep(1.0) 
             else:
                 req.state = 0.0
                 self.io_client.call_async(req)
