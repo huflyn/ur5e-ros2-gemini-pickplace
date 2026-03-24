@@ -13,8 +13,10 @@ planning_pipelines:
 plan_request_params:
   planning_attempts: 1
   planning_pipeline: ompl
+  planner_id: "RRTConnectkConfigDefault"
   max_velocity_scaling_factor: 0.2
   max_acceleration_scaling_factor: 0.2
+  planning_time: 5.0   
 
 ompl_rrtc:  # Namespace for individual plan request
   plan_request_params:  # PlanRequestParameters similar to the ones that are used by the single pipeline planning of moveit_cpp
@@ -23,13 +25,13 @@ ompl_rrtc:  # Namespace for individual plan request
     planner_id: "RRTConnectkConfigDefault"  # Name of the specific planner to be used by the pipeline
     max_velocity_scaling_factor: 0.2  # Velocity scaling parameter for the trajectory generation algorithm that is called (if configured) after the path planning
     max_acceleration_scaling_factor: 0.2  # Acceleration scaling parameter for the trajectory generation algorithm that is called (if configured) after the path planning
-    planning_time: 1.0  # Time budget for the motion plan request. If the planning problem cannot be solved within this time, an empty solution with error code is returned
+    planning_time: 5.0  # Time budget for the motion plan request. If the planning problem cannot be solved within this time, an empty solution with error code is returned
 
 pilz_lin:
   plan_request_params:
     planning_attempts: 1
     planning_pipeline: pilz_industrial_motion_planner
-    planner_id: "LIN"  # <--- HIER WAR PTP, das muss LIN sein für gerade Linien!
+    planner_id: "LIN"
     max_velocity_scaling_factor: 0.2
     max_acceleration_scaling_factor: 0.2
     planning_time: 10.0
@@ -42,11 +44,3 @@ pilz_ptp:
     max_velocity_scaling_factor: 0.2
     max_acceleration_scaling_factor: 0.2
     planning_time: 10.0
-
-chomp_planner:
-  plan_request_params:
-    planning_attempts: 1
-    planning_pipeline: chomp
-    max_velocity_scaling_factor: 0.2
-    max_acceleration_scaling_factor: 0.2
-    planning_time: 1.5
