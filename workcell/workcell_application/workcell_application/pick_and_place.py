@@ -526,7 +526,7 @@ def main(args=None):
                     logger.info(f"🟢 PHASE 5: Transport to {color} drop-off (OMPL)")
                     if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
                         logger.warn("🛑 Pilz failed, trying OMPL fallback...")
-                        if not plan_and_execute_ompl(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
+                        if not plan_and_execute_ompl(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
                             raise RuntimeError("🛑 Failed to reach drop-off zone")
 
                     check_abort()
