@@ -2,14 +2,13 @@ pick_and_place_node:
   ros__parameters:
     # Z-Heights
     hover_height: 0.25
-    grasp_height: 0.0 # 0.00 = table surface
+    grasp_height: 0.001 # 0.00 = table surface
     dropoff_height: 0.08
-    grasp_z_offset: 0.0 # UNUSED Optional: To ensure a secure grasp by going slightly below the detected Z
-    brick_center_offset: 0.01 # Offset from front face to center of brick in meters (for 3D grasping)
+    brick_center_offset: 0.013 # Offset from front face to center of brick in meters (for 3D grasping)
 
     # Drop-off coordinates: [X, Y]
     dropoff_default: [-0.22, 0.31]
     dropoff_yellow: [0.275, 0.5]
     dropoff_red: [0.275, 0.38]
     dropoff_green: [0.275, 0.26]
-    dropoff_blue: [0.275, 0.11]
+    dropoff_blue: [-0.205, 0.475]
