@@ -4,6 +4,7 @@ from launch import LaunchDescription
 from launch_ros.actions import Node, SetParameter
 from launch_ros.parameter_descriptions import ParameterValue
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Command
+from launch.actions import DeclareLaunchArgument
 import xacro
 from ament_index_python.packages import get_package_share_directory
 from webots_ros2_driver.webots_launcher import WebotsLauncher
@@ -14,6 +15,14 @@ def generate_launch_description():
     package_dir = get_package_share_directory('workcell_simulation')
     workcell_desc_dir = get_package_share_directory('workcell_description')
     ros2_controllers_yaml_dir = get_package_share_directory('workcell_moveit_config')
+
+    use_sim_time = LaunchConfiguration('use_sim_time')
+
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='Use simulation (Webots) clock if true, hardware clock if false'
+    )
 
     # ===== 1) URDFs verarbeiten (xacro → XML-String) =====
 
@@ -34,7 +43,7 @@ def generate_launch_description():
     robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
-        parameters=[{'robot_description': workcell_description}, {'use_sim_time': True}],
+        parameters=[{'robot_description': workcell_description}, {'use_sim_time': use_sim_time}],
     )
 
     # Spawner
@@ -44,14 +53,14 @@ def generate_launch_description():
         package='controller_manager',
         executable='spawner',
         arguments=['joint_state_broadcaster', '--controller-manager', '/controller_manager'] + controller_manager_timeout,
-        parameters=[{'use_sim_time': True}]
+        parameters=[{'use_sim_time': use_sim_time}]
     )
 
     trajectory_spawner = Node(
         package='controller_manager',
         executable='spawner',
         arguments=['scaled_joint_trajectory_controller', '--controller-manager', '/controller_manager'] + controller_manager_timeout,
-        parameters=[{'use_sim_time': True}]
+        parameters=[{'use_sim_time': use_sim_time}]
     )
 
     # Webots starten
@@ -65,7 +74,7 @@ def generate_launch_description():
         robot_name='ur5e',
         parameters=[
             {'robot_description': ur5e_xacro},
-            {'use_sim_time': True},
+            {'use_sim_time': use_sim_time},
             ur5e_control_params,
         ],
     )
@@ -75,13 +84,13 @@ def generate_launch_description():
         robot_name='realsense',
         parameters=[
             {'robot_description': realsense_xacro},
-            {'use_sim_time': True},
+            {'use_sim_time': use_sim_time},
         ],
     )
 
 
     return LaunchDescription([
-
+        use_sim_time_arg,
         robot_state_publisher,
         webots,
         webots._supervisor,
