@@ -508,8 +508,7 @@ def main(args=None):
                     # ── PHASE 3: GRASP ────────────────────────────
                     logger.info("🟢 PHASE 3: Grasping")
                     node.set_gripper(True)
-                    time.sleep(0.5) # En                    time.sleep(0.5) # Ensure gripper has time to release before moving the arm
-sure gripper has time to activate before lifting the arm
+                    time.sleep(0.5) # Ensure gripper has time to activate before lifting the arm
 
                     check_abort()
 
