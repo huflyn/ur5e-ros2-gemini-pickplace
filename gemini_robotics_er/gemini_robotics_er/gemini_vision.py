@@ -62,13 +62,13 @@ class DetectionResult(BaseModel):
 
 SYSTEM_PROMPT = textwrap.dedent("""\
     You are a vision system for a robotic pick-and-place task.
-    Your job is to analyze the image, detect Lego bricks, and determine their bounding boxes, colors, and potential drop-off locations based on user instructions.
+    Your job is to analyze the image, detect Lego bricks (and other requested objects), and determine their bounding boxes, colors, and potential drop-off locations based on user instructions.
 
     Return a JSON list matching this exact schema:
     {
       "bricks": [
         {
-          "label": "<color>",
+          "label": "<color or object name>",
           "box_2d": [ymin, xmin, ymax, xmax],
           "user_dropoff": boolean,
           "dropoff_point_2d": [y, x] | null,
@@ -78,16 +78,22 @@ SYSTEM_PROMPT = textwrap.dedent("""\
     }
 
     JSON Field Instructions:
-    1. label: Simple colors only ("red", "blue", "green", "black", ...).
-    2. box_2d: Bounding box of the brick. Normalized integers 0-1000.
-    3. user_dropoff: Set to true ONLY if the user explicitly specifies a target destination for this brick. Otherwise false.
-    4. dropoff_point_2d: Use ONLY for visual targets (e.g., "put it on the red mat"). Returns the [y, x] center point in normalized integers 0-1000. Null if not applicable.
-    5. dropoff_coords_m: Use ONLY for metric coordinates provided in the text (e.g., "put it at x=0.4, y=0.5"). Returns [x, y] floats in meters. Null if not applicable.
+    1. label: Simple colors for Lego bricks, or the object name for non-lego items.
+    2. box_2d: Bounding box of the object. Normalized integers 0-1000.
+    3. user_dropoff: Evaluate this STRICTLY PER INDIVIDUAL OBJECT.
+       - Set to true ONLY if the user explicitly asks to move THIS SPECIFIC object to a custom location, or to find a safe spot for it.
+       - Set to false if the user simply asks to "sort" the object (without any specific placement instructions, which means the robot uses predefined hardware bins), or if no specific placement is mentioned for that individual object.
+    4. dropoff_point_2d: If user_dropoff is false, this MUST be null. If user_dropoff is true, provide the [y, x] center point in normalized integers 0-1000.
+       CRITICAL CONSTRAINT FOR DROPOFFS: The drop-off point MUST be located strictly on the flat wooden table surface visible at the bottom of the image. 
+       - NEVER place the drop-off point on the background, walls, windows, or cabinets in the upper half of the image.
+       - Look at the y-coordinates of the detected objects resting on the table. Your drop-off y-coordinate must fall within that same horizontal band (typically y > 700).
+       - Ensure the point is not too close to other detected objects.
+    5. dropoff_coords_m: Use ONLY for explicitly provided metric coordinates in the text (e.g., "put it at x=0.4, y=0.5"). Returns [x, y] floats in meters. Null if not applicable.
 
     General Instructions:
-    - ONLY SINGLE BRICKS, no builds or groups or stacks.
-    - SELECTION: Only return bricks that match the user's instructions.
-    - SEQUENCE: Order the array logically by pick sequence (e.g., top-most bricks first).
+    - ONLY SINGLE BRICKS/OBJECTS, no builds or groups or stacks.
+    - SELECTION: Only return objects that match the user's instructions.
+    - SEQUENCE: Order the array logically by pick sequence (e.g., top-most or most relevant objects first).
     - LIMIT: Maximum 15 objects per image.
 """)
 
@@ -321,7 +327,7 @@ class GeminiVisionNode(Node):
         #self.declare_parameter('gemini_model', 'gemini-robotics-er-1.5-preview')
 
         self.declare_parameter('temperature', 1)
-        self.declare_parameter('thinking_budget', 0)
+        self.declare_parameter('thinking_budget', -1)
 
         self.model_id = self.get_parameter('gemini_model').value
         self.temperature = self.get_parameter('temperature').value
@@ -670,9 +676,18 @@ class GeminiVisionNode(Node):
                     msg.bounding_box_px = [ymin, xmin, ymax, xmax]
                     msg.has_user_dropoff = False
 
-                    # --- Robust Depth for Drop-off (Optional) ---
+                    # --- Robust Depth for Drop-off ---
                     if brick.dropoff_point_2d:
                         drop_depth_mm = get_robust_depth(brick.dropoff_point_2d, cv_depth, img_w, img_h)
+
+                        # Fallback to brick depth if dropoff pixel has no depth
+                        if drop_depth_mm is None:
+                            self.get_logger().warn(
+                                f"No depth at dropoff for '{color}'. Using brick depth as fallback."
+                            )
+                            drop_depth_mm = depth_mm
+    
+
                         if drop_depth_mm is not None:
                             drop_z = drop_depth_mm / 1000.0
                             dy, dx = normalized_to_pixel(brick.dropoff_point_2d, img_w, img_h)
