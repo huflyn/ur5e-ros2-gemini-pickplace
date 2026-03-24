@@ -29,30 +29,30 @@ DEF scene Pose {
         BrickContainer {
           translation -0.22 0.31 0
           rotation 0 1 0 4.692820414042842e-06
-          name "container_1"
+          name "default"
           color 0.603922 0.6 0.588235
         }
         BrickContainer {
-          translation 0.275 0.38 0
+          translation 0.275 0.39 0
           rotation 0 1 0 4.692820414042842e-06
-          name "container_2"
+          name "red"
         }
         BrickContainer {
-          translation 0.275 0.26 0
+          translation 0.275 0.27 0
           rotation 0 1 0 4.692820414042842e-06
-          name "container_3"
+          name "green"
           color 0.14902 0.635294 0.411765
         }
         BrickContainer {
           translation 0.275 0.5 0
           rotation 0 1 0 4.692820414042842e-06
-          name "container_4"
+          name "yellow"
           color 0.898039 0.647059 0.0392157
         }
         BrickContainer {
           translation -0.205 0.475 0
           rotation 0 1 0 4.692820414042842e-06
-          name "container_3(1)"
+          name "blue"
           color 0.101961 0.372549 0.705882
         }
         DEF plate Pose {
