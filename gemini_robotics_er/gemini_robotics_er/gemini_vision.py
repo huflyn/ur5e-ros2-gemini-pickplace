@@ -86,7 +86,7 @@ SYSTEM_PROMPT = textwrap.dedent("""\
 
     General Instructions:
     - ONLY SINGLE BRICKS, no builds or groups or stacks.
-    - SELECTION: Only return bricks that match the user's instructions. If no instructions are provided, return all bricks.
+    - SELECTION: Only return bricks that match the user's instructions.
     - SEQUENCE: Order the array logically by pick sequence (e.g., top-most bricks first).
     - LIMIT: Maximum 15 objects per image.
 """)
@@ -97,7 +97,7 @@ SYSTEM_PROMPT = textwrap.dedent("""\
 def build_prompt(user_prompt: Optional[str] = None) -> str:
     """Builds the Gemini prompt."""
     prompt = textwrap.dedent("""\
-        Detect all Lego bricks in the image.""")
+        Detect Lego bricks""")
 
     if user_prompt:
         prompt = textwrap.dedent(f"""\
@@ -113,9 +113,10 @@ def resize_image(image: PILImage.Image) -> PILImage.Image:
     # Calculate height based on the original aspect ratio
     height_target = int(width_target * image.size[1] / image.size[0])
     # Resizing using LANCZOS for high quality
-    resized_img = image.resize((width_target, height_target), PILImage.Resampling.LANCZOS)
+    #resized_img = image.resize((width_target, height_target), PILImage.Resampling.LANCZOS)
     
-    return resized_img
+    #return resized_img
+    return image
 
 
 def normalized_to_pixel(coords: List[int], img_w: int, img_h: int) -> tuple:
@@ -153,39 +154,73 @@ def normalized_to_pixel(coords: List[int], img_w: int, img_h: int) -> tuple:
         raise ValueError(f"Expected 2 or 4 coordinates, got {len(coords)}")
 
 
-def get_robust_depth(coords_2d: List[int], cv_depth: np.ndarray, img_w: int, img_h: int) -> Optional[float]:
+def get_robust_depth(coords_2d: List[int], cv_depth: np.ndarray, 
+                     img_w: int, img_h: int) -> Optional[float]:
     """
-    Extracts the median depth from a 5x5 pixel region around the center of the given 2D coordinates.
-    Works for both bounding boxes (4 items) and single points (2 items).
-    Returns depth in millimeters, or None if no valid depth could be found.
+    Extracts median depth from a region around the center.
+    Adaptive region size based on bounding box dimensions.
     """
     if len(coords_2d) == 4:
-        # Bounding Box: calculate center
         ymin, xmin, ymax, xmax = normalized_to_pixel(coords_2d, img_w, img_h)
-        cx = np.clip((xmin + xmax) // 2, 0, img_w - 1)
-        cy = np.clip((ymin + ymax) // 2, 0, img_h - 1)
+        # ✅ FIX: Division durch 2, nicht 4!
+        cx = (xmin + xmax) // 2
+        cy = (ymin + ymax) // 2
+
+        # ✅ Adaptive Region: 30% der BBox-Größe, aber min 3, max 20
+        box_w = xmax - xmin
+        box_h = ymax - ymin
+        half_w = max(3, min(20, int(box_w * 0.15)))
+        half_h = max(3, min(20, int(box_h * 0.15)))
+
     elif len(coords_2d) == 2:
-        # Single Point
         cy, cx = normalized_to_pixel(coords_2d, img_w, img_h)
+        half_w = 5
+        half_h = 5
     else:
         return None
 
-    # Extract a 5x5 region around the center to avoid NaN/0 holes
+    # Clamp to image bounds
+    cx = np.clip(cx, 0, img_w - 1)
+    cy = np.clip(cy, 0, img_h - 1)
+
+    # Extract region
     region = cv_depth[
-        max(0, cy - 5):min(img_h, cy + 6),
-        max(0, cx - 5):min(img_w, cx + 6)
+        max(0, cy - half_h):min(img_h, cy + half_h + 1),
+        max(0, cx - half_w):min(img_w, cx + half_w + 1)
     ]
 
-    # Filter out invalid values (0 or infinite/NaN)
+    # Filter invalid values
     valid_depth = region[(region > 0) & np.isfinite(region)]
 
     if valid_depth.size == 0:
         return None
 
-    # Return the median value of the valid pixels
-    median_depth_mm = float(np.median(valid_depth))
-    return median_depth_mm
+    return float(np.median(valid_depth))
 
+def get_robust_depth_multi_frame(self, coords_2d, img_w, img_h, 
+                                  num_frames=5, delay=0.05):
+    """Sammelt Depth über mehrere Frames für Zuverlässigkeit."""
+    depths = []
+    for _ in range(num_frames):
+        if self.latest_depth_msg is None:
+            continue
+
+        if self.latest_depth_msg.encoding == '32FC1':
+            cv_depth = self.bridge.imgmsg_to_cv2(
+                self.latest_depth_msg, "32FC1") * 1000.0
+        else:
+            cv_depth = self.bridge.imgmsg_to_cv2(
+                self.latest_depth_msg, "16UC1").astype(np.float32)
+
+        d = get_robust_depth(coords_2d, cv_depth, img_w, img_h)
+        if d is not None:
+            depths.append(d)
+        time.sleep(delay)
+
+    if not depths:
+        return None
+
+    return float(np.median(depths))
 
 def draw_bbox(image, label, ymin, xmin, ymax, xmax, pt_3d=None, color=(255, 140, 72)):
     """Draws a bounding box with label and optional 3D coordinates on the image."""
@@ -282,8 +317,10 @@ class GeminiVisionNode(Node):
         super().__init__('gemini_vision_node')
 
         # --- Gemini API Parameters ---
-        self.declare_parameter('gemini_model', 'gemini-robotics-er-1.5-preview')
-        self.declare_parameter('temperature', 0.5)
+        self.declare_parameter('gemini_model', 'gemini-3-flash-preview')
+        #self.declare_parameter('gemini_model', 'gemini-robotics-er-1.5-preview')
+
+        self.declare_parameter('temperature', 1)
         self.declare_parameter('thinking_budget', 0)
 
         self.model_id = self.get_parameter('gemini_model').value
@@ -414,7 +451,7 @@ class GeminiVisionNode(Node):
                         z = brick.position.point.z
                         color = brick.color.data
                         distance = brick.camera_distance_mm
-                        log_msg += f"   - {color.capitalize()}: [X: {x:.3f}, Y: {y:.3f}, Z: {z:.3f}]\n"
+                        log_msg += f"   - {color.capitalize()}: [X: {x:.3f}, Y: {y:.3f}, Z: {z:.3f}] | Distanz: {distance:.0f} mm\n"
                     log_msg += f"{'='*60}"
                     self.get_logger().info(log_msg)
                 # ---------------------------------------
@@ -601,12 +638,13 @@ class GeminiVisionNode(Node):
                     cx = np.clip((xmin + xmax) // 2, 0, img_w - 1)
                     cy = np.clip((ymin + ymax) // 2, 0, img_h - 1)
                     ray = self.camera_model.projectPixelTo3dRay((cx, cy))
+                    scale = z / ray[2]
                     
                     # Create Point in Camera Frame
                     pt_cam = PointStamped()
                     pt_cam.header.frame_id = self.camera_frame
-                    pt_cam.point.x = ray[0] * z
-                    pt_cam.point.y = ray[1] * z
+                    pt_cam.point.x = ray[0] * scale
+                    pt_cam.point.y = ray[1] * scale
                     pt_cam.point.z = z
 
                     # Transform to Robot Base Frame
@@ -614,6 +652,14 @@ class GeminiVisionNode(Node):
                     
                     # Store in Pydantic for drawing
                     brick.position_3d = [pt_base.point.x, pt_base.point.y, pt_base.point.z]
+
+                    self.get_logger().info(
+                        f"DEBUG {color}: pixel=({cx},{cy}), "
+                        f"ray=({ray[0]:.4f},{ray[1]:.4f},{ray[2]:.4f}), "
+                        f"scale={scale:.4f}, "
+                        f"cam=({ray[0]*scale:.4f},{ray[1]*scale:.4f},{z:.4f}), "
+                        f"base=({pt_base.point.x:.4f},{pt_base.point.y:.4f},{pt_base.point.z:.4f})"
+                    )
 
                     # --- Build ROS Message ---
                     msg = LegoBrick()
@@ -631,11 +677,12 @@ class GeminiVisionNode(Node):
                             drop_z = drop_depth_mm / 1000.0
                             dy, dx = normalized_to_pixel(brick.dropoff_point_2d, img_w, img_h)
                             drop_ray = self.camera_model.projectPixelTo3dRay((dx, dy))
+                            scale = drop_z / drop_ray[2]
                             
                             drop_cam = PointStamped()
                             drop_cam.header.frame_id = self.camera_frame
-                            drop_cam.point.x = drop_ray[0] * drop_z
-                            drop_cam.point.y = drop_ray[1] * drop_z
+                            drop_cam.point.x = drop_ray[0] * scale
+                            drop_cam.point.y = drop_ray[1] * scale
                             drop_cam.point.z = drop_z
                             
                             drop_base = do_transform_point(drop_cam, tf_cam_to_base)
