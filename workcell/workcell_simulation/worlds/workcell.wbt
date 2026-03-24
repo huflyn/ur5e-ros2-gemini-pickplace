@@ -11,8 +11,8 @@ WorldInfo {
   basicTimeStep 20
 }
 Viewpoint {
-  orientation -0.22234920849079665 -0.10119379885497322 0.9697013171883472 3.972834729963595
-  position 3.8083819943071013 4.937463215154996 2.774936232638434
+  orientation -0.20778529328000897 -0.10090955048958682 0.9729555665684484 4.024435178186777
+  position 2.1811466271185984 2.2368360303230785 1.535515830539661
 }
 TexturedBackground {
 }
@@ -27,30 +27,30 @@ DEF scene Pose {
       translation 0 -0.26 1.15
       children [
         BrickContainer {
-          translation 0.27 0.25 0
+          translation -0.22 0.31 0
           rotation 0 1 0 4.692820414042842e-06
           name "container_1"
           color 0.603922 0.6 0.588235
         }
         BrickContainer {
-          translation 0.27 0.35 0
+          translation 0.275 0.38 0
           rotation 0 1 0 4.692820414042842e-06
           name "container_2"
         }
         BrickContainer {
-          translation 0.27 0.45 0
+          translation 0.275 0.26 0
           rotation 0 1 0 4.692820414042842e-06
           name "container_3"
           color 0.14902 0.635294 0.411765
         }
         BrickContainer {
-          translation -0.27 0.35 0
+          translation 0.275 0.5 0
           rotation 0 1 0 4.692820414042842e-06
           name "container_4"
           color 0.898039 0.647059 0.0392157
         }
         BrickContainer {
-          translation -0.27 0.45 0
+          translation 0.275 0.11 0
           rotation 0 1 0 4.692820414042842e-06
           name "container_3(1)"
           color 0.101961 0.372549 0.705882
