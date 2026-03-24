@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
 Verification script for alignment and calibration.
-Moves the robot to defined test positions requiring user confirmation.
+Moves the robot to defined test positions from a YAML file.
 """
+import os
 import time
 import math
+import yaml
 
 import rclpy
 from rclpy.node import Node
@@ -13,13 +15,13 @@ from std_msgs.msg import Empty
 from geometry_msgs.msg import PoseStamped
 from tf_transformations import quaternion_from_euler
 from moveit.planning import MoveItPy
+from ament_index_python.packages import get_package_share_directory
 
 def plan_and_execute(robot, arm, logger, target):
     """
     Plans and executes a trajectory to either a named pose or a PoseStamped.
     Includes validation and a physical settling delay for the simulation.
     """
-
     arm.set_start_state_to_current_state()
     
     if isinstance(target, str):
@@ -32,7 +34,6 @@ def plan_and_execute(robot, arm, logger, target):
     plan_result = arm.plan()
 
     if plan_result:
-        logger
         logger.info("Executing planned trajectory...")
         
         # 1. Execute the trajectory and store the success status
@@ -68,6 +69,21 @@ class TriggerNode(Node):
         self.triggered = True
 
 
+def load_poses_from_yaml(logger):
+    """Liest die Test-Posen aus der YAML-Datei."""
+    try:
+        # Passe hier deinen Package-Namen an, falls er anders lautet!
+        pkg_share = get_package_share_directory('workcell_application')
+        yaml_path = os.path.join(pkg_share, 'config', 'verify_alignment.yaml')
+        
+        with open(yaml_path, 'r') as file:
+            data = yaml.safe_load(file)
+            return data.get('test_poses', [])
+    except Exception as e:
+        logger.error(f"❌ Failed to load YAML file: {e} ❌")
+        return []
+
+
 def main(args=None):
     rclpy.init(args=args)
     logger = get_logger("verify_alignment")
@@ -82,78 +98,33 @@ def main(args=None):
     # Standard orientation: Gripper pointing straight down
     q_down = quaternion_from_euler(math.pi, 0.0, 0.0)
 
+    # --- Lade Posen aus YAML ---
+    test_poses = load_poses_from_yaml(logger)
+    if not test_poses:
+        logger.error("No test poses loaded. Exiting.")
+        rclpy.shutdown()
+        return
+
     # --- MOVE TO READY POSE FIRST ---
     logger.info("="*50)
     logger.info("Initializing: Moving to 'ready' pose...")
     logger.info("="*50 + "\n")
     plan_and_execute(ur5e, ur5e_arm, logger, "ready")
 
-    # =========================================================================
-    # CONFIGURATION OF TEST POSES
-    # =========================================================================
-    # TEMPLATE & EXPLANATION:
-    # This list contains dictionaries. Each dictionary defines one test pose.
-    # There are two types of poses you can define: "named" or "cartesian".
-    #
-    # 1. NAMED POSE (Predefined in your SRDF, e.g., via MoveIt Setup Assistant)
-    # {
-    #     "name": "Description shown in the terminal logger",
-    #     "type": "named",       # Must be strictly "named"
-    #     "target": "ready"      # The exact string name of the pose in the SRDF
-    # }
-    #
-    # 2. CARTESIAN POSE (Exact X/Y/Z coordinates in the workspace)
-    # {
-    #     "name": "Description shown in the terminal logger",
-    #     "type": "cartesian",   # Must be strictly "cartesian"
-    #     "x": 0.0,              # X position in meters (relative to ur5e_base_link)
-    #     "y": 0.5,              # Y position in meters
-    #     "z": 0.10,             # Z position in meters
-    #     "q": q_down            # Quaternion array [x, y, z, w] for the gripper orientation
-    # }
-    # =========================================================================
-    
-    test_poses = [
-        {
-            "name": "TCP Check: 10cm Z-Height, 50cm Y-Offset",
-            "type": "cartesian",
-            "x": 0.0,
-            "y": 0.5,
-            "z": 0.10,
-            "q": q_down
-        },
-        {
-            "name": "TCP Check: 1cm Z-Height, 50cm Y-Offset",
-            "type": "cartesian",
-            "x": 0.0,
-            "y": 0.5,
-            "z": 0.01,
-            "q": q_down
-        },
-        {
-            "name": "TCP Check: 0cm Z-Height, 50cm Y-Offset",
-            "type": "cartesian",
-            "x": 0.0,
-            "y": 0.5,
-            "z": 0.0,
-            "q": q_down
-        },
-        # Add additional test poses here as needed
-    ]
-
     logger.info("="*50)
     logger.info(" ALIGNMENT VERIFICATION SCRIPT STARTED ")
-    logger.info(" Messure from the robot base to the TCP at each")
+    logger.info(" Measure from the robot base to the TCP at each")
     logger.info(" position and compare with expected values.")
     logger.info("="*50 + "\n")
-
 
     trigger_node = TriggerNode()
 
     try:
         # Iterate through all defined test poses
         for i, pose_config in enumerate(test_poses):
-            name = pose_config["name"]
+            name = pose_config.get("name", f"Pose {i+1}")
+            pose_type = pose_config.get("type", "cartesian")
+            
             logger.info("\n" + "="*50)
             logger.info("="*50)
             logger.info(f"🟢 Test {i+1}: {name} 🟢")
@@ -172,20 +143,26 @@ def main(args=None):
                 rclpy.spin_once(trigger_node, timeout_sec=0.1)
 
             # 2. Prepare the target based on its type
-            if pose_config["type"] == "named":
+            if pose_type == "named":
                 target = pose_config["target"]
             else:
                 target = PoseStamped()
                 target.header.frame_id = "ur5e_base_link"
-                target.pose.position.x = pose_config["x"]
-                target.pose.position.y = pose_config["y"]
-                target.pose.position.z = pose_config["z"]
+                target.pose.position.x = float(pose_config.get("x", 0.0))
+                target.pose.position.y = float(pose_config.get("y", 0.0))
+                target.pose.position.z = float(pose_config.get("z", 0.0))
                 
-                q = pose_config["q"]
-                target.pose.orientation.x = q[0]
-                target.pose.orientation.y = q[1]
-                target.pose.orientation.z = q[2]
-                target.pose.orientation.w = q[3]
+                # Wenn in der YAML ein 'q' angegeben ist, nutze dieses.
+                # Ansonsten nimm automatisch q_down als Standard.
+                if "q" in pose_config:
+                    q = pose_config["q"]
+                else:
+                    q = q_down
+                    
+                target.pose.orientation.x = float(q[0])
+                target.pose.orientation.y = float(q[1])
+                target.pose.orientation.z = float(q[2])
+                target.pose.orientation.w = float(q[3])
 
             # 3. Plan and execute the motion
             success = plan_and_execute(ur5e, ur5e_arm, logger, target)
@@ -194,7 +171,7 @@ def main(args=None):
                 logger.info("="*50)
                 logger.info(f"✅ Position {i+1} reached:" + "\n")
                 logger.info(f"{name}" + "\n")
-                logger.info("Messure from the robot base to the TCP at each")
+                logger.info("Measure from the robot base to the TCP at each")
                 logger.info("position and compare with expected values.")
                 logger.info("="*50 + "\n")
             else:
@@ -214,6 +191,7 @@ def main(args=None):
         logger.info("="*50)
         logger.info("Shutting down verification script.")
         logger.info("="*50 + "\n")
+        trigger_node.destroy_node()
         rclpy.shutdown()
 
 if __name__ == '__main__':
