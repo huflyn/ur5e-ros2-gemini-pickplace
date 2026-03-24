@@ -1,0 +1,108 @@
+# =========================================================================
+# CONFIGURATION OF POSES FOR ALIGNMENT VERIFICATION
+# =========================================================================
+# TEMPLATE & EXPLANATION:
+# This YAML file defines a list of test poses that the robot will move to during the alignment verification process. 
+# Each pose can be either a "named" pose (predefined in your SRDF) or a "cartesian" pose (defined by specific X/Y/Z coordinates and orientation).
+#
+# 1. NAMED POSE (Predefined in your SRDF, e.g., via MoveIt Setup Assistant)
+# {
+#     "name": "Description shown in the terminal logger",
+#     "type": "named",       # Must be strictly "named"
+#     "target": "ready"      # The exact string name of the pose in the SRDF
+# }
+#
+# 2. CARTESIAN POSE (Exact X/Y/Z coordinates in the workspace)
+# {
+#     "name": "Description shown in the terminal logger",
+#     "type": "cartesian",   # Must be strictly "cartesian"
+#     "x": 0.0,              # X position in meters (relative to ur5e_base_link)
+#     "y": 0.5,              # Y position in meters
+#     "z": 0.10,             # Z position in meters
+# }
+# =========================================================================
+
+
+test_poses:
+
+# --- TCP Check Poses (Move to specific points in space to verify the TCP is correctly aligned) ---
+
+  # - name: "TCP Check: 10cm Z-Height, 50cm Y-Offset"
+  #   type: "cartesian"
+  #   x: 0.0
+  #   y: 0.5
+  #   z: 0.10
+
+  # - name: "TCP Check: 1cm Z-Height, 50cm Y-Offset"
+  #   type: "cartesian"
+  #   x: 0.0
+  #   y: 0.5
+  #   z: 0.01
+
+  # - name: "TCP Check: 0cm Z-Height, 50cm Y-Offset"
+  #   type: "cartesian"
+  #   x: 0.0
+  #   y: 0.5
+  #   z: 0.0
+
+# --- Plane Check Poses (Systematically check a grid of points above the table to verify alignment) ---
+
+  - name: "Plane Check 1/9: 0 cm X-Offset, 70 cm Y-Offset, 0.5 cm Above Table"
+    type: "cartesian"
+    x: 0.0
+    y: 0.70
+    z: 0.005
+
+  - name: "Plane Check 2/9: 20 cm X-Offset, 70 cm Y-Offset, 0.5 cm Above Table"
+    type: "cartesian"
+    x: 0.20
+    y: 0.70
+    z: 0.005
+
+  - name: "Plane Check 3/9: -20 cm X-Offset, 70 cm Y-Offset, 0.5 cm Above Table"
+    type: "cartesian"
+    x: -0.20
+    y: 0.70
+    z: 0.005
+
+  - name: "Plane Check 4/9: -20 cm X-Offset, 50 cm Y-Offset, 0.5 cm Above Table"
+    type: "cartesian"
+    x: -0.20
+    y: 0.50
+    z: 0.005
+
+  - name: "Plane Check 5/9: 0 cm X-Offset, 50 cm Y-Offset, 0.5 cm Above Table"
+    type: "cartesian"
+    x: 0.0
+    y: 0.50
+    z: 0.005
+
+  - name: "Plane Check 6/9: 20 cm X-Offset, 50 cm Y-Offset, 0.5 cm Above Table"
+    type: "cartesian"
+    x: 0.20
+    y: 0.50
+    z: 0.005
+
+  - name: "Plane Check 7/9: 20 cm X-Offset, 30 cm Y-Offset, 0.5 cm Above Table"
+    type: "cartesian"
+    x: 0.20
+    y: 0.30
+    z: 0.005
+
+  - name: "Plane Check 8/9: 0 cm X-Offset, 30 cm Y-Offset, 0.5 cm Above Table"
+    type: "cartesian"
+    x: 0.0
+    y: 0.30
+    z: 0.005
+
+  - name: "Plane Check 9/9: -20 cm X-Offset, 30 cm Y-Offset, 0.5 cm Above Table"
+    type: "cartesian"
+    x: -0.20
+    y: 0.30
+    z: 0.005
+
+
+  # Example of a named pose
+  # - name: "Check Ready Pose"
+  #   type: "named"
+  #   target: "ready"
