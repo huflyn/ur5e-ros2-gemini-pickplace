@@ -33,10 +33,10 @@ def generate_launch_description():
     )
 
     # 2. Path to your custom drop-off parameters YAML
-    sorter_params_file = os.path.join(
+    pick_and_place_params_file = os.path.join(
         get_package_share_directory('workcell_application'),
         'config',
-        'sorter_params.yaml'
+        'pick_and_place_parameters.yaml'
     )
 
     # 3. Define the main sorting node
@@ -46,7 +46,7 @@ def generate_launch_description():
         name="pick_and_place_node",
         parameters=[
             moveit_config.to_dict(),      # Loads URDF, SRDF, Kinematics, etc.
-            sorter_params_file,           # Loads your custom drop-off coordinates
+            pick_and_place_params_file,           # Loads your custom drop-off coordinates
             {"use_sim_time": use_sim_time}   # Important to sync with Webots clock
         ],
         output="screen",
