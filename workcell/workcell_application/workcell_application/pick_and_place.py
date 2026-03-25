@@ -32,16 +32,7 @@ from moveit.planning import MoveItPy, PlanRequestParameters
 from ur_msgs.srv import SetIO
 
 
-# ═══════════════════════════════════════════════════════════════
-#  ROS 2 Node: Handles communication (services, gripper, params)
-# ═══════════════════════════════════════════════════════════════
-
 class PickAndPlaceNode(Node):
-    """
-    Lightweight ROS 2 node for communication.
-    MoveItPy runs on its own internal node, so we keep this separate
-    and spin it via MultiThreadedExecutor (same pattern as brick_sorter.py).
-    """
 
     def __init__(self):
         super().__init__('pick_and_place_node')
@@ -49,7 +40,7 @@ class PickAndPlaceNode(Node):
         # Robotiq EPick with URCap
         self.script_pub = self.create_publisher(String, '/urscript_interface/script_command', 10)
 
-        # ── Parameters ─────────────────────────────────────────
+        # --- Parameters ---
         self.declare_parameter('base_frame', 'ur5e_base_link')
         self.declare_parameter('tcp_link', 'pisoftgrip_tcp')
         self.declare_parameter('planning_group', 'ur_arm')
@@ -61,15 +52,15 @@ class PickAndPlaceNode(Node):
         self.declare_parameter('use_sim_gripper', False)
         self.declare_parameter('gripper_topic', '/ur5e/vacuum_gripper/turn_on')
 
-        self.declare_parameter('brick_center_offset', 0.0) # Offset from front face to center of brick in meters (for 3D grasping)
+        self.declare_parameter('brick_center_offset', 0.0) # Offset from front face to center of brick in meters (for 3D grasping), adjust in pick_and_place_parameters.yaml if needed
 
-        self.declare_parameter('dropoff_default', [0.27, 0.250])
+        self.declare_parameter('dropoff_default', [0.27, 0.250]) # adjust in pick_and_place_parameters.yaml if needed
         self.declare_parameter('dropoff_red',    [0.27, 0.450])
         self.declare_parameter('dropoff_blue',   [0.27, 0.350])
         self.declare_parameter('dropoff_green',  [-0.27, 0.450])
         self.declare_parameter('dropoff_yellow', [-0.27, 0.350])
 
-        # ── Read Parameters ────────────────────────────────────
+        # --- Read Parameters ---
         self.base_frame = self.get_parameter('base_frame').value
         self.tcp_link = self.get_parameter('tcp_link').value
         self.planning_group = self.get_parameter('planning_group').value
@@ -91,7 +82,7 @@ class PickAndPlaceNode(Node):
             'yellow':  self.get_parameter('dropoff_yellow').value,
         }
 
-        # ── Gripper Setup ──────────────────────────────────────
+        # --- Gripper Setup ---
         if self.use_sim_gripper:
             self.gripper_pub = self.create_publisher(Bool, gripper_topic, 10)
             self.gripper_status_str = f"Webots vacuum via {gripper_topic}"
@@ -100,25 +91,24 @@ class PickAndPlaceNode(Node):
             self.io_client = self.create_client(SetIO, '/io_and_status_controller/set_io')
             self.gripper_status_str = "Real hardware mode (UR I/O pin 0 for Robotiq EPick)"
 
-        # ── Vision Service Client ──────────────────────────────
+        # --- Vision Service Client ---
         self.detect_client = self.create_client(DetectBricks, '/detect_bricks')
 
-        # ── Trigger Subscriber ────────────────────────────
+        # --- Trigger Subscriber ---
         self.start_triggered = False
         self.stop_triggered = False
         self.current_prompt = "" 
         
-        self.trigger_sub = self.create_subscription(String, '/pick_and_place/scan', self.trigger_callback, 10) 
+        self.trigger_sub = self.create_subscription(String, '/pick_and_place/scan', self.trigger_callback, 10)
         self.stop_sub = self.create_subscription(Empty, '/pick_and_place/stop', self.stop_callback, 10)
 
-        # ── Initialized message with all parameters for easy debugging ──
+        # --- Initialized message with all parameters for easy debugging ──
         self.get_logger().info("PickAndPlaceNode initialized.")
-        self.get_logger().info(f"  Base frame:  {self.base_frame}")
-        self.get_logger().info(f"  TCP link:    {self.tcp_link}")
-        self.get_logger().info(f"  Drop-offs:   {list(self.dropoffs.keys())}")
+        self.get_logger().info(f"Base frame:  {self.base_frame}")
+        self.get_logger().info(f"TCP link:    {self.tcp_link}")
+        self.get_logger().info(f"Drop-offs:   {list(self.dropoffs.keys())}")
 
-    # ── Gripper Control ────────────────────────────────────────
-
+    # --- Gripper Control ---
     def set_gripper(self, activate: bool):
         """Activate (True) or deactivate (False) the gripper."""
         if self.use_sim_gripper:
@@ -128,7 +118,7 @@ class PickAndPlaceNode(Node):
         else:
             # Real hardware I/O service
             if not self.io_client.wait_for_service(timeout_sec=2.0):
-                self.get_logger().error("🛑 IO Service nicht verfügbar! Greifer kann nicht geschaltet werden.")
+                self.get_logger().error("🛑 UR I/O service not available!")
                 return
 
             req = SetIO.Request()
@@ -149,8 +139,7 @@ class PickAndPlaceNode(Node):
         action = "GRIP (suction ON)" if activate else "RELEASE (suction OFF)"
         self.get_logger().info(f"Gripper: {action}")
 
-    # ── Vision Service ─────────────────────────────────────────
-
+    # --- Vision Service ---
     def detect_bricks(self, executor, prompt: str) -> list:
         """
         Calls /detect_bricks service synchronously.
@@ -180,7 +169,7 @@ class PickAndPlaceNode(Node):
 
         return list(result.bricks)
 
-    # ── Trigger Callback ──────────────────────────────────
+    # --- Trigger Callback ---
     def trigger_callback(self, msg):
         self.current_prompt = msg.data # Store the latest prompt for use in custom Gemini instructions
         if self.current_prompt:
@@ -194,9 +183,9 @@ class PickAndPlaceNode(Node):
         self.stop_triggered = True
 
 
-# ═══════════════════════════════════════════════════════════════
-#  Motion Planning Functions (identical patterns to brick_sorter)
-# ═══════════════════════════════════════════════════════════════
+# --------------------------------------------------------------
+# Motion Planning Functions (identical patterns to brick_sorter)
+# --------------------------------------------------------------
 
 def plan_and_execute_ompl(robot, arm, logger, target, tcp_link="pisoftgrip_tcp"):
     """
@@ -325,31 +314,31 @@ def plan_and_execute_pilz(robot, arm, logger, target, tcp_link="pisoftgrip_tcp")
     return False
 
 
-# ═══════════════════════════════════════════════════════════════
-#  Main Loop: Scan → Select → Pick → Place → Repeat
-# ═══════════════════════════════════════════════════════════════
+# -----------------------------------------------------------------------------------
+# Main Pick and Place operation: Trigger → Scan → Loop: Brick → Pick → Place → Repeat
+# -----------------------------------------------------------------------------------
 
 def main(args=None):
     rclpy.init(args=args)
     logger = get_logger("pick_and_place")
 
-    # ── 1. Initialize MoveItPy ─────────────────────────────────
+    # --- Initialize MoveItPy ---
     logger.info("🟢 Initializing MoveItPy...")
     ur5e = MoveItPy(node_name="pick_place_moveit")
 
-    # ── 2. Start communication node ───────────────────────────
+    # --- Start communication node ---
     node = PickAndPlaceNode()
     executor = MultiThreadedExecutor()
     executor.add_node(node)
 
-    # ── Background thread for ROS callbacks
+    # --- Background thread for ROS callbacks ---
     spin_thread = threading.Thread(target=executor.spin, daemon=True)
     spin_thread.start()
 
     ur5e_arm = ur5e.get_planning_component(node.planning_group)
     tcp_link = node.tcp_link
 
-    # ── 3. Helper: Create a PoseStamped with downward orientation ──
+    # --- Helper: Create a PoseStamped with downward orientation ---
     def make_pose(x, y, z, yaw=0.0):
         pose = PoseStamped()
         pose.header.frame_id = node.base_frame
@@ -367,7 +356,7 @@ def main(args=None):
         pose.pose.position.z = float(z)
         return pose
 
-    # ── 5. Initial homing ──────────────────────────────────────
+    # --- Initial homing ---
     logger.info("🟢 Initializing: Gripper OFF, moving to 'ready' pose")
     node.set_gripper(False)
     time.sleep(1.0)
@@ -376,21 +365,20 @@ def main(args=None):
 
     try:
         while rclpy.ok():
-            # ─────────────────────────────────────────────────
-            #  MANUAL TRIGGER (Standby Loop)
-            # ─────────────────────────────────────────────────
+            # -----------------------------
+            # MANUAL TRIGGER (Standby Loop)
+            # -----------------------------
             logger.info(
                 "Status:\n" +
                 "="*60 + "\n" +
                 "🟢 PickAndPlaceNode (Client Node) ready.\n" +
                 f"🤜 Gripper: {node.gripper_status_str}\n" +
                 "⏸️  STANDBY: Waiting for SCAN trigger.\n\n" +
-                "👉 Default Mode (distance sorted) - pub to /pick_and_place/scan:\n" +
+                "🅰️  Default Mode - Detects all bricks an place them in the correct container:\n" +
                 "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: ''}\"\n\n" +
-                "👉 AI Task Planner Mode - add your instructions to the data field:\n" +
+                "🅱️  User Prompt Mode - add your instructions to the data field:\n" +
                 "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: 'Pick the red brick and place it somewhere safe.'}\"\n\n" +
-                "To manually STOP the Pick and Place process\n" +
-                "and return to STANDBY, pub to /pick_and_place/stop:\n" +
+                "⏹️  To manually STOP the Pick and Place process and return to STANDBY:\n" +
                 "   ros2 topic pub --once /pick_and_place/stop std_msgs/msg/Empty\n" +
                 "="*60
             )
@@ -406,9 +394,7 @@ def main(args=None):
             if not rclpy.ok():
                 break # if shutdown signal received while waiting for trigger, exit main loop
 
-            # ─────────────────────────────────────────────────
-            #  PHASE 0: SCAN
-            # ─────────────────────────────────────────────────
+            # --- PHASE 0: SCAN ---
             logger.info("=" * 60)
             logger.info("🟢 PHASE 0: Scanning table via perception service...")
             logger.info("=" * 60)
@@ -418,17 +404,17 @@ def main(args=None):
             
             # <--- NEU: Die magische Task-Planner Weiche
             if node.current_prompt:
-                logger.info("AI Task Planner mode active. Using Gemini's selection and sequence.")
+                logger.info("🅱️  User Prompt Mode active. Using Gemini's selection and sequence.")
                 bricks_sorted = bricks # Gemini is responsible for both selecting which bricks to pick and the order in which to pick them, based on the custom prompt provided by the user.
             else:
-                logger.info("Default mode active. Sorting all visible bricks by camera distance.")
+                logger.info("🅰️  Default Mode active. Sorting all visible bricks.")
                 bricks_sorted = sorted(bricks, key=lambda b: b.camera_distance_mm)
             
             logger.info(f"🟢 Detected {len(bricks_sorted)} brick(s). Starting Batch Processing!")
 
-            # ─────────────────────────────────────────────────
-            #  BATCH PROCESSING LOOP
-            # ─────────────────────────────────────────────────
+            # ---------------------
+            # BATCH PROCESSING LOOP
+            # ---------------------
 
             # Helper function to check for soft stop trigger at multiple points in the cycle
             def check_abort():
@@ -466,24 +452,23 @@ def main(args=None):
                     logger.warn(f"No drop-off for '{color}', using 'default'.")
                     target_xy = node.dropoffs['default']
 
-                # ─────────────────────────────────────────────────
-                #  DEFINE ALL POSES FOR THIS CYCLE
-                # ─────────────────────────────────────────────────
+
+                # --- DEFINE ALL POSES FOR THIS CYCLE ---
                 pose_hover_pick_straight = make_pose(bx, by, node.hover_height, 0.0)
                 pose_hover_pick_oriented = make_pose(bx, by, node.hover_height, yaw)
                 pose_grasp               = make_pose(bx, by, node.grasp_height, yaw)
                 pose_hover_drop          = make_pose(target_xy[0], target_xy[1], node.hover_height, 0.0)
                 pose_drop                = make_pose(target_xy[0], target_xy[1], node.dropoff_height, 0.0)
 
-                # ─────────────────────────────────────────────────
-                #  EXECUTE PICK-AND-PLACE CYCLE
-                # ─────────────────────────────────────────────────
                 escape_pose = None
 
+                # -----------------------------------------------------------
+                # MAIN PICK AND PLACE SEQUENCE WITH ERROR HANDLING & RECOVERY
+                # -----------------------------------------------------------
                 try:
                     check_abort()
 
-                    # ── PHASE 1: APPROACH + ORIENT (OMPL) ─────────
+                    # --- PHASE 1: APPROACH + ORIENT (OMPL) ---
                     # OMPL plans free-space motion including yaw rotation
                     # Rotation happens safely at hover height, not near the table
                     logger.info("🟢 PHASE 1: Approach + orient (OMPL)")
@@ -495,7 +480,7 @@ def main(args=None):
                     check_abort()
                     escape_pose = pose_hover_pick_straight
 
-                    # ── PHASE 2: DESCEND (Pilz) ────────────────────
+                    # --- PHASE 2: DESCEND (Pilz) ---
                     # Pure vertical descent, yaw is already set
                     logger.info("🟢 PHASE 2: Descend to grasp (Pilz)")
                     if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_grasp, tcp_link):
@@ -505,14 +490,14 @@ def main(args=None):
 
                     check_abort()
 
-                    # ── PHASE 3: GRASP ────────────────────────────
+                    # --- PHASE 3: GRASP ---
                     logger.info("🟢 PHASE 3: Grasping")
                     node.set_gripper(True)
                     time.sleep(0.5) # Ensure gripper has time to activate before lifting the arm
 
                     check_abort()
 
-                    # ── PHASE 4: LIFT (Pilz) ───────────────────────
+                    # --- PHASE 4: LIFT (Pilz) ---
                     # Straight up, keeping yaw to avoid rotating with brick near table
                     logger.info("🟢 PHASE 4: Lift (Pilz)")
                     if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
@@ -522,7 +507,7 @@ def main(args=None):
 
                     check_abort()
 
-                    # ── PHASE 5: TRANSPORT ────────────────────────
+                    # --- PHASE 5: TRANSPORT ---
                     logger.info(f"🟢 PHASE 5: Transport to {color} drop-off (OMPL)")
                     if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
                         logger.warn("🛑 Pilz failed, trying OMPL fallback...")
@@ -532,7 +517,7 @@ def main(args=None):
                     check_abort()
                     escape_pose = pose_hover_drop
 
-                    # ── PHASE 6: LOWER (Pilz) ──────────────────────
+                    # --- PHASE 6: LOWER (Pilz) ---
                     logger.info("🟢 PHASE 6: Lower to drop-off (Pilz)")
                     if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_drop, tcp_link):
                         logger.warn("🛑 Pilz failed, trying OMPL fallback...")
@@ -541,14 +526,14 @@ def main(args=None):
 
                     check_abort()
 
-                    # ── PHASE 7: RELEASE ──────────────────────────
+                    # ─--- PHASE 7: RELEASE ---
                     logger.info("🟢 PHASE 7: Release")
                     node.set_gripper(False)
                     time.sleep(0.5) # Ensure gripper has time to release before moving the arm
 
                     check_abort()
 
-                    # ── PHASE 8: RETREAT (Pilz) ────────────────────
+                    # --- PHASE 8: RETREAT (Pilz) ---
                     logger.info("🟢 PHASE 8: Retreat (Pilz)")
                     if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
                         logger.warn("🛑 Pilz failed, trying OMPL fallback...")
@@ -558,7 +543,7 @@ def main(args=None):
                     escape_pose = None
 
                 except RuntimeError as e:
-                    # ── ERROR RECOVERY & SOFT STOP ──
+                    # --- ERROR RECOVERY & SOFT STOP ---
                     logger.info(
                         "Status:"
                         "\n" + "="*60 + "\n" +
