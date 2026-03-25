@@ -5,6 +5,7 @@
 - [Step 2: Google GenAI SDK Installation (Docs)](#step-2-google-genai-sdk-installation-docs)
 - [Step 3: Setting the API key as an environment variable (Docs)](#step-3-setting-the-api-key-as-an-environment-variable-docs)
 - [Step 4: Make your first request (Docs)](#step-4-make-your-first-request-docs)
+- [Models Overview](#models-overview)
 
 
 # Step 1: Create Gemini API Key ([Docs](https://ai.google.dev/gemini-api/docs/api-key))
@@ -62,7 +63,7 @@ It should print your API key.
 
 # Step 4: Make your first request ([Docs](https://ai.google.dev/gemini-api/docs/quickstart#make-first-request))
 
-Here is a simple example of how to use the Google GenAI SDK to make a request to the Gemini API with Gemini Robotics-ER 1.5 model:
+Here is a simple example of how to use the Google GenAI SDK to make a request to the Gemini API with the Gemini 2.5 Flash model:
 
 ```python
 import os
@@ -76,7 +77,7 @@ GOOGLE_API_KEY  = os.environ.get('GEMINI_API_KEY')
 client = genai.Client(api_key=GOOGLE_API_KEY)
 
 # Define model and prompt
-MODEL_ID = "gemini-robotics-er-1.5-preview"
+MODEL_ID = "gemini-2.5-flash"
 PROMPT = "Are you there?"
 
 # Generate content / API Call
@@ -89,17 +90,28 @@ response = client.models.generate_content(
 print(response.text)
 ```
 
-Safe the code in a file named `gemini_api_test.py` and run it using the following command:
-
-```bash
-python3 gemini_api_test.py
-```
-
-You should see a response from the Gemini Robotics-ER model printed in the terminal, similar to the following:
+If everything is set up correctly, you should see a response from the Gemini 3 Flash model printed in the terminal, similar to the following:
 
 ```text
 Yes, I'm here! How can I assist you today?
 ```
+
+
+
+
+# Models Overview
+
+The Gemini API provides access to a range of powerful language models, each designed for specific use cases, and with different request limits (you can see your current usage and limits in [Google AI Studio](https://aistudio.google.com/app/rate-limit)).
+
+Following models are recommended for this project (description from official Gemini API [Model Overview](https://ai.google.dev/gemini-api/docs/models)):
+
+| Model | Description | RPD (Free tier) | Latest Update* |
+| --- | --- | :---: | :---: |
+| [gemini-3-flash-preview](https://ai.google.dev/gemini-api/docs/models/gemini-3-flash-preview) | The best model in the world for multimodal understanding, and our most powerful agentic and vibe-coding model yet, delivering richer visuals and deeper interactivity, all built on a foundation of state-of-the-art reasoning. | 20 | December 2025 |
+| [gemini-3.1-flash-lite-preview](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite-preview) | Our most cost-efficient multimodal model, offering the fastest performance for high-frequency, lightweight tasks. Gemini 3.1 Flash-Lite is best for high-volume agentic tasks, simple data extraction, and extremely low-latency applications where budget and speed are the primary constraints. | 500 | March 2026 |
+| [gemini-robotics-er-1.5-preview](https://ai.google.dev/gemini-api/docs/models/gemini-robotics-er-1.5-preview) | Gemini Robotics-ER 1.5 is a vision-language model (VLM) that brings Gemini's agentic capabilities to robotics. It's designed for advanced reasoning in the physical world, allowing robots to interpret complex visual data, perform spatial reasoning, and plan actions from natural language commands. | 20 | September 2025 |
+
+**Information from March 2026, please refer to the official [Gemini API Models documentation](https://ai.google.dev/gemini-api/docs/models) for the most up-to-date information on available models and their capabilities.*
 
 ---
 
