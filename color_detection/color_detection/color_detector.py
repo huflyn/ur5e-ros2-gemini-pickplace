@@ -131,9 +131,10 @@ class ColorDetectorNode(Node):
         self.color_sub = self.create_subscription(Image, color_topic, self.color_callback, 5) # 5 = Depth: 5, Reliability: reliable (like TCP, ensures we get every frame for the live stream)
         self.depth_sub = self.create_subscription(Image, depth_topic, self.depth_callback, 5)
 
-        # Visualization: Timer at 10 Hz for fluid RQT updates
+        # Visualization: Timer for fluid RQT updates
+        update_rate_hz = 6
         self.annotated_pub = self.create_publisher(Image, '/annotated_image', 5) # qos_profile=qos_profile_sensor_data = Depth: 5, Reliability: Best effort (like UDP, allows dropping frames if network/CPU can't keep up)
-        self.vis_timer = self.create_timer(0.1, self.annotate_timer_callback)
+        self.vis_timer = self.create_timer(1.0 / update_rate_hz, self.annotate_timer_callback)
 
         # State variables for continuous live annotation
         self.last_brick_annotations = []
@@ -176,7 +177,7 @@ class ColorDetectorNode(Node):
         self.camera_model.fromCameraInfo(data)
             
     def annotate_timer_callback(self):
-        """Runs at 5 Hz — publishes live annotated image for rqt."""
+        """Publishes live annotated image for rqt with update_rate_hz"""
         if self.latest_color_msg is None:
             return
 
