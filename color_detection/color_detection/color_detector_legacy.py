@@ -26,7 +26,7 @@ import tf2_geometry_msgs
 from image_geometry import PinholeCameraModel
 
 # Eigene MSG und Funktionen
-from color_detection_msgs.msg import LegoBrick
+from brick_interfaces.msg import LegoBrick
 from color_detection.color_functions import detect_color, process_mask, display_information
 
 
