@@ -19,13 +19,13 @@ def generate_launch_description():
     )
 
     # Paths to the YAML parameter files
-    sim_params = os.path.join(pkg_dir, 'config', 'sim_params.yaml')
-    real_params = os.path.join(pkg_dir, 'config', 'real_params.yaml')
+    sim_parameters = os.path.join(pkg_dir, 'config', 'sim_parameters.yaml')
+    real_parameters = os.path.join(pkg_dir, 'config', 'real_parameters.yaml')
     hsv_bounds = os.path.join(pkg_dir, 'config', 'hsv_bounds.yaml')
 
     # Evaluate which parameter file to load based on use_sim_time
     param_file = PythonExpression([
-        "'", sim_params, "' if '", use_sim_time, "'.lower() == 'true' else '", real_params, "'"
+        "'", sim_parameters, "' if '", use_sim_time, "'.lower() == 'true' else '", real_parameters, "'"
     ])
 
     # Node configuration
