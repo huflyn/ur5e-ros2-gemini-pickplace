@@ -1,0 +1,17 @@
+pick_and_place_node:
+  ros__parameters:
+    # Z-Heights
+    hover_height: 0.295 # safe height for moving above the table and bricks between pick and place positions
+    grasp_height: 0.001 # 0.00 = table surface, might detect collisions (moveit) if set too low
+    dropoff_height: 0.08 # height to drop bricks from
+
+    # Y-Offset
+    brick_center_offset: 0.013 # Offset from front face (reference for camera) to center of brick in meters for better grasping, adjust if needed
+
+    # Drop-off coordinates: [X, Y] in meters relative to robot base, adjust if needed
+    dropoff_default: [-0.22, 0.31] # Default drop-off if no color-specific position is set
+    dropoff_blue: [-0.205, 0.475]
+    dropoff_yellow: [0.275, 0.5]
+    dropoff_red: [0.275, 0.39]
+    dropoff_green: [0.275, 0.27]
+    
