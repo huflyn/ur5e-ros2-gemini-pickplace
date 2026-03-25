@@ -3,12 +3,13 @@
 '''
 Brick Sorter Node (ROS 2) - Old Version adapted from ROS 1 sorting application (Refactored, Universally Compatible and Improved Version is pick_and_place.py)
 
+Note: The Brick Sorter Legacy only works with Color Detector Legacy (color_detector_legacy.py) and vice versa!
+It does not work with the real hardware (gripper control), only simulated in Webots.
+
 This node subscribes to the detected brick information published by the color detection node,
 plans pick-and-place trajectories using MoveItPy, and controls the Webots vacuum gripper via a ROS topic.
 The sorting logic is a direct replication of the original ROS 1 application, with improvements in structure and error handling.
 The node also includes an idle/standby behavior when no bricks are detected for a certain period.
-
-This node is meant to be used with color_detector_old.py and is launched via brick_sorter.launch.py.
 '''
 
 import time
@@ -23,7 +24,7 @@ from std_msgs.msg import Bool
 from tf_transformations import quaternion_from_euler
 
 # Correct custom message package
-from color_detection_msgs.msg import LegoBrick
+from brick_interfaces.msg import LegoBrick
 
 # MoveIt 2 Python API
 from moveit.planning import MoveItPy, PlanRequestParameters
