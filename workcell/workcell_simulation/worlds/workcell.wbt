@@ -11,8 +11,8 @@ WorldInfo {
   basicTimeStep 20
 }
 Viewpoint {
-  orientation -0.20838713116640625 -0.10120183440221793 0.972796480399606 4.0243088585644236
-  position 2.1811466271185984 2.2368360303230785 1.535515830539661
+  orientation -0.19874183067161683 -0.09651757279638758 0.9752876718603535 4.026286079905412
+  position 3.6566286801920627 4.425619281049293 2.240186904342514
 }
 TexturedBackground {
 }
@@ -59,7 +59,7 @@ DEF scene Pose {
           translation 0 0.61 -0.0004
           children [
             Solid {
-              translation 0.2 -0.79 0.001
+              translation 0.21 0 0.001
               children [
                 Shape {
                   appearance PBRAppearance {
@@ -67,7 +67,7 @@ DEF scene Pose {
                     metalness 0
                   }
                   geometry DEF plate Box {
-                    size 0.1 0.1 0.001
+                    size 0.15 0.1 0.001
                   }
                 }
               ]
@@ -75,7 +75,7 @@ DEF scene Pose {
               boundingObject USE plate
             }
             Solid {
-              translation 0.2 -0.68 0.001
+              translation 0.21 0.1 0.001
               children [
                 Shape {
                   appearance PBRAppearance {
@@ -83,7 +83,7 @@ DEF scene Pose {
                     metalness 0
                   }
                   geometry DEF plate Box {
-                    size 0.1 0.1 0.001
+                    size 0.15 0.1 0.001
                   }
                 }
               ]
@@ -91,7 +91,7 @@ DEF scene Pose {
               boundingObject USE plate
             }
             Solid {
-              translation -0.2 -0.68 0
+              translation -0.21 0.1 0
               children [
                 Shape {
                   appearance PBRAppearance {
@@ -99,7 +99,7 @@ DEF scene Pose {
                     metalness 0
                   }
                   geometry DEF plate Box {
-                    size 0.1 0.1 0.001
+                    size 0.15 0.1 0.001
                   }
                 }
               ]
@@ -107,7 +107,7 @@ DEF scene Pose {
               boundingObject USE plate
             }
             Solid {
-              translation -0.2 -0.79 0
+              translation -0.21 0 0
               children [
                 Shape {
                   appearance PBRAppearance {
@@ -115,7 +115,7 @@ DEF scene Pose {
                     metalness 0
                   }
                   geometry DEF plate Box {
-                    size 0.1 0.1 0.001
+                    size 0.15 0.1 0.001
                   }
                 }
               ]
@@ -150,9 +150,6 @@ DEF scene Pose {
           appearance PBRAppearance {
             baseColor 0.709804 0.513726 0.352941
             baseColorMap ImageTexture {
-              url [
-                "../textures/table_surface.png"
-              ]
             }
             metalness 0
             textureTransform TextureTransform {
