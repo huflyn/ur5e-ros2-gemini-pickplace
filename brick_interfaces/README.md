@@ -1,4 +1,4 @@
-# Brick Interfaces Package (`brick_interfaces`)
+# Brick Interfaces Package (`brick_interfaces`) <!-- omit from toc -->
 
 [![jazzy][jazzy-badge]][jazzy]
 [![ubuntu24][ubuntu24-badge]][ubuntu24]
@@ -10,7 +10,10 @@
 
 This package defines the custom ROS 2 messages (`.msg`) and services (`.srv`) used for communication between the vision systems (``color_detector.py`` and ``gemini_vision.py``) and the Pick-and-Place Application (``pick_and_place.py``).
 
-## Custom Message: `LegoBrick.msg`
+- [Custom Message: `LegoBrick.msg`](#custom-message-legobrickmsg)
+- [Custom Service: `DetectBricks.srv`](#custom-service-detectbrickssrv)
+
+# Custom Message: `LegoBrick.msg`
 
 Used to encapsulate all consolidated data of a detected object, including its 3D position, orientation, color, bounding box, and optional AI-generated drop-off coordinates.
 
@@ -25,7 +28,7 @@ bool has_user_dropoff                       # True if a specific custom drop-off
 geometry_msgs/Point user_dropoff_position   # Transformed 3D coordinates of the custom drop-off location
 ```
 
-## Custom Service: `DetectBricks.srv`
+# Custom Service: `DetectBricks.srv`
 
 Used to trigger an on-demand image scan and object detection process. It allows passing optional text instructions to the ``gemini_vision`` node to guide the detection and placement logic.
 
