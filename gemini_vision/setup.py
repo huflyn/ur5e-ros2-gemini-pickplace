@@ -7,7 +7,6 @@ data_files = []
 data_files.append(('share/ament_index/resource_index/packages', ['resource/' + package_name]))
 data_files.append(('share/' + package_name, ['package.xml']))
 data_files.append(('share/' + package_name + '/launch', glob('launch/*launch.[pxy][yma]*')))
-data_files.append(('share/' + package_name + '/config', glob('config/*.yaml')))
 
 setup(
     name=package_name,
@@ -27,7 +26,6 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'gemini_api_test_node = gemini_vision.gemini_api_test_node:main',
             'gemini_vision = gemini_vision.gemini_vision:main',
         ],
     },
