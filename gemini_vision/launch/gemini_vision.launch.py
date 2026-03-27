@@ -8,8 +8,11 @@ from launch_ros.actions import Node
 def generate_launch_description():
     pkg_dir = get_package_share_directory('gemini_vision')
 
+    bringup_pkg_dir = get_package_share_directory('workcell_bringup')
+
     # Create LaunchConfiguration variable
     use_sim_time = LaunchConfiguration('use_sim_time')
+    gemini_model = LaunchConfiguration('model')
 
     use_sim_time_arg = DeclareLaunchArgument(
         'use_sim_time',
@@ -17,9 +20,15 @@ def generate_launch_description():
         description='Use simulation topics and parameters'
     )
 
+    gemini_model_arg = DeclareLaunchArgument(
+        'model',
+        default_value='',
+        description='Override Gemini API model (leave empty to use Python script default)'
+    )
+
     # Paths to the YAML parameter files
-    sim_parameters = os.path.join(pkg_dir, 'config', 'sim_parameters.yaml')
-    real_parameters = os.path.join(pkg_dir, 'config', 'real_parameters.yaml')
+    sim_parameters = os.path.join(bringup_pkg_dir, 'config', 'sim_camera_parameters.yaml')
+    real_parameters = os.path.join(bringup_pkg_dir, 'config', 'real_camera_parameters.yaml')
 
     # Evaluate which parameter file to load based on use_sim_time
     param_file = PythonExpression([
@@ -33,7 +42,10 @@ def generate_launch_description():
         name='gemini_vision_node',
         parameters=[
             param_file,
-            {'use_sim_time': use_sim_time}
+            {
+                'use_sim_time': use_sim_time,
+                'gemini_model': gemini_model
+            }
         ],
         output='screen'
     )
@@ -42,16 +54,21 @@ def generate_launch_description():
     log_launch_info = LogInfo(
         msg=[
             "\n" + "="*60 + "\n",
-            'Gemini Vision Node \n',
+            'Gemini Vision Node Launcher\n',
             '- Simulation Time (use_sim_time): ', use_sim_time, '\n',
+            '- Override Model: [', gemini_model, '] (If empty, node uses internal default)\n',
             '\nLaunch Arguments:\n',
             '- use_sim_time (default: false): Set to "true" if you use Simulation\n',
+            '- model (default: empty): Override the Gemini API model\n',
+            '  Available Models: gemini-3-flash-preview, gemini-3.1-flash-lite-preview, gemini-robotics-er-1.5\n',
+            '  Other models may work but have not been tested\n',
             "="*60
         ]
     )
 
     return LaunchDescription([
         use_sim_time_arg,
+        gemini_model_arg,
         log_launch_info,
         gemini_vision_node
     ])
