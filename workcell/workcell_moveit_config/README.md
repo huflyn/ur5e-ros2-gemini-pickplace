@@ -11,6 +11,8 @@
 
 This package contains the semantic representation (SRDF), kinematics, and motion planning configurations for the UR5e workcell. It was primarily generated using the MoveIt 2 Setup Assistant and adapted for the specific collision environment and tool setup (gripper).
 
+![Screenshot of the RViz interface with MoveIt plugin and Webots simulation.](/docs/images/moveit_webots.png)
+
 - [I) Package Structure](#i-package-structure)
 - [II) Usage](#ii-usage)
   - [Step 1: Start the Robot (Real or Simulated)](#step-1-start-the-robot-real-or-simulated)
@@ -29,12 +31,12 @@ Normally, MoveIt is launched automatically by the higher-level application launc
 
 - ### Option A: Webots Simulation
 
-  > [!IMPORTANT] Simulation Time
-  > When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands**! This ensures proper time synchronization between the simulator, MoveIt, and all ROS nodes.
-
   ```bash
   ros2 launch workcell_simulation simulation.launch.py
   ```
+  
+  > [!IMPORTANT]
+  > **``use_sim_time``:** When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands**! This ensures proper time synchronization between the simulator, MoveIt, and all ROS nodes.
 
 - ### Option B: Real Hardware (UR5e)
 
@@ -54,6 +56,7 @@ Normally, MoveIt is launched automatically by the higher-level application launc
     
     ```bash
     ros2 launch workcell_moveit_config move_group.launch.py
+    # use_sim_time:=true is required if using the Webots simulation, but can be left out for real hardware
     ```
 
     If everything went well you should see the output: “You can start planning now!”.
@@ -64,4 +67,6 @@ Normally, MoveIt is launched automatically by the higher-level application launc
 
     ```bash
     ros2 launch workcell_moveit_config moveit_rviz.launch.py
+    # use_sim_time:=true is required if using the Webots simulation, but can be left out for real hardware
     ```
+If everything is running correctly, you should see the UR5e robot in the RViz environment with the MoveIt plugin enabled, allowing you to visualize the robot state, plan motions, and execute trajectories in both the simulated and real environments. The image at the top of this README shows the RViz interface with the MoveIt plugin and the Webots simulation running in parallel.
