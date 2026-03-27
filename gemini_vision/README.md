@@ -24,15 +24,19 @@ This package provides a highly capable, **AI-driven vision system for the pick-a
   - [Gemini Configuration (Python)](#gemini-configuration-python)
 - [V) Launch Gemini Vision](#v-launch-gemini-vision)
 - [VI) Testing the Service via Terminal](#vi-testing-the-service-via-terminal)
-- [VII) Models Overview\[^1\]](#vii-models-overview1)
+- [VII) Reviewing the Gemini Output](#vii-reviewing-the-gemini-output)
+  - [1. Terminal Logs](#1-terminal-logs)
+  - [2. RViz2 Visualization (Recommended)](#2-rviz2-visualization-recommended)
+  - [3. RQT Image View (Alternative)](#3-rqt-image-view-alternative)
+- [VIII) Models Overview\[^1\]](#viii-models-overview1)
 
 
-## I) Package Structure
+# I) Package Structure
 
 * **`gemini_vision.py`**: The core ROS 2 multi-threaded node. It acts as a Service Server, processes images into JPEG bytes, communicates with the Gemini API, calculates 3D transformations via `tf2`, and streams an annotated visualization.
 
 
-## II) Prerequisites & API Key
+# II) Prerequisites & API Key
 
 Because this node relies on cloud-based AI processing, it requires a valid Google Gemini API key exported as an environment variable (`GEMINI_API_KEY`). 
 
@@ -40,7 +44,7 @@ Because this node relies on cloud-based AI processing, it requires a valid Googl
 > Please refer to the **[Gemini API Setup Guide](../GEMINI_API.md)** for detailed instructions on how to generate your API key and permanently add it to your environment. This package assumes the API key setup is already completed.
 
 
-## III) Services, Topics & Custom Messages
+# III) Services, Topics & Custom Messages
 
 **Service Server:**
 * `/detect_bricks` (`brick_interfaces/srv/DetectBricks`): Evaluates the current camera frame. You can pass an empty prompt for default detection, or a custom natural language instruction (e.g., "Sort the red bricks to the left"). Returns an array of valid `LegoBrick` objects.
@@ -53,9 +57,9 @@ Because this node relies on cloud-based AI processing, it requires a valid Googl
 * Camera Info, Color Image, and Depth Image (configurable via parameters).
 
 
-## IV) Configuration (Camera and Gemini)
+# IV) Configuration (Camera and Gemini)
 
-### Camera & Hardware Configuration (YAML)
+## Camera & Hardware Configuration (YAML)
 
 To maintain consistency, the camera configuration files are centralized in the **`workcell_bringup`** package.
 
@@ -78,7 +82,7 @@ Example `sim_camera_parameters.yaml`:
     robot_base_frame: 'ur5e_base_link'
 ```
 
-### Gemini Configuration (Python)
+## Gemini Configuration (Python)
 
 While you can override the AI model temporarily via launch arguments, the default behavior of the vision system is configured directly at the top of the **`gemini_vision.py`** script. 
 
@@ -104,7 +108,7 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""...""")
 ```
 
 
-## V) Launch Gemini Vision
+# V) Launch Gemini Vision
 
 You can launch the node using the provided launch file:
 
@@ -134,7 +138,7 @@ ros2 launch gemini_vision gemini_vision.launch.py model:="gemini-3.1-flash-lite-
 > Please refer to the **Models Overview** below or the official [Gemini API Models documentation](https://ai.google.dev/gemini-api/docs/models) for the most up-to-date information.
 
 
-## VI) Testing the Service via Terminal
+# VI) Testing the Service via Terminal
 
 Once the node is running, you can trigger the vision pipeline directly from the terminal.
 
@@ -154,23 +158,48 @@ Once the node is running, you can trigger the vision pipeline directly from the 
     ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks "{user_prompt: 'Pick the red and blue bricks'}"
     ```
 
-Launch RViz to **view the live annotated image stream** and **visualize the TF frames** of the detected bricks, as shown in the image above:
 
-```bash
-ros2 launch workcell_application rviz.launch.py
-# use_sim_time:=true is required for Webots simulation, but should be false for real hardware
-```
+# VII) Reviewing the Gemini Output
 
-Alternatively, you can use RQT to view the `/annotated_image` topic, but it may be less stable than RViz (sometimes no image):
+To evaluate what the Gemini is "seeing" and deciding, you have three primary tools at your disposal:
+
+## 1. Terminal Logs
+
+The most detailed information is printed directly in the terminal where the `gemini_vision` node is running. After every scan, the node outputs:
+* Its "Thoughts" (the Gemini's internal reasoning process).
+* The detected objects and their colors.
+* The exact 3D pick coordinates [X, Y, Z].
+* The calculated drop-off targets (if requested via a custom prompt).
+
+## 2. RViz2 Visualization (Recommended)
+
+To view the live annotated image stream (bounding boxes, coordinates, target crosshairs) and the dynamically generated 3D `tf2` frames in real-time, launch the pre-configured RViz workspace:
+
+* **For Simulation (Webots):**
+
+    ```bash
+    ros2 launch workcell_application rviz.launch.py use_sim_time:=true
+    ```
+
+* **For Real Hardware:**
+
+    ```bash
+    ros2 launch workcell_application rviz.launch.py
+    ```
+
+## 3. RQT Image View (Alternative)
+Alternatively, you can view just the raw 2D image overlay using RQT. 
 
 ```bash
 rqt
 ```
+*In RQT, navigate to **Plugins → Visualization → Image View**, then select the `/annotated_image` topic from the dropdown.*
 
-In RQT go to Plugins → Visualization → Image View, then select the `/annotated_image` topic.
+> [!WARNING]
+> RQT can sometimes drop frames or fail to load the image stream entirely. If the screen remains gray, use the RViz2 method above, which is generally much more stable.
 
 
-## VII) Models Overview[^1]
+# VIII) Models Overview[^1]
 
 The Gemini API provides access to a range of powerful language models, each designed for specific use cases, and with different request limits (you can see your current usage and limits in [Google AI Studio](https://aistudio.google.com/app/rate-limit)).
 
