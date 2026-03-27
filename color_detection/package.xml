@@ -3,9 +3,9 @@
 <package format="3">
   <name>color_detection</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Vision system for detecting colored Lego bricks using HSV masking and depth projection.</description>
   <maintainer email="daneceni@gmail.com">daniel</maintainer>
-  <license>TODO: License declaration</license>
+  <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
