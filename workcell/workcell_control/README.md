@@ -26,15 +26,20 @@ This package manages the connection to the physical UR5e hardware. It contains t
 
 ### Option A: Real Hardware (UR5e)
 
-If you want to start the real UR5e robot, make sure that the **[robot setup](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html#robot-setup)** is done and **external_control** is active on the robot.
+> [!Note]
+> If you want to start the real UR5e robot, make sure that the **[robot setup](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html#robot-setup)** on the teach pendant is done and the program with the **external_control** node is created.
+
 Make sure to set the correct **robot_ip** in the command below or in the ``start_robot.launch.py`` file in the ``workcell_control`` package!
 
 ```bash
 # You can set the robot_ip either via command line argument or directly in the start_robot.launch.py file
-ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>1
+ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
 # launch_rviz:=true can be set to automatically start RViz to visualize the robot and its movements
 ```
 This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces. Make sure to follow all safety precautions when working with real robots.
+
+> [!IMPORTANT]
+> Start the program with the **external control** node on the teach pendant, to ensure the robot can receive commands from ROS 2.
 
 ### Option B: Mock Hardware (no Webots simulation, just RViz)
 
