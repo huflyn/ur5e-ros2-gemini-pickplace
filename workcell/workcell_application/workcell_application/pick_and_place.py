@@ -374,7 +374,7 @@ def main(args=None):
                 "🟢 PickAndPlaceNode (Client Node) ready.\n" +
                 f"🤜 Gripper: {node.gripper_status_str}\n" +
                 "⏸️  STANDBY: Waiting for SCAN trigger.\n\n" +
-                "🅰️  Default Mode - Detects all bricks an place them in the correct container:\n" +
+                "🅰️  Default Mode - 'Detects all bricks on the table':\n" +
                 "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: ''}\"\n\n" +
                 "🅱️  User Prompt Mode - add your instructions to the data field:\n" +
                 "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: 'Pick the red brick and place it somewhere safe.'}\"\n\n" +
