@@ -14,7 +14,7 @@
 
 This package provides a highly capable, **AI-driven vision system for the pick-and-place application**. It leverages the **Gemini API** (supporting models like Gemini 3 Flash and Gemini Robotics-ER 1.5) to analyze RGB-D camera streams. It can detect specified objects (like Lego bricks), map 2D bounding boxes to 3D spatial coordinates, and interpret complex natural language instructions to dynamically calculate custom drop-off locations on a table surface, if specified.
 
-INSERT_IMAGE
+![Screenshot of the gemini_vision node running in Webots simulation, showing detected bricks highlighted with bounding boxes in RViz.](../docs/images/gemini_vision_user-prompt-mode_rviz.png)
 
 - [I) Package Structure](#i-package-structure)
 - [II) Prerequisites \& API Key](#ii-prerequisites--api-key)
@@ -106,7 +106,7 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""...""")
 
 ## V) Launch Gemini Vision
 
-You can launch the node using the provided launch file. It connects to the central configuration automatically.
+You can launch the node using the provided launch file:
 
 * **Option A: Simulation (Webots)**
 
@@ -138,15 +138,37 @@ ros2 launch gemini_vision gemini_vision.launch.py model:="gemini-3.1-flash-lite-
 
 Once the node is running, you can trigger the vision pipeline directly from the terminal.
 
-* **Option A: Default Mode** (Detects all bricks on the table):
+* **Option A: Default Mode**
+
+    Detects all bricks on the table (default prompt).
+
     ```bash
     ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks
     ```
 
-* **Option B: User Prompt Mode** (Instructs the AI to perform specific spatial reasoning):
+* **Option B: User Prompt Mode** 
+  
+    Lets you specify a custom natural language instruction to guide the detection and sorting logic. For example, you can ask it to only detect certain colors, or to calculate specific drop-off locations based on the prompt.
+
     ```bash
-    ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks "{user_prompt: 'Pick the red bricks and blue bricks'}"
+    ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks "{user_prompt: 'Pick the red and blue bricks'}"
     ```
+
+Launch RViz to **view the live annotated image stream** and **visualize the TF frames** of the detected bricks, as shown in the image above:
+
+```bash
+ros2 launch workcell_application rviz.launch.py
+# use_sim_time:=true is required for Webots simulation, but should be false for real hardware
+```
+
+Alternatively, you can use RQT to view the `/annotated_image` topic, but it may be less stable than RViz (sometimes no image):
+
+```bash
+rqt
+```
+
+In RQT go to Plugins → Visualization → Image View, then select the `/annotated_image` topic.
+
 
 ## VII) Models Overview[^1]
 
