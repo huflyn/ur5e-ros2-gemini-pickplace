@@ -47,7 +47,7 @@ GEMINI_MODELS = [
     "gemini-3.1-flash-lite-preview",
     "gemini-robotics-er-1.5-preview"
 ]
-GEMINI_MODEL = GEMINI_MODELS[0] # Change this to switch models
+GEMINI_MODEL = GEMINI_MODELS[2] # Change this to switch models
 
 GEMINI_THINKING_LEVELS = ["minimal", "low", "medium", "high"] # Gemini 3 Flash default: high / Gemini 3.1 Flash-Lite default: minimal
 GEMINI_THINKING_LEVEL_DEFAULT = GEMINI_THINKING_LEVELS[2] # Change this to switch thinking levels, for complex user prompts medium (2) or high (3) is recommended, for the simple default prompt minimal (0) works fine and is faster (using Gemini 3.1 Flash-Lite Preview)
@@ -87,15 +87,19 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
     1. label: Simple colors for Lego bricks, or the object name for non-lego items.
     2. box_2d: Bounding box of the object. Normalized integers 0-1000.
     3. user_dropoff: Evaluate this STRICTLY PER INDIVIDUAL OBJECT.
-       - Set to true ONLY if the user explicitly asks to move THIS SPECIFIC object to a custom location, or to find a safe spot for it.
-       - Set to false if the user simply asks to "sort" the object (without any specific placement instructions, which means the robot uses predefined hardware bins), or if no specific placement is mentioned for that individual object.
-       - If set to false, skip the next two fields and return null for them, as no custom drop-off is needed.
-    4. dropoff_point_2d: If user_dropoff is false, this MUST be null. If user_dropoff is true, return the dropoff point [y, x] (or center point [y, x] if it is a dropoff area) in normalized integers 0-1000.
-       CRITICAL CONSTRAINT FOR DROPOFFS: The drop-off point MUST be located strictly on the flat wooden table surface visible at the bottom of the image. 
-       - NEVER place the drop-off point on the background, walls, windows, or cabinets in the upper half of the image.
+       - Set to true if the user specifies a destination. This destination can be EITHER a VISUAL TARGET visible in the image (e.g., "on the colored areas", "next to the blue block") OR explicit METRIC COORDINATES provided in the text (e.g., "put it at x=0.5, y=0.1").
+       - Set to false ONLY if the user asks to pick or sort objects WITHOUT specifying any destination at all (e.g., "pick all red bricks", "sort the bricks by color").
+    4. dropoff_point_2d: 
+       - If user_dropoff is true AND the target is visual, return the dropoff point [y, x] in normalized integers 0-1000.
+       - If the target is strictly metric coordinates, or if user_dropoff is false, this MUST be null.
+       CRITICAL CONSTRAINT FOR VISUAL DROPOFFS: The drop-off point MUST be located strictly on the flat wooden table surface visible at the bottom of the image. 
+       - NEVER place the drop-off point on the background, walls, windows, or cabinets.
        - Look at the y-coordinates of the detected objects resting on the table. Your drop-off y-coordinate must fall within that same horizontal band (typically y > 700).
-       - Ensure the point is not too close to other detected objects.
-    5. dropoff_coords_m: Use ONLY for explicitly provided metric coordinates in the text (e.g., "put it at x=0.4, y=0.5"). Returns [x, y] floats in meters. Null if not applicable.
+       - COLLISION AVOIDANCE: Ensure the drop-off point is NOT located on top of or too close to OTHER currently unpicked objects on the table. Find a clear, empty spot within the target area to avoid blocking future picks.
+       - GROUPING RULE: If multiple objects belong to the exact same visual target area, use the EXACT SAME center point [y, x] for all of them. Do NOT calculate spatial offsets to place them side-by-side UNLESS the user explicitly instructs you to do so.
+    5. dropoff_coords_m:
+       - If user_dropoff is true AND the user provided explicit numerical metric coordinates in the prompt (e.g., "x=0.4, y=0.5"), return them here as [x, y] floats in meters. 
+       - Otherwise, this MUST be null.
 
     General Instructions:
     - ONLY SINGLE BRICKS/OBJECTS, no builds or groups or stacks.
@@ -614,32 +618,53 @@ class GeminiVisionNode(Node):
         start = time.time()
         prompt = build_prompt(user_prompt)
         
+        current_temperature = 1.0 # Default temperature, recommended to keep it at 1.0, can be adjusted based on user needs (e.g., lower for more deterministic results, higher for more creative interpretations)
+        
+        # --- Thinking Config Selection Logic ---
+
+        # 1. Specific Config for Gemini Robotics-ER 1.5 (uses thinking_budget instead of thinking_level)
         if "gemini-robotics-er-1.5" in self.gemini_model:
-            current_temperature = 0.5 # as used in the Robotics Cookbook
             current_thinking_config = types.ThinkingConfig(
                 thinking_budget=GEMINI_THINKING_BUDGET,
                 include_thoughts=True
             )
             self.get_logger().info(f"Using thinking_budget={GEMINI_THINKING_BUDGET} for model {self.gemini_model}")
-        else:
+            
+        # 2. Specific Config for Gemini 3 Family (supporting thinking_level)
+        elif "gemini-3" in self.gemini_model: 
             if not user_prompt:
                 current_thinking_level = "minimal"
                 self.get_logger().info("🅰️  Default Mode:")
             else:
+                self.get_logger().info("🅱️  User Prompt Mode:")
                 if self.gemini_model == "gemini-3-flash-preview":
                     current_thinking_level = GEMINI_THINKING_LEVEL_3FLASH
                 elif self.gemini_model == "gemini-3.1-flash-lite-preview":
                     current_thinking_level = GEMINI_THINKING_LEVEL_31FLASHLITE
                 else:
-                    current_thinking_level = GEMINI_THINKING_LEVEL_DEFAULT
-                self.get_logger().info("🅱️  User Prompt Mode:")
-
-            current_temperature = 1.0 # Gemini API Docs: For all Gemini 3 models, we strongly recommend keeping the temperature parameter at its default value of 1.0.
+                    # Fallback für zukünftige Gemini 3 Modelle
+                    current_thinking_level = GEMINI_THINKING_LEVEL_DEFAULT 
+                    
             current_thinking_config = types.ThinkingConfig(
                 thinking_level=current_thinking_level,
                 include_thoughts=True
             )
             self.get_logger().info(f"Using thinking_level='{current_thinking_level}' for model {self.gemini_model}")
+            
+        # 3. Universal fallback for unknown or older models (e.g., set via launch file)
+        else:
+            if not user_prompt:
+                self.get_logger().info("🅰️  Default Mode (Fallback Model):")
+            else:
+                self.get_logger().info("🅱️  User Prompt Mode (Fallback Model):")
+                
+            # For unknown models, we use a safe default that includes thoughts but does not rely on specific thinking_level or thinking_budget parameters.
+            current_thinking_config = types.ThinkingConfig(
+                include_thoughts=True
+            )
+            self.get_logger().info(f"Using default thinking config (only include_thoughts=True) for model {self.gemini_model}")
+
+        # --- Gemini API Call ---
 
         self.get_logger().info(f"Prompt: {prompt}")
 
