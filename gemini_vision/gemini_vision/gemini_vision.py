@@ -54,8 +54,17 @@ GEMINI_THINKING_LEVEL = GEMINI_THINKING_LEVELS[3] # Change this to switch thinki
 
 GEMINI_THINKING_BUDGET = -1 # Gemini Robotics-ER 1.5 uses thinking_budget (default: -1 for dynamic thinking) instead of thinking_level, set to 0 for no thinking, range: 0 to 24576
 
+GEMINI_DEFAULT_PROMPT = textwrap.dedent("""\
+    Detect all bricks on the table
+""")
+
 GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
     You are a vision system for a robotic pick-and-place task.
+
+    SCENE CONTEXT:
+    The camera is placed directly on the table in front of the robot. The camera's field of view is perfectly horizontal and parallel to the table surface. 
+    Because of this perspective, the flat table surface is only visible in the lower portion of the image. Objects that appear higher up in the image are most likely further away in the background or off the table entirely.
+
     Your job is to analyze the image, detect Lego bricks (and other requested objects), and determine their bounding boxes, colors, and potential drop-off locations based on user instructions.
 
     Return a JSON list matching this exact schema:
@@ -123,8 +132,7 @@ class DetectionResult(BaseModel):
 
 def build_prompt(user_prompt: Optional[str] = None) -> str:
     """Builds the Gemini prompt."""
-    prompt = textwrap.dedent("""\
-        Detect Lego bricks""")
+    prompt = GEMINI_DEFAULT_PROMPT
 
     if user_prompt:
         prompt = textwrap.dedent(f"""\
@@ -404,9 +412,10 @@ class GeminiVisionNode(Node):
             "🟢 GeminiVisionNode (Service Node) ready.\n" +
             f"📷 Subscribed to camera topics: {self.camera_info_topic}, {self.camera_color_image_topic}, {self.camera_depth_image_topic}\n" +
             "👂 Waiting for service call...\n" +
-            "To test functionality manually, use:\n" +
+            "\nTo test functionality manually, use:\n" +
+            "🅰️  Default Mode - 'Detects all bricks on the table':\n" +
             "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{user_prompt: ''}\"\n" +
-            "Or with user instruction:\n" +
+            "🅱️  User Prompt Mode - add your instructions to the data field:\n" +
             "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{user_prompt: 'Pick the red bricks'}\"\n" +
             "="*60
         )
