@@ -1,5 +1,5 @@
 
-# AI-Driven Pick-and-Place with Google Gemini and Universal Robots UR5e in ROS 2 Jazzy  <!-- omit from toc -->
+# AI-Driven Pick-and-Place with Google Gemini and Universal Robots UR5e in ROS 2 Jazzy <!-- omit from toc -->
 
 [![jazzy][jazzy-badge]][jazzy-link]
 [![ubuntu24][ubuntu24-badge]][ubuntu24-link]
@@ -16,16 +16,19 @@ This repository demonstrates how to integrate state-of-the-art vision-language m
 
 The project features a complete perception-to-action pipeline. It utilizes the Gemini API for advanced spatial reasoning and natural language processing, and MoveIt 2 for hybrid motion planning (OMPL + Pilz LIN/PTP).
 
-![Video of the AI-Driven (Gemini) Pick-and-Place Application](docs/videos/pick-and-place_user-prompt-mode_demo.mp4)
+![Video of the AI-Driven (Gemini) Pick-and-Place Application](docs/videos/pick-and-place_user-prompt_demo.mp4)
 
 - [I) Prerequisites](#i-prerequisites)
 - [II) Installation and Setup](#ii-installation-and-setup)
+  - [ROS 2 Packages and Tools](#ros-2-packages-and-tools)
+  - [Google Gemini API and SDK](#google-gemini-api-and-sdk)
 - [III) Workspace Overview](#iii-workspace-overview)
-- [IV) Developer Workflow Tips (Bash Shortcuts)](#iv-developer-workflow-tips-bash-shortcuts)
-- [V) Quick Start: AI Pick-and-Place Pipeline](#v-quick-start-ai-pick-and-place-pipeline)
-    - [Step 1: Start Hardware or Simulation](#step-1-start-hardware-or-simulation)
-    - [Step 2: Start Gemini Vision \& RViz](#step-2-start-gemini-vision--rviz)
-    - [Step 3: Start Application \& Trigger](#step-3-start-application--trigger)
+- [IV) Workflow Tips (Bash Shortcuts)](#iv-workflow-tips-bash-shortcuts)
+- [V) Quick Start: Pick-and-Place with Gemini Vision](#v-quick-start-pick-and-place-with-gemini-vision)
+  - [Step 1: Start the Robot Driver (Real or Simulated)](#step-1-start-the-robot-driver-real-or-simulated)
+  - [Step 2: Start Gemini Vision \& RViz](#step-2-start-gemini-vision--rviz)
+  - [Step 3: Start Pick-and-Place Application](#step-3-start-pick-and-place-application)
+  - [Step 4: Trigger Pick-and-Place Cycle](#step-4-trigger-pick-and-place-cycle)
 - [VI) Hardware Testing Tools](#vi-hardware-testing-tools)
 - [VII) Documentation and References](#vii-documentation-and-references)
 
@@ -45,10 +48,24 @@ The project features a complete perception-to-action pipeline. It utilizes the G
 
 # II) Installation and Setup
 
-To ensure all components function correctly, you must install the required ROS 2 packages and configure access to the Gemini API.
+To make sure all components of this workspace function correctly, you need to install and set up the required ROS 2 packages, the Google GenAI SDK, and configure access to the Gemini API.
 
-1. **ROS 2 & Dependencies:** Follow the [INSTALL.md](INSTALL.md) guide.
-2. **AI Setup:** Follow the [GEMINI_API.md](GEMINI_API.md) guide to generate your Google Gemini API key and export it as an environment variable.
+## ROS 2 Packages and Tools
+
+**Instructions:** [INSTALL.md](INSTALL.md)
+
+- [ros2_control](https://control.ros.org/jazzy/doc/getting_started/getting_started.html)
+- [Universal Robots ROS2 Driver](https://docs.universal-robots.com/Universal_Robots_ROS_Documentation/doc/ur_robot_driver/ur_robot_driver/doc/installation/installation.html)
+- [Universal Robots ROS2 Description](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/tree/jazzy)
+- [MoveIt 2](https://moveit.ai/install-moveit2/binary/)
+- [Realsense ROS Wrapper](https://github.com/realsenseai/realsense-ros)
+- [Webots](https://docs.ros.org/en/jazzy/Tutorials/Advanced/Simulators/Webots/Installation-Ubuntu.html)
+
+## Google Gemini API and SDK
+
+**Instructions:** [GEMINI_API.md](GEMINI_API.md)
+
+- [Google Gen AI SDK](https://ai.google.dev/gemini-api/docs/quickstart)
 
 
 # III) Workspace Overview
@@ -57,29 +74,39 @@ This repository uses a modular architecture, strictly separating hardware driver
 
 ```bash
 ros2_ws/src/
-├── gemini_vision             # Main AI perception (Gemini API, spatial reasoning)
-├── color_detection           # Alternative classic perception (OpenCV HSV masking)
-├── brick_interfaces          # Custom ROS 2 messages and services (e.g., DetectBricks.srv)
-├── descriptions              # URDF/Xacro models for the robot, grippers, and environment
-├── workcell_bringup          # Centralized configuration YAMLs (cameras, TF frames)
-├── workcell_application      # Main state machine, MoveIt 2 orchestrator (pick_and_place.py)
-├── workcell_control          # Launch files for real UR5e hardware drivers
-├── workcell_moveit_config    # MoveIt 2 SRDFs, kinematics, and controllers
-└── workcell_simulation       # Webots digital twin environments
-````
+├── brick_interfaces              # Custom ROS 2 messages and services
+├── color_detection               # Alternative classic perception (OpenCV HSV masking)
+├── descriptions                  # URDF/Xacro models for the robot, gripper, and environment
+├── gemini_vision                 # Main AI perception (Gemini API)
+└── workcell                      
+    ├── workcell_application      # Main state machine, MoveIt 2 orchestrator (pick_and_place.py)
+    ├── workcell_bringup          # Master launch files and centralized configuration YAMLs (cameras, TF frames)
+    ├── workcell_control          # Launch files for real UR5e hardware drivers
+    ├── workcell_moveit_config    # MoveIt 2 SRDFs, kinematics, and controllers
+    └── workcell_simulation       # Webots simulation environment
+```
 
-*(For detailed configuration options, see the `README.md` files located inside each package folder.)*
+## Key Packages <!-- omit from toc -->
 
-# IV) Developer Workflow Tips (Bash Shortcuts)
+For detailed instructions, please refer to the `README.md` files located inside each specific package folder.
 
-To significantly speed up testing and avoid typing long ROS 2 commands with JSON payloads, add these functions to your `~/.bashrc` file.
+  * **[`gemini_vision`](https://www.google.com/search?q=gemini_vision/)**: The AI perception pipeline. Uses the Gemini API to analyze RGB-D streams, maps bounding boxes to 3D coordinates, and interprets natural language prompts.
+  * **[`workcell_application`](https://www.google.com/search?q=workcell/workcell_application/)**: The core MoveIt 2 orchestrator. Contains the main `pick_and_place.py` state machine and hardware alignment tools.
+  * **[`color_detection`](https://www.google.com/search?q=color_detection/)**: The alternative classic perception pipeline. Uses OpenCV HSV masking to detect Lego bricks.
+  * **[`workcell_bringup`](https://www.google.com/search?q=workcell/workcell_bringup/)**: Contains centralized YAML parameters for cameras and frames to ensure consistency across the entire workcell.
+  * **[`workcell_control`](https://www.google.com/search?q=workcell/workcell_control/)**: Contains launch files to initiate the connection with the real UR5e hardware via `ur_robot_driver`.
+  * **[`workcell_simulation`](https://www.google.com/search?q=workcell/workcell_simulation/)**: Launch files and worlds for the Webots digital twin environment.
+  * **[`workcell_moveit_config`](https://www.google.com/search?q=workcell/workcell_moveit_config/)**: The MoveIt 2 setup package, containing SRDFs, kinematics, and Pilz/OMPL controller configurations.
 
-Open your terminal and edit your bashrc (e.g., `nano ~/.bashrc`), then append this block:
+
+# IV) Workflow Tips (Bash Shortcuts)
+
+To significantly speed up testing and avoid typing long ROS 2 commands, add these functions to your `~/.bashrc` file:
 
 ```bash
 # --- Pick and Place Shortcuts ---
 
-# Call the vision service directly to test AI reasoning without moving the robot
+# Call the vision service directly to test AI reasoning without moving the robot.
 testscan() {
     ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks "{user_prompt: '$*'}"
 }
@@ -93,53 +120,120 @@ scan() {
 alias stop='ros2 topic pub --once /pick_and_place/stop std_msgs/msg/Empty'
 ```
 
-After saving and running `source ~/.bashrc`, you can instantly trigger tasks using natural language, e.g.: `scan Pick the red bricks and put them on the left side`.
+After saving and running `source ~/.bashrc`, you can instantly trigger tasks using natural language.
 
-# V) Quick Start: AI Pick-and-Place Pipeline
+Examples:
+
+```bash
+# without arguments (uses the default prompt):
+scan
+# or
+testscan
+
+# with a custom prompt:
+scan Pick the red and blue bricks and place them on the left side of the table
+# or
+testscan Pick the red and blue bricks and place them on the left side of the table
+```
+
+
+# V) Quick Start: Pick-and-Place with Gemini Vision
 
 This section outlines how to start the primary Gemini-driven application. Open **three separate terminals**.
 
-> [\!IMPORTANT]
+> [!IMPORTANT]
 > When using the Webots simulation, you MUST append `use_sim_time:=true` to **all** launch commands to synchronize the ROS 2 clock.
 
-### Step 1: Start Hardware or Simulation
+## Step 1: Start the Robot Driver (Real or Simulated)
 
-**Simulation (Webots):**
+* **Option A: Simulation (Webots):**
 
-```bash
-ros2 launch workcell_simulation simulation.launch.py
-```
+  ```bash
+  ros2 launch workcell_simulation simulation.launch.py
+  ```
 
-**Real Hardware:**
-Ensure the *external control* node is active on the UR teach pendant, then launch the driver:
+* **Option B: Real Hardware (UR5e & RealSense)**
+  
+  > [!CAUTION]
+  > Follow all safety precautions when working with real robots.
 
-```bash
-ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
-```
+  First, start the connection to the UR5e controller:
 
-### Step 2: Start Gemini Vision & RViz
+  ```bash
+  ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
+  ```
 
-Start the AI perception node and the RViz visualization to see the robot state and live camera annotations:
+  > [!IMPORTANT]
+  > Start the program with the **external control** node on the teach pendant, to ensure the robot can receive commands from ROS 2.
+  > For detailed instructions on setting up the UR5e for ROS 2 control, see the **[workcell_control README](./workcell/workcell_control/README.md#option-a-real-hardware-ur5e)**.
 
-```bash
-ros2 launch gemini_vision gemini_vision.launch.py use_sim_time:=true
-ros2 launch workcell_application rviz.launch.py use_sim_time:=true
-```
 
-*(Note: If you prefer classic, non-AI computer vision, launch `color_detector.launch.py` from the `color_detection` package instead).*
+## Step 2: Start Gemini Vision & RViz
 
-### Step 3: Start Application & Trigger
+* **Option A: Simulation (Webots)**
 
-Launch the MoveIt orchestrator. The robot will move to the `ready` pose and wait in STANDBY mode:
+  Start Gemini Vision and RViz (simulation clock is required):
 
-```bash
-ros2 launch workcell_application pick_and_place.launch.py use_sim_time:=true
-```
+  ```bash
+  ros2 launch gemini_vision gemini_vision.launch.py use_sim_time:=true
+  ros2 launch workcell_application rviz.launch.py use_sim_time:=true
+  ```
 
-Once ready, open a new terminal and use the bash shortcuts configured in Section IV to trigger the cycle:
+* **Option B: Real Hardware (UR5e & RealSense)**
 
-  * `scan` (Picks and sorts all detected objects to default locations).
-  * `scan Pick only the blue block and place it at x=0.2, y=0.3` (Custom AI prompt).
+  First, start the RealSense camera stream in a new terminal:
+
+  ```bash
+  ros2 launch realsense2_camera rs_launch.py depth_module.depth_profile:=1280x720x30 camera_name:=d415 align_depth.enable:=true enable_sync:=true pointcloud.enable:=true
+  ```
+
+  Then, start the Gemini Vision node and RViz:
+
+  ```bash
+  ros2 launch gemini_vision gemini_vision.launch.py
+  ros2 launch workcell_application rviz.launch.py
+  ```
+
+> [!NOTE]
+> If you want to test classic, non-AI computer vision, launch `color_detector.launch.py` from the `color_detection` package instead. Keep in mind that this requires the camera to be properly calibrated for HSV masking, and it won't understand natural language prompts.
+
+## Step 3: Start Pick-and-Place Application
+
+Launch the Pick-and-Place application. The robot will move to the `ready` pose and wait in STANDBY mode:
+
+* **Option A: Simulation (Webots)**
+
+  ```bash
+  ros2 launch workcell_application pick_and_place.launch.py use_sim_time:=true
+  ```
+
+* **Option B: Real Hardware (UR5e & RealSense)**
+
+  ```bash
+  ros2 launch workcell_application pick_and_place.launch.py
+  ```
+
+## Step 4: Trigger Pick-and-Place Cycle
+
+Once ready, open a new terminal and use the bash shortcuts configured in **[Section IV](#iv-workflow-tips-bash-shortcuts)** to trigger the cycle:
+
+* **Trigger Option A: Default Mode**
+
+  Picks all detected bricks and sorts them into their respective color-coded drop-off locations based on the YAML config.
+
+  ```bash
+  scan
+  ```
+
+* **Trigger Option B: Custom Prompt Mode - Gemini ONLY:**
+
+  Lets you specify a custom natural language instruction to guide the sorting logic. For example, you can ask it to only pick certain colors, or to calculate specific drop-off locations based on the prompt.
+
+  Simply include your instructions in the command after `scan`. For example:
+
+  ```bash
+  scan Pick the red and blue bricks and place them on the left side of the table
+  ```
 
 # VI) Hardware Testing Tools
 
@@ -152,19 +246,22 @@ The `workcell_application` package includes several utility scripts for hardware
 # VII) Documentation and References
 
 **ROS 2 Ecosystem**
-
-  - [ROS 2 Jazzy](https://docs.ros.org/en/jazzy/index.html)
-  - [MoveIt 2](https://moveit.picknik.ai/main/index.html#)
+- [ROS 2 Jazzy](https://docs.ros.org/en/jazzy/index.html)
+- [ROS 2 Control](https://control.ros.org/jazzy/index.html)
+- [MoveIt 2](https://moveit.picknik.ai/main/index.html#)
 
 **Universal Robots**
+- [Universal Robots ROS 2 Driver](https://docs.universal-robots.com/Universal_Robots_ROS_Documentation/index.html)
+- [Universal Robots ROS 2 Driver - Setup a Robot](https://docs.universal-robots.com/Universal_Robots_ROS_Documentation/doc/ur_client_library/doc/setup.html#setup-a-robot)
+- [Universal Robots ROS 2 Driver GitHub](https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver/tree/jazzy)
+- [Universal Robots ROS 2 Description GitHub](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/tree/jazzy)
+- [Setting up the tool communication on an e-Series robot](https://github.com/UniversalRobots/Universal_Robots_ROS_Driver/blob/master/ur_robot_driver/doc/setup_tool_communication.md)
 
-  - [Universal Robots ROS 2 Driver](https://docs.universal-robots.com/Universal_Robots_ROS_Documentation/index.html)
-  - [UR ROS 2 Driver - Setup a Robot](https://docs.universal-robots.com/Universal_Robots_ROS_Documentation/doc/ur_client_library/doc/setup.html#setup-a-robot)
 
-**Sensors & AI**
+**Realsense**
+- [ROS Wrapper for RealSense(TM) Cameras](https://ai.google.dev/gemini-api/docs/quickstart#make-first-request)
 
-  - [ROS Wrapper for RealSense™ Cameras](https://github.com/IntelRealSense/realsense-ros)
-  - [Google Gemini API Docs](https://ai.google.dev/gemini-api/docs/)
-  - [Google Gemini Robotics-ER 1.5](https://ai.google.dev/gemini-api/docs/robotics-overview)
+**Google Gemini**
+- [Google Gemini API](https://ai.google.dev/gemini-api/docs/)
+- [Google Gemini Robotics-ER 1.5](https://ai.google.dev/gemini-api/docs/robotics-overview)
 
-<!-- end list -->
