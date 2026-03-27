@@ -26,9 +26,14 @@ This package provides the Webots simulation environment for the Pick-and-Place a
 To start the complete simulation (shown in the screenshot above), use the following command:
 
 ```bash
-ros2 launch workcell_simulation simulation.launch.py # use_sim_time:=true is set by default in the launch file
+ros2 launch workcell_simulation simulation.launch.py 
+# use_sim_time:=true is set by default in the launch file
 ```
-The simulation time starts automatically, and you should see the following output in the Webots console:
+
+> [!IMPORTANT]
+> **``use_sim_time``:** When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands**! This ensures proper time synchronization between the simulation and all ROS nodes.
+
+The simulation runs automatically and you should see the following output in the Webots console:
 
 ![Screenshot of the Webots simulation console output after starting.](/docs/images/webots_world_console.png)
 
