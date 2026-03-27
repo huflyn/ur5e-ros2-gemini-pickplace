@@ -16,7 +16,7 @@ This repository demonstrates how to integrate state-of-the-art vision-language m
 
 The project features a complete perception-to-action pipeline. It utilizes the Gemini API for advanced spatial reasoning and natural language processing, and MoveIt 2 for hybrid motion planning (OMPL + Pilz LIN/PTP).
 
-![Video of the AI-Driven (Gemini) Pick-and-Place Application](docs/videos/pick-and-place_user-prompt_demo.mp4)
+https://github.com/user-attachments/assets/ba4a9620-bd2b-4814-b3d8-9d6d37d2f78e
 
 - [I) Prerequisites](#i-prerequisites)
 - [II) Installation and Setup](#ii-installation-and-setup)
