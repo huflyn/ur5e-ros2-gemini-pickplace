@@ -11,10 +11,12 @@
 
 This package manages the connection to the physical UR5e hardware. It contains the launch files necessary to start the official `ur_robot_driver` with the correct calibration parameters, network settings, and ROS 2 controllers for this specific workcell.
 
+![Screenshot of the UR5e in RViz.](/docs/images/workcell_control_rviz.png)
+
 - [I) Package Structure](#i-package-structure)
 - [II) Usage / Launch](#ii-usage--launch)
-  - [Option A: Mock Hardware (no Webots, just RViz and MoveIt)](#option-a-mock-hardware-no-webots-just-rviz-and-moveit)
-  - [Option B: Real Hardware (UR5e)](#option-b-real-hardware-ur5e)
+  - [Option A: Real Hardware (UR5e)](#option-a-real-hardware-ur5e)
+  - [Option B: Mock Hardware (no Webots simulation, just RViz)](#option-b-mock-hardware-no-webots-simulation-just-rviz)
 
 ## I) Package Structure
 * **`start_robot.launch.py`**: The main launch file to start the UR5e driver. It includes parameters for both real hardware and mock hardware, allowing you to switch between them easily.
@@ -22,21 +24,25 @@ This package manages the connection to the physical UR5e hardware. It contains t
 
 ## II) Usage / Launch
 
-### Option A: Mock Hardware (no Webots, just RViz and MoveIt)
+### Option A: Real Hardware (UR5e)
 
-```bash
-# Make sure to set use_mock_hardware:=true in the command below if you want to use mock hardware
-ros2 launch workcell_control start_robot.launch.py use_mock_hardware:=true
-```
-This will start a simulated robot using the ros2_control mock hardware interface. The robot will mirror the commands sent to it, allowing you to test your MoveIt 2 configuration without needing access to physical hardware or the Webots simulation.
-
-### Option B: Real Hardware (UR5e)
-
-If you want to start a real robot, make sure that the **[robot setup](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html#robot-setup)** is done and **external_control** is active on the robot.
+If you want to start the real UR5e robot, make sure that the **[robot setup](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html#robot-setup)** is done and **external_control** is active on the robot.
 Make sure to set the correct **robot_ip** in the command below or in the ``start_robot.launch.py`` file in the ``workcell_control`` package!
 
 ```bash
 # You can set the robot_ip either via command line argument or directly in the start_robot.launch.py file
-ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
+ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>1
+# launch_rviz:=true can be set to automatically start RViz to visualize the robot and its movements
 ```
 This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces. Make sure to follow all safety precautions when working with real robots.
+
+### Option B: Mock Hardware (no Webots simulation, just RViz)
+
+```bash
+ros2 launch workcell_control start_robot.launch.py use_mock_hardware:=true
+# launch_rviz:=true can be set to automatically start RViz to visualize the robot and its movements
+```
+This will start a virtual robot using the ros2_control mock hardware interface. The robot will mirror the commands sent to it, without needing access to physical hardware or the Webots simulation. Set ``launch_rviz:=true`` to visualize the robot in RViz, as shown in the screenshot at the top.
+
+> [!NOTE]
+> If you want to use the **Webots simulation** instead, please refer to the **[workcell_simulation package](../workcell_simulation/README.md)**, which includes its own launch file that starts the Webots simulation.
