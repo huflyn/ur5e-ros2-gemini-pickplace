@@ -50,7 +50,10 @@ GEMINI_MODELS = [
 GEMINI_MODEL = GEMINI_MODELS[0] # Change this to switch models
 
 GEMINI_THINKING_LEVELS = ["minimal", "low", "medium", "high"] # Gemini 3 Flash default: high / Gemini 3.1 Flash-Lite default: minimal
-GEMINI_THINKING_LEVEL = GEMINI_THINKING_LEVELS[3] # Change this to switch thinking levels, for complex user prompts medium (2) or high (3) is recommended, for the simple default prompt minimal (0) works fine and is faster (using Gemini 3 Flash Preview)
+GEMINI_THINKING_LEVEL_DEFAULT = GEMINI_THINKING_LEVELS[2] # Change this to switch thinking levels, for complex user prompts medium (2) or high (3) is recommended, for the simple default prompt minimal (0) works fine and is faster (using Gemini 3.1 Flash-Lite Preview)
+GEMINI_THINKING_LEVEL_3FLASH = GEMINI_THINKING_LEVELS[3] # Dedicated thinking level for Gemini 3 Flash
+GEMINI_THINKING_LEVEL_31FLASHLITE = GEMINI_THINKING_LEVELS[2] # Dedicated thinking level for Gemini 3.1 Flash-Lite
+
 
 GEMINI_THINKING_BUDGET = -1 # Gemini Robotics-ER 1.5 uses thinking_budget (default: -1 for dynamic thinking) instead of thinking_level, set to 0 for no thinking, range: 0 to 24576
 
@@ -87,7 +90,7 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
        - Set to true ONLY if the user explicitly asks to move THIS SPECIFIC object to a custom location, or to find a safe spot for it.
        - Set to false if the user simply asks to "sort" the object (without any specific placement instructions, which means the robot uses predefined hardware bins), or if no specific placement is mentioned for that individual object.
        - If set to false, skip the next two fields and return null for them, as no custom drop-off is needed.
-    4. dropoff_point_2d: If user_dropoff is false, this MUST be null. If user_dropoff is true, return the center point [y, x] in normalized integers 0-1000.
+    4. dropoff_point_2d: If user_dropoff is false, this MUST be null. If user_dropoff is true, return the dropoff point [y, x] (or center point [y, x] if it is a dropoff area) in normalized integers 0-1000.
        CRITICAL CONSTRAINT FOR DROPOFFS: The drop-off point MUST be located strictly on the flat wooden table surface visible at the bottom of the image. 
        - NEVER place the drop-off point on the background, walls, windows, or cabinets in the upper half of the image.
        - Look at the y-coordinates of the detected objects resting on the table. Your drop-off y-coordinate must fall within that same horizontal band (typically y > 700).
@@ -338,23 +341,25 @@ class GeminiVisionNode(Node):
     def __init__(self):
         super().__init__('gemini_vision_node')
 
-        # --- Gemini API Parameters ---
-        self.declare_parameter('gemini_model', GEMINI_MODEL)
-        self.declare_parameter('thinking_level', GEMINI_THINKING_LEVEL)
-        self.declare_parameter('thinking_budget', GEMINI_THINKING_BUDGET)
-
-        self.model_id = self.get_parameter('gemini_model').value
-        self.thinking_level = self.get_parameter('thinking_level').value
-        self.thinking_budget = self.get_parameter('thinking_budget').value
 
 
-        # --- Gemini Client ---
+        # Declare the parameter with an empty string as the default
+        self.declare_parameter('gemini_model', '')
+        passed_model = self.get_parameter('gemini_model').value
+
+        # Fallback logic: If the launch file passed an empty string, use the global constant.
+        # Otherwise, use the model passed via the command line.
+        if passed_model == '':
+            self.gemini_model = GEMINI_MODEL
+        else:
+            self.gemini_model = passed_model
+
         self.api_key = os.environ.get('GEMINI_API_KEY')
         if not self.api_key:
             self.get_logger().fatal("🔴 GEMINI_API_KEY not set!")
             raise RuntimeError("Missing API key")
         self.client = genai.Client(api_key=self.api_key)
-        self.get_logger().info(f"🟢 Model: {self.model_id} - ready.")
+        self.get_logger().info(f"🟢 Model: {self.gemini_model} - ready.")
 
         
         # --- ROS Parameters ---
@@ -609,19 +614,24 @@ class GeminiVisionNode(Node):
         start = time.time()
         prompt = build_prompt(user_prompt)
         
-        if "gemini-robotics-er-1.5" in self.model_id:
+        if "gemini-robotics-er-1.5" in self.gemini_model:
             current_temperature = 0.5 # as used in the Robotics Cookbook
             current_thinking_config = types.ThinkingConfig(
-                thinking_budget=self.thinking_budget,
+                thinking_budget=GEMINI_THINKING_BUDGET,
                 include_thoughts=True
             )
-            self.get_logger().info(f"Using thinking_budget={self.thinking_budget} for model {self.model_id}")
+            self.get_logger().info(f"Using thinking_budget={GEMINI_THINKING_BUDGET} for model {self.gemini_model}")
         else:
             if not user_prompt:
                 current_thinking_level = "minimal"
                 self.get_logger().info("🅰️  Default Mode:")
             else:
-                current_thinking_level = self.thinking_level
+                if self.gemini_model == "gemini-3-flash-preview":
+                    current_thinking_level = GEMINI_THINKING_LEVEL_3FLASH
+                elif self.gemini_model == "gemini-3.1-flash-lite-preview":
+                    current_thinking_level = GEMINI_THINKING_LEVEL_31FLASHLITE
+                else:
+                    current_thinking_level = GEMINI_THINKING_LEVEL_DEFAULT
                 self.get_logger().info("🅱️  User Prompt Mode:")
 
             current_temperature = 1.0 # Gemini API Docs: For all Gemini 3 models, we strongly recommend keeping the temperature parameter at its default value of 1.0.
@@ -629,7 +639,7 @@ class GeminiVisionNode(Node):
                 thinking_level=current_thinking_level,
                 include_thoughts=True
             )
-            self.get_logger().info(f"Using thinking_level='{current_thinking_level}' for model {self.model_id}")
+            self.get_logger().info(f"Using thinking_level='{current_thinking_level}' for model {self.gemini_model}")
 
         self.get_logger().info(f"Prompt: {prompt}")
 
@@ -641,7 +651,7 @@ class GeminiVisionNode(Node):
             )
             
             resp = self.client.models.generate_content(
-                model=self.model_id,
+                model=self.gemini_model,
                 contents=[prompt, image_part],
                 config=types.GenerateContentConfig(
                     system_instruction=GEMINI_SYSTEM_PROMPT,
