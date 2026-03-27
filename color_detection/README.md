@@ -40,6 +40,9 @@ This package relies on the **`brick_interfaces`** package for custom message and
 * `/annotated_image` (`sensor_msgs/Image`): Publishes a live, non-blocking visualization of detected bounding boxes, 3D coordinates, and safe zones at 6 Hz for RQT/RViz.
 * `/tf`: Broadcasts individual `TransformStamped` frames for every detected brick (e.g., `brick_red_0`) relative to the robot's base frame.
 
+**Subscribed Topics:**
+* Camera Info, Color Image, and Depth Image (configurable via parameters).
+
 **Message Format (`brick_interfaces/msg/LegoBrick`):**
 The service response returns an array of these messages.
 ```text
@@ -49,6 +52,7 @@ float32 camera_distance_mm           # Raw depth distance from the camera lens t
 float32 yaw_degrees                  # Calculated brick orientation (0.0 or 30.0 degrees) based on aspect ratio
 int32[] bounding_box_px              # Bounding box array [xmin, ymin, xmax, ymax]
 ```
+
 
 # III) Configuration & Camera Setup (YAML)
 
