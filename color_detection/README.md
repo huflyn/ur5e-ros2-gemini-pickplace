@@ -8,8 +8,9 @@
 [ubuntu24-badge]: https://img.shields.io/badge/-UBUNTU%2024%2E04-blue?style=flat-square&logo=ubuntu&logoColor=white
 [ubuntu24]: https://releases.ubuntu.com/noble/
 
-
 This package detects colored Lego bricks using a camera stream (RGB + Depth). It generates precise bounding boxes by applying configurable HSV color masks and contour detection to the RGB image. By mapping these 2D bounding boxes to the aligned depth map, it calculates the 3D coordinates of each brick relative to the robot's base frame and provides this data to the ROS 2 network.
+
+![Screenshot of the annotated image stream by the color detection node in RQT.](../docs/images/color_detector_rqt.png)
 
 - [I) Package Structure](#i-package-structure)
 - [II) Services, Topics \& Custom Messages](#ii-services-topics--custom-messages)
@@ -51,18 +52,18 @@ int32[] bounding_box_px              # Bounding box array [xmin, ymin, xmax, yma
 
 # III) Configuration & Camera Setup (YAML)
 
-We use parameter files in the `config/` directory to seamlessly switch between Webots simulation and real-world hardware, and to manage color thresholds:
+The configuration for this node relies on parameter files distributed across two locations to cleanly separate global camera settings from local color thresholds:
 
-  * **`sim_parameters.yaml` / `real_parameters.yaml`**: Store the camera topic names and the target `tf2` frames.
-  * **`hsv_bounds.yaml`**: Centrally stores the HSV color thresholds for all detected colors.
+  * **`workcell_bringup/config/`** **`sim_camera_parameters.yaml`** & **`real_camera_parameters.yaml`**: These centralized files store the camera topic names and the target `tf2` frames. This allows the entire workcell to easily switch between Webots simulation and real-world hardware.
+  * **`color_detection/config/hsv_bounds.yaml`**: This local file centrally stores the specific HSV color limits for all detected Lego bricks.
 
 > [!IMPORTANT]
-> Before running the node on a new setup, you must adjust the camera topics and the `tf2` frames in the respective parameters YAML file, as well as the HSV bounds.
+> Before running the node on a new setup, you must adjust the **camera topics** and the **`tf2` frames** in the respective `workcell_bringup` YAML files, as well as calibrate the **HSV bounds** in the local `hsv_bounds.yaml`.
 
-Example `sim_parameters.yaml`:
+Example `sim_camera_parameters.yaml` (located in `workcell_bringup/config/`):
 
 ```yaml
-color_detector_node:
+/**:
   ros__parameters:
     # --- Camera Topics ---
     camera_info_topic: '/webots_realsense/depth/image_rect_raw/camera_info'
@@ -76,7 +77,7 @@ color_detector_node:
     robot_base_frame: 'ur5e_base_link'
 ```
 
-Example `hsv_bounds.yaml`:
+Example `hsv_bounds.yaml` (located in `color_detection/config/`):
 
 ```yaml
 color_detector_node:
@@ -99,32 +100,35 @@ color_detector_node:
 
 ![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes and their coordinates printed in the terminal.](../docs/images/color_detector_terminal.png)
 
+## Launch Command <!-- omit from toc -->
 
 This launches the service server:
 
 ```bash
-ros2 launch color_detection color_detector.launch.py use_sim_time:=true # must be true for Webots simulation
+ros2 launch color_detection color_detector.launch.py 
+# use_sim_time:=true is required for Webots simulation, but should be false for real hardware
 ```
-
-To test the functionality manually via the terminal, use:
+## Interaction <!-- omit from toc -->
+To **test the functionality** manually via the terminal, use:
 
 ```bash
-ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks"
+ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks
 ```
 
-To view the live annotated image stream, use RQT:
+Launch RViz to **view the live annotated image stream** and **visualize the TF frames** of the detected bricks, as shown in the image above:
+
+```bash
+ros2 launch workcell_application rviz.launch.py
+# use_sim_time:=true is required for Webots simulation, but should be false for real hardware
+```
+
+Alternatively, you can use RQT to view the `/annotated_image` topic, but it may be less stable than RViz (sometimes no image):
 
 ```bash
 rqt
 ```
+
 In RQT go to Plugins → Visualization → Image View, then select the `/annotated_image` topic.
-
-Alternatively, you can visualize the detected bricks and their TF frames in RViz:
-
-```bash
-ros2 launch workcell_application rviz.launch.py use_sim_time:=true # must be true for Webots simulation
-```
-
 
 ## Edge Margins (Safe Zone) <!-- omit from toc -->
 
@@ -132,7 +136,7 @@ To ensure reliable grasping and accurate depth calculations, the detector implem
 
   * Default `edge_margin_x`: 100 pixels
   * Default `edge_margin_y`: 1 pixel
-  
+
 These margins are drawn as a red safe-zone rectangle in the `/annotated_image` stream.
 
 # V) Launch color_detector_legacy (Topic-based Node)
@@ -140,8 +144,10 @@ These margins are drawn as a red safe-zone rectangle in the `/annotated_image` s
 ![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes.](../docs/images/color_detector_legacy_terminal.png)
 
 > [!IMPORTANT]
-> The ``color_detector_legacy`` node only works with the ``brick_sorter_legacy`` node and vice versa!
-It does not work with the real hardware (gripper control) yet, only simulated in Webots.
+> The `color_detector_legacy` node only works with the `brick_sorter_legacy` node and vice versa!
+> It does not work with the real hardware (gripper control) yet, only simulated in Webots.
+
+## Launch Command <!-- omit from toc -->
 
 If you want to try the old version adapted from ROS 1, which continuously processes images and publishes the best target brick to a topic, use this launch command:
 
@@ -151,7 +157,7 @@ ros2 launch color_detection color_detector_legacy.launch.py use_sim_time:=true #
 
 This node evaluates all targets and publishes only the best target brick to `/lego_brick_info` using a 1.0-second timer.
 
-### Sorting Method (Endless Loop Prevention) <!-- omit from toc -->
+## Sorting Method (Endless Loop Prevention) <!-- omit from toc -->
 
 By default, the legacy node selects the brick with the shortest camera depth (closest to the lens). If the robot repeatedly fails to grasp a specific target, it can get stuck in an endless loop. To prevent this, you can randomize the target selection by using the launch argument `sort_method:=random`.
 
@@ -183,7 +189,7 @@ Adding a new color requires exactly three steps, without touching the core image
     hsv_orange_upper: [15, 255, 255]
 ```
 
-## Step 2: Declare and map the parameters in Python <!-- omit from toc -->
+## Step 2: Declare and map the parameters <!-- omit from toc -->
 
 In the `__init__` function of your detector node (`color_detector.py`), declare the parameters and map them into the dictionary:
 
@@ -203,7 +209,7 @@ In the `__init__` function of your detector node (`color_detector.py`), declare 
 
 ## Step 3: Add the color to the processing list <!-- omit from toc -->
 
-Inside the `detect_callback` function in ``color_detector`` (or `image_callback` in ``color_detector_legacy``), simply add the string to the list:
+Inside the `detect_callback` function in `color_detector` (or `image_callback` in `color_detector_legacy`), simply add the string to the list:
 
 ```python
         colors = ['green', 'yellow', 'red', 'blue', 'orange']
