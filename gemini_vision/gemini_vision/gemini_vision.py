@@ -402,6 +402,7 @@ class GeminiVisionNode(Node):
             "Status:\n" +
             "="*60 + "\n" +
             "🟢 GeminiVisionNode (Service Node) ready.\n" +
+            f"📷 Subscribed to camera topics: {self.camera_info_topic}, {self.camera_color_image_topic}, {self.camera_depth_image_topic}\n" +
             "👂 Waiting for service call...\n" +
             "To test functionality manually, use:\n" +
             "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{user_prompt: ''}\"\n" +
