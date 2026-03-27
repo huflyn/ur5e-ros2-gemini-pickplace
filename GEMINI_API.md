@@ -1,5 +1,8 @@
 # Setup Google Gemini API <!-- omit from toc -->
-[![Gemini](https://img.shields.io/badge/-Gemini%20API-black?style=flat-square&logo=googlegemini)](https://ai.google.dev/gemini-api/docs)
+[![gemini][gemini-badge]][gemini-link]
+
+[gemini-badge]: https://img.shields.io/badge/-GEMINI%20API-7C4DFF?style=flat-square&logo=googlegemini&logoColor=white
+[gemini-link]: https://ai.google.dev/gemini-api/docs
 
 - [Step 1: Create Gemini API Key (Docs)](#step-1-create-gemini-api-key-docs)
 - [Step 2: Google GenAI SDK Installation (Docs)](#step-2-google-genai-sdk-installation-docs)
