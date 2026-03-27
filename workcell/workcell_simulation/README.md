@@ -13,6 +13,10 @@ This package provides the Webots simulation environment for the Pick-and-Place a
 
 ![Screenshot of the Webots simulation environment, showing the UR5e robot, the table with bricks, and the Realsense camera.](/docs/images/webots_world_overlays.png)
 
+- [I) Package Structure](#i-package-structure)
+- [II) Usage](#ii-usage)
+
+
 # I) Package Structure
 
 * **`worlds/`**: Contains the Webots world file.
