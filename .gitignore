@@ -8,5 +8,7 @@
 # OS specific
 .DS_Store
 
-# temporary ignore files
+# temporary ignore files, will be deleted later
 .misc
+PLAN.md
+SYSTEM_PROMPTS.py
