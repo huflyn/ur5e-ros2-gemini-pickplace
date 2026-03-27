@@ -47,7 +47,7 @@ GEMINI_MODELS = [
     "gemini-3.1-flash-lite-preview",
     "gemini-robotics-er-1.5-preview"
 ]
-GEMINI_MODEL = GEMINI_MODELS[2] # Set your default model here
+GEMINI_MODEL = GEMINI_MODELS[1] # Set your default model here
 
 GEMINI_THINKING_LEVELS = ["minimal", "low", "medium", "high"] # Gemini 3 Flash default: high / Gemini 3.1 Flash-Lite default: minimal
 GEMINI_THINKING_LEVEL_DEFAULT = GEMINI_THINKING_LEVELS[2] # Change this to switch thinking levels, for complex user prompts medium (2) or high (3) is recommended, for the simple default prompt minimal (0) works fine and is faster (using Gemini 3.1 Flash-Lite Preview)
