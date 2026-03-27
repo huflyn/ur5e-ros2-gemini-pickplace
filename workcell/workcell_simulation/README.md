@@ -32,4 +32,14 @@ The simulation time starts automatically, and you should see the following outpu
 
 ![Screenshot of the Webots simulation console output after starting.](/docs/images/webots_world_console.png)
 
+Wait until you see that the `scaled_joint_trajectory_controller` has been successfully activated, which indicates that the robot is ready to receive commands. The relevant lines in the console output will look like this:
+```bash
+...
+
+[webots_controller_ur5e-4] [INFO] [1774613576.573235034] [controller_manager]: Activating controllers: [ scaled_joint_trajectory_controller ]
+[webots_controller_ur5e-4] [INFO] [1774613576.600943920] [controller_manager]: Successfully switched controllers!
+[spawner-7] [INFO] [1774613576.616463985] [spawner_scaled_joint_trajectory_controller]: Configured and activated scaled_joint_trajectory_controller
+[INFO] [spawner-7]: process has finished cleanly [pid 145270]
+```
+
 Now the simulation is ready for the Pick-and-Place application. It can also be used for testing different prompts with Gemini Vision and the Webots environment to see how well the vision system can identify and locate the bricks and drop-off locations and how accurate it follows the instructions.
