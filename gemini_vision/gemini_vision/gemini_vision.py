@@ -420,11 +420,13 @@ class GeminiVisionNode(Node):
         if self.latest_color_msg is None or self.latest_depth_msg is None:
             response.success = False
             response.message = "🔴 No color or depth image available yet."
+            self.get_logger().info(response.message)
             return response
 
         if not self.camera_info_ready:
             response.success = False
             response.message = "🔴 Camera info not ready yet."
+            self.get_logger().info(response.message)
             return response
 
         try:
