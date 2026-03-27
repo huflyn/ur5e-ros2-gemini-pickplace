@@ -423,7 +423,7 @@ class GeminiVisionNode(Node):
             "👂 Waiting for service call...\n" +
             "\nTo test functionality manually, use:\n" +
             "🅰️  Default Mode - 'Detects all bricks on the table':\n" +
-            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{user_prompt: ''}\"\n" +
+            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks\n" +
             "🅱️  User Prompt Mode - add your instructions to the data field:\n" +
             "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{user_prompt: 'Pick the red bricks'}\"\n" +
             "="*60
