@@ -19,7 +19,7 @@ This package manages high-level robot control for the Pick-and-Place application
 - [II) Workflow of `pick_and_place.py`](#ii-workflow-of-pick_and_placepy)
 - [III) Configuration (YAML)](#iii-configuration-yaml)
 - [IV) Starting the Pick-and-Place Application](#iv-starting-the-pick-and-place-application)
-  - [Step 1: Start the Robot Driver (Real or Simulated)](#step-1-start-the-robot-driver-real-or-simulated)
+  - [Step 1: Start the Robot and Camera (Real or Simulated)](#step-1-start-the-robot-and-camera-real-or-simulated)
   - [Step 2: Start a Perception Pipeline (Gemini Vision or Color Detection)](#step-2-start-a-perception-pipeline-gemini-vision-or-color-detection)
   - [Step 3: Start the RViz Visualization (Optional, but Recommended)](#step-3-start-the-rviz-visualization-optional-but-recommended)
   - [Step 4: Start the Application](#step-4-start-the-application)
@@ -76,26 +76,47 @@ pick_and_place_node:
 
 # IV) Starting the Pick-and-Place Application
 
-You need to open 3 terminals to run the full application:
+You need to open multiple terminals to run the full application:
 
-## Step 1: Start the Robot Driver (Real or Simulated)
+## Step 1: Start the Robot and Camera (Real or Simulated)
 
-* **Option A: Webots Simulation**
-  
+* **Option A: Simulation (Webots):**
+
+  Start the Webots environment. This includes the UR5e robot and a simulated RealSense camera:
+
   ```bash
+  # Start the Webots simulation
   ros2 launch workcell_simulation simulation.launch.py
   ```
   > [!IMPORTANT]
-  > **``use_sim_time``:** When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands**! This ensures proper time synchronization between the simulation and all ROS nodes.
+  > When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands** to synchronize the ROS 2 clock.
 
-* **Option B: Real Hardware (UR5e)**
+* **Option B: Real Hardware (UR5e & RealSense)**
 
-  ```bash
-  ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
-  ```
+  > [!CAUTION]
+  > Follow all safety precautions when working with real robots.
+
+  > [!WARNING]
+  > **Hardware Specificity:** This project and its configurations are strictly designed and tested for the **UR5e**. Attempting to use this workspace with other Universal Robots models (e.g., UR3e, UR10e) will cause issues. You would need to heavily modify the URDF, MoveIt configurations, and launch files to match your specific robot model's kinematics and limits.
 
   > [!IMPORTANT]
-  > Start the program with the **external control** node on the teach pendant, to ensure the robot can receive commands from ROS 2.
+  > Before launching, ensure the **[robot setup](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html#robot-setup)** on the teach pendant is complete. 
+  > 
+  > Once the ROS 2 driver is running, you MUST start the program with the **external_control** node on the teach pendant so the robot can receive commands from ROS 2.
+
+  This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces:
+
+  ```bash
+  # Start the UR5e driver (replace <ROBOT_IP_ADDRESS> with the actual IP, can also be set in the launch file)
+  ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
+  # Optional: Append launch_rviz:=true to automatically start RViz and visualize the robot
+  ```
+
+  Next, open a new terminal and start the RealSense camera stream:
+
+  ```bash
+  ros2 launch realsense2_camera rs_launch.py depth_module.depth_profile:=1280x720x6 rgb_camera.color_profile:=1280x720x6 camera_name:=d415 align_depth.enable:=true enable_sync:=true spatial_filter.enable:=true pointcloud.enable:=false
+  ```
 
 
 ## Step 2: Start a Perception Pipeline (Gemini Vision or Color Detection)
@@ -107,8 +128,8 @@ Choose **one** of the following vision nodes to provide the `/detect_bricks` ser
   Uses natural language processing and spatial reasoning. Recommended for its performance, adaptability and ease of use, as it doesn't require manual tuning.
 
   ```bash
+  # Start Gemini Vision (append 'use_sim_time:=true' if using Webots simulation)
   ros2 launch gemini_vision gemini_vision.launch.py
-  # use_sim_time:=true is required for Webots simulation, but should be false for real hardware
   ```
 
 * **Option B: Color Detection (Masking)**
@@ -116,8 +137,8 @@ Choose **one** of the following vision nodes to provide the `/detect_bricks` ser
   Uses fast, deterministic OpenCV contour masking, but is harder to set up (requires manual HSV tuning for different lighting conditions).
 
   ```bash
+  # Start the Color Detection node (append 'use_sim_time:=true' if using Webots simulation)
   ros2 launch color_detection color_detector.launch.py
-  # use_sim_time:=true is required for Webots simulation, but should be false for real hardware
   ```
 
 ## Step 3: Start the RViz Visualization (Optional, but Recommended)
@@ -125,8 +146,8 @@ Choose **one** of the following vision nodes to provide the `/detect_bricks` ser
 To view the  **robot**, the **live annotated image stream** and visualize the **TF frames of the detected bricks**, as shown in the image at the top, launch the RViz node:
 
 ```bash
+# Start RViz (append 'use_sim_time:=true' if using Webots simulation)
 ros2 launch workcell_application rviz.launch.py
-# use_sim_time:=true is required for Webots simulation, but should be false for real hardware
 ```
 
 ## Step 4: Start the Application
@@ -134,8 +155,8 @@ ros2 launch workcell_application rviz.launch.py
 Launch the main pick-and-place orchestrator:
 
 ```bash
+# Start the Pick-and-Place application (append 'use_sim_time:=true' if using Webots simulation)
 ros2 launch workcell_application pick_and_place.launch.py
-# use_sim_time:=true is required for Webots simulation, but should be false for real hardware
 ```
 
 Once running, the robot will move to the `ready` pose and wait in STANDBY. Open a new terminal to trigger it.
