@@ -106,6 +106,9 @@ color_detector_node:
 
 ## Launch Command <!-- omit from toc -->
 
+> [!IMPORTANT]
+> **Camera Prerequisite:** This node requires an active camera stream to function. Ensure that either the Webots simulation is running or the real RealSense camera stream is active.
+
 This launches the service server:
 
 ```bash
@@ -147,11 +150,14 @@ These margins are drawn as a red safe-zone rectangle in the `/annotated_image` s
 
 ![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes.](../docs/images/color_detector_legacy_terminal.png)
 
+## Launch Command <!-- omit from toc -->
+
 > [!IMPORTANT]
 > The `color_detector_legacy` node only works with the `brick_sorter_legacy` node and vice versa!
 > It does not work with the real hardware (gripper control) yet, only simulated in Webots.
 
-## Launch Command <!-- omit from toc -->
+> [!IMPORTANT]
+> **Camera Prerequisite:** This node requires an active camera stream to function. Ensure that either the Webots simulation is running or the real RealSense camera stream is active.
 
 If you want to try the old version adapted from ROS 1, which continuously processes images and publishes the best target brick to a topic, use this launch command:
 
@@ -168,6 +174,9 @@ By default, the legacy node selects the brick with the shortest camera depth (cl
 # VI) Using the HSV Tuner
 
 ![Screenshot of the HSV tuner GUI running in Webots simulation, showing the trackbars and live video feed.](../docs/images/hsv_tuner_terminal.png)
+
+> [!IMPORTANT]
+> **Camera Prerequisite:** This node requires an active camera stream to function. Ensure that either the Webots simulation is running or the real RealSense camera stream is active.
 
 To find the perfect HSV color thresholds for your environment, use the built-in tuning tool. It opens a live video feed with trackbars and automatically loads the correct camera topics based on your configuration.
 
