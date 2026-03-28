@@ -98,13 +98,15 @@ ros2_ws/src/
 
 For detailed instructions, please refer to the `README.md` files located inside each specific package folder.
 
-  * **[`gemini_vision`](https://www.google.com/search?q=gemini_vision/)**: The AI perception pipeline. Uses the Gemini API to analyze RGB-D streams, maps bounding boxes to 3D coordinates, and interprets natural language prompts.
-  * **[`workcell_application`](https://www.google.com/search?q=workcell/workcell_application/)**: The core MoveIt 2 orchestrator. Contains the main `pick_and_place.py` state machine and hardware alignment tools.
-  * **[`color_detection`](https://www.google.com/search?q=color_detection/)**: The alternative classic perception pipeline. Uses OpenCV HSV masking to detect Lego bricks.
-  * **[`workcell_bringup`](https://www.google.com/search?q=workcell/workcell_bringup/)**: Contains centralized YAML parameters for cameras and frames to ensure consistency across the entire workcell.
-  * **[`workcell_control`](https://www.google.com/search?q=workcell/workcell_control/)**: Contains launch files to initiate the connection with the real UR5e hardware via `ur_robot_driver`.
-  * **[`workcell_simulation`](https://www.google.com/search?q=workcell/workcell_simulation/)**: Launch files and worlds for the Webots digital twin environment.
-  * **[`workcell_moveit_config`](https://www.google.com/search?q=workcell/workcell_moveit_config/)**: The MoveIt 2 setup package, containing SRDFs, kinematics, and Pilz/OMPL controller configurations.
+  * **[`gemini_vision`](/gemini_vision/README.md)**: The AI perception pipeline. Uses the Gemini API to analyze RGB-D streams, maps bounding boxes to 3D coordinates, and interprets natural language prompts.
+  * **[`workcell_application`](/workcell/workcell_application/README.md)**: The core MoveIt 2 orchestrator. Contains the main `pick_and_place.py` state machine and hardware alignment tools.
+  * **[`color_detection`](/color_detection/README.md)**: The alternative classic perception pipeline. Uses OpenCV HSV masking to detect Lego bricks.
+  * **[`workcell_bringup`](/workcell/workcell_bringup/README.md)**: Contains centralized YAML parameters for cameras and frames to ensure consistency across the entire workcell.
+  * **[`workcell_control`](/workcell/workcell_control/README.md)**: Contains launch files to initiate the connection with the real UR5e hardware via `ur_robot_driver`.
+  * **[`workcell_simulation`](/workcell/workcell_simulation/README.md)**: Launch files and worlds for the Webots digital twin environment.
+  * **[`workcell_moveit_config`](/workcell/workcell_moveit_config/README.md)**: The MoveIt 2 setup package, containing SRDFs, kinematics, and Pilz/OMPL controller configurations.
+  * **[`descriptions`](/descriptions/README.md)**: URDF/Xacro models for the UR5e, the vacuum gripper, and the workcell environment. Used for both simulation and RViz visualization.
+  * **[`brick_interfaces`](/brick_interfaces/README.md)**: Custom ROS 2 messages and services for communication between the vision system and the pick-and-place orchestrator.
 
 ---
 
