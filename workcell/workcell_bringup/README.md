@@ -130,7 +130,7 @@ Once the master launch file has finished its sequence, the robot will move to it
 > [!NOTE]
 > If you launched the system in **`legacy`** vision mode, the robot will not wait for a manual trigger. It will automatically start the pick-and-place cycle as soon as bricks appear in the camera's view and match the configured HSV color bounds.
 
-For the `gemini` and `hsv` modes, open a **new terminal** to interact with the system. You can trigger actions using standard ROS 2 CLI commands or the convenient bash shortcuts (if you configured them as shown in the **[Main README](/README.md#iv-workflow-tips-bash-shortcuts)**).
+For the `gemini` and `hsv` modes, open a **new terminal** to interact with the system. You can trigger actions using standard ROS 2 CLI commands or the convenient bash shortcuts (if you configured them as shown in the **[Main README](/README.md#v-workflow-tips-bash-shortcuts)**).
 
 ## Test the vision system (no robot movement)
 

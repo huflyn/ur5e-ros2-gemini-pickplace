@@ -13,9 +13,12 @@ This package provides the Webots simulation environment for the Pick-and-Place a
 
 ![Screenshot of the Webots simulation environment, showing the UR5e robot, the table with bricks, and the Realsense camera.](/docs/images/webots_world_overlays.png)
 
+---
+
 - [I) Package Structure](#i-package-structure)
 - [II) Usage](#ii-usage)
 
+---
 
 # I) Package Structure
 
@@ -24,6 +27,8 @@ This package provides the Webots simulation environment for the Pick-and-Place a
 * **`config/`**: Contains the configuration files for the simulated robot and sensors.
 * **`protos/`**: Contains the Webots PROTO files for custom objects like the bricks and the camera.
 * **`meshes/`**: Contains the 3D mesh files used in the simulation, such as the bricks and the camera model.
+
+---
 
 # II) Usage
 
@@ -52,3 +57,5 @@ Wait until you see that the `scaled_joint_trajectory_controller` has been succes
 ```
 
 Now the simulation is ready for the Pick-and-Place application. It can also be used for testing different prompts with Gemini Vision and the Webots environment to see how well the vision system can identify and locate the bricks and drop-off locations and how accurate it follows the instructions.
+
+---

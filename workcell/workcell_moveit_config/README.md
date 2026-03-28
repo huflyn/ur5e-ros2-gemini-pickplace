@@ -13,6 +13,8 @@ This package contains the semantic representation (SRDF), kinematics, and motion
 
 ![Screenshot of the RViz interface with MoveIt plugin and Webots simulation.](/docs/images/moveit_webots.png)
 
+---
+
 - [I) Package Structure](#i-package-structure)
 - [II) Usage](#ii-usage)
   - [Step 1: Start the Robot (Real or Simulated)](#step-1-start-the-robot-real-or-simulated)
@@ -20,10 +22,14 @@ This package contains the semantic representation (SRDF), kinematics, and motion
     - [Option B: Real Hardware (UR5e)](#option-b-real-hardware-ur5e)
   - [Step 2: Start MoveIt](#step-2-start-moveit)
 
+---
+
 # I) Package Structure
 
 * **`config/`**: Contains the SRDF and YAML configuration files.
 * **`launch/`**: Contains the launch files to start the MoveIt 2 move_group node and the RViz setup with the MoveIt plugin. Both launch files were modified to accept a `use_sim_time` argument for proper synchronization with the Webots simulation clock.
+
+---
 
 # II) Usage
 
@@ -72,3 +78,5 @@ ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
     # use_sim_time:=true is required if using the Webots simulation, but can be left out for real hardware
     ```
 If everything is running correctly, you should see the UR5e robot in the RViz environment with the MoveIt plugin enabled, allowing you to visualize the robot state, plan motions, and execute trajectories in both the simulated and real environments. The image at the top of this README shows the RViz interface with the MoveIt plugin and the Webots simulation running in parallel.
+
+---

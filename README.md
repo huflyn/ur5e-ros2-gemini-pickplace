@@ -25,16 +25,17 @@ https://github.com/user-attachments/assets/ba4a9620-bd2b-4814-b3d8-9d6d37d2f78e
   - [ROS 2 Packages and Tools](#ros-2-packages-and-tools)
   - [Google Gemini API and SDK](#google-gemini-api-and-sdk)
 - [III) Workspace Overview](#iii-workspace-overview)
-- [IV) Workflow Tips (Bash Shortcuts)](#iv-workflow-tips-bash-shortcuts)
-- [V) Quick Start: Automated Bringup (Recommended)](#v-quick-start-automated-bringup-recommended)
+- [IV) Global Configuration (YAML)](#iv-global-configuration-yaml)
+- [V) Workflow Tips (Bash Shortcuts)](#v-workflow-tips-bash-shortcuts)
+- [VI) Quick Start: Automated Bringup (Recommended)](#vi-quick-start-automated-bringup-recommended)
   - [Option A: Simulation (Webots)](#option-a-simulation-webots)
   - [Option B: Real Hardware (UR5e \& RealSense)](#option-b-real-hardware-ur5e--realsense)
-- [VI) Triggering the Pick-and-Place Cycle](#vi-triggering-the-pick-and-place-cycle)
+- [VII) Triggering the Pick-and-Place Cycle](#vii-triggering-the-pick-and-place-cycle)
   - [Test the vision system (no robot movement)](#test-the-vision-system-no-robot-movement)
   - [Trigger the full Pick-and-Place cycle](#trigger-the-full-pick-and-place-cycle)
-- [VII) Advanced Usage, Manual Launch \& Legacy Systems](#vii-advanced-usage-manual-launch--legacy-systems)
-- [VIII) Hardware Testing Tools](#viii-hardware-testing-tools)
-- [IX) Documentation and References](#ix-documentation-and-references)
+- [VIII) Advanced Usage, Manual Launch \& Legacy Systems](#viii-advanced-usage-manual-launch--legacy-systems)
+- [IX) Hardware Testing Tools](#ix-hardware-testing-tools)
+- [X) Documentation and References](#x-documentation-and-references)
 
 ---
 
@@ -107,7 +108,21 @@ For detailed instructions, please refer to the `README.md` files located inside 
 
 ---
 
-# IV) Workflow Tips (Bash Shortcuts)
+# IV) Global Configuration (YAML)
+
+Before running the physical hardware or modifying the workspace layout, you may need to adjust the centralized configuration files. These YAML files allow you to adapt the system to your specific environment without changing the source code.
+
+* **Workspace Layout (`workcell_application`):** Defines the safe hover/grasp heights, brick center offsets, and specific Cartesian drop-off coordinates for the pick-and-place orchestrator.
+  * `workcell/workcell_application/config/pick_and_place_parameters.yaml`
+* **Camera & TF Frames (`workcell_bringup`):** Defines the camera topic names and target `tf2` reference frames for both simulation and real hardware.
+  * `workcell/workcell_bringup/config/sim_camera_parameters.yaml`
+  * `workcell/workcell_bringup/config/real_camera_parameters.yaml`
+* **Color Thresholds (`color_detection`):** If you are using the classic HSV vision mode instead of the Gemini AI, this file stores the upper and lower bounds for color masking.
+  * `color_detection/config/hsv_bounds.yaml`
+
+---
+
+# V) Workflow Tips (Bash Shortcuts)
 
 To significantly speed up testing and avoid typing long ROS 2 commands, add these functions to your `~/.bashrc` file:
 
@@ -146,7 +161,7 @@ testscan Pick the red and blue bricks and place them on the left side of the tab
 
 ---
 
-# V) Quick Start: Automated Bringup (Recommended)
+# VI) Quick Start: Automated Bringup (Recommended)
 
 The easiest way to start the complete perception-to-action pipeline is using the centralized master launch files from the `workcell_bringup` package. These files use staggered timers to automatically start the hardware/simulation, the selected vision system, RViz, and the MoveIt application in the correct order.
 
@@ -194,14 +209,14 @@ Append the `vision` argument to use classic OpenCV computer vision:
 
 -----
 
-# VI) Triggering the Pick-and-Place Cycle
+# VII) Triggering the Pick-and-Place Cycle
 
 Once the master launch file has finished its sequence, the robot will move to its `ready` pose and wait in STANDBY mode.
 
 > [!NOTE]
 > If you launched the system in **`legacy`** vision mode (`vision:=legacy`), the robot will not wait for a manual trigger. It will automatically start sorting as soon as bricks appear in the camera's view and match the configured HSV color bounds.
 
-For the `gemini` and `hsv` modes, open a **new terminal** to interact with the system. You can trigger actions using standard ROS 2 CLI commands or the convenient bash shortcuts (if you configured them as shown in **[Section IV](#iv-workflow-tips-bash-shortcuts)**).
+For the `gemini` and `hsv` modes, open a **new terminal** to interact with the system. You can trigger actions using standard ROS 2 CLI commands or the convenient bash shortcuts (if you configured them as shown in **[Section IV](#v-workflow-tips-bash-shortcuts)**).
 
 ## Test the vision system (no robot movement)
 
@@ -247,7 +262,7 @@ scan Pick the red and blue bricks
 
 ---
 
-# VII) Advanced Usage, Manual Launch & Legacy Systems
+# VIII) Advanced Usage, Manual Launch & Legacy Systems
 
 If you want to debug specific nodes, bypass the automated `workcell_bringup`, or explore the older non-AI systems, please refer to the detailed instructions in the respective package documentation:
 
@@ -257,7 +272,7 @@ If you want to debug specific nodes, bypass the automated `workcell_bringup`, or
 
 ---
 
-# VIII) Hardware Testing Tools
+# IX) Hardware Testing Tools
 
 The `workcell_application` package includes several utility scripts for hardware commissioning and testing. See its [README](/workcell/workcell_application/README.md) for detailed instructions on using:
 
@@ -266,7 +281,7 @@ The `workcell_application` package includes several utility scripts for hardware
 
 ---
 
-# IX) Documentation and References
+# X) Documentation and References
 
 **ROS 2 Ecosystem**
 - [ROS 2 Jazzy](https://docs.ros.org/en/jazzy/index.html)

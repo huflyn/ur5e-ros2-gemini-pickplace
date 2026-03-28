@@ -13,14 +13,20 @@ This package manages the connection to the physical UR5e hardware. It contains t
 
 ![Screenshot of the UR5e in RViz.](/docs/images/workcell_control_rviz.png)
 
+---
+
 - [I) Package Structure](#i-package-structure)
 - [II) Starting the Robot Driver](#ii-starting-the-robot-driver)
   - [Option A: Real Hardware (UR5e)](#option-a-real-hardware-ur5e)
   - [Option B: Mock Hardware (no Webots simulation, just RViz)](#option-b-mock-hardware-no-webots-simulation-just-rviz)
 
+---
+
 ## I) Package Structure
 * **`start_robot.launch.py`**: The main launch file to start the UR5e driver. It includes parameters for both real hardware and mock hardware, allowing you to switch between them easily.
 * `config/` directory: Contains the robots calibration YAML file.
+
+---
 
 ## II) Starting the Robot Driver
 
@@ -55,3 +61,5 @@ This will start a virtual robot using the ros2_control mock hardware interface. 
 
 > [!NOTE]
 > If you want to use the **Webots simulation** instead, please refer to the **[workcell_simulation package](../workcell_simulation/README.md)**, which includes its own launch file that starts the Webots simulation.
+
+---

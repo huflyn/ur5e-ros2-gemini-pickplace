@@ -10,8 +10,12 @@
 
 This package defines the custom ROS 2 messages (`.msg`) and services (`.srv`) used for communication between the vision systems (``color_detector.py`` and ``gemini_vision.py``) and the Pick-and-Place Application (``pick_and_place.py``).
 
+---
+
 - [Custom Message: `LegoBrick.msg`](#custom-message-legobrickmsg)
 - [Custom Service: `DetectBricks.srv`](#custom-service-detectbrickssrv)
+
+---
 
 # Custom Message: `LegoBrick.msg`
 
@@ -27,6 +31,8 @@ int32[4] bounding_box_px                    # 2D bounding box in the camera imag
 bool has_user_dropoff                       # True if a specific custom drop-off location was defined for this object
 geometry_msgs/Point user_dropoff_position   # Transformed 3D coordinates of the custom drop-off location
 ```
+
+---
 
 # Custom Service: `DetectBricks.srv`
 
