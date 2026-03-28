@@ -26,19 +26,15 @@ https://github.com/user-attachments/assets/ba4a9620-bd2b-4814-b3d8-9d6d37d2f78e
   - [Google Gemini API and SDK](#google-gemini-api-and-sdk)
 - [III) Workspace Overview](#iii-workspace-overview)
 - [IV) Workflow Tips (Bash Shortcuts)](#iv-workflow-tips-bash-shortcuts)
-- [V) Quick Start: Pick-and-Place with Gemini Vision](#v-quick-start-pick-and-place-with-gemini-vision)
-  - [Step 1: Start the Robot and Camera (Real or Simulated)](#step-1-start-the-robot-and-camera-real-or-simulated)
-    - [Option A: Simulation (Webots)](#option-a-simulation-webots)
+- [V) Quick Start: Automated Bringup (Recommended)](#v-quick-start-automated-bringup-recommended)
+  - [Option A: Simulation (Webots)](#option-a-simulation-webots)
     - [Option B: Real Hardware (UR5e \& RealSense)](#option-b-real-hardware-ur5e--realsense)
-  - [Step 2: Start Gemini Vision \& RViz](#step-2-start-gemini-vision--rviz)
-  - [Step 3: Start Pick-and-Place Application](#step-3-start-pick-and-place-application)
-    - [Option A: Simulation (Webots)](#option-a-simulation-webots-1)
-    - [Option B: Real Hardware (UR5e \& RealSense)](#option-b-real-hardware-ur5e--realsense-1)
-  - [Step 4: Trigger Pick-and-Place Cycle](#step-4-trigger-pick-and-place-cycle)
-    - [Trigger Option A: Default Mode](#trigger-option-a-default-mode)
-    - [Trigger Option B: Custom Prompt Mode - Gemini ONLY](#trigger-option-b-custom-prompt-mode---gemini-only)
-- [VI) Hardware Testing Tools](#vi-hardware-testing-tools)
-- [VII) Documentation and References](#vii-documentation-and-references)
+- [VI) Triggering the Pick-and-Place Cycle](#vi-triggering-the-pick-and-place-cycle)
+  - [Test the vision system (no robot movement)](#test-the-vision-system-no-robot-movement)
+  - [Trigger the full Pick-and-Place cycle](#trigger-the-full-pick-and-place-cycle)
+- [VII) Advanced Usage, Manual Launch \& Legacy Systems](#vii-advanced-usage-manual-launch--legacy-systems)
+- [VIII) Hardware Testing Tools](#viii-hardware-testing-tools)
+- [IX) Documentation and References](#ix-documentation-and-references)
 
 ---
 
@@ -150,118 +146,127 @@ testscan Pick the red and blue bricks and place them on the left side of the tab
 
 ---
 
-# V) Quick Start: Pick-and-Place with Gemini Vision
+# V) Quick Start: Automated Bringup (Recommended)
 
-This section outlines how to start the primary Gemini-driven application. You will need to open multiple terminals:
+The easiest way to start the complete perception-to-action pipeline is using the centralized master launch files from the `workcell_bringup` package. These files use staggered timers to automatically start the hardware/simulation, the selected vision system, RViz, and the MoveIt application in the correct order.
 
-## Step 1: Start the Robot and Camera (Real or Simulated)
+> [!IMPORTANT]
+> **API Key Required:** Because the Gemini Vision pipeline is the default mode, ensure you have exported your `GEMINI_API_KEY` in your terminal before running these launch files.
 
-### Option A: Simulation (Webots)
-  
-Start the Webots environment. This includes the UR5e robot and a simulated RealSense camera:
+> [!NOTE]
+> **Staggered Startup:** Please wait roughly 10-15 seconds after launching for all controllers, drivers, and nodes to fully boot up!
+
+## Option A: Simulation (Webots)
+
+Start the Webots environment, simulated camera, and all nodes:
 
 ```bash
-# Start the Webots simulation
-ros2 launch workcell_simulation simulation.launch.py
+# Default: Gemini Vision
+ros2 launch workcell_bringup sim.launch.py
 ```
-> [!IMPORTANT]
-> When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands** to synchronize the ROS 2 clock.
+
+**Alternative Vision Modes:**
+Append the `vision` argument to use classic computer vision methods instead of the Gemini AI:
+* **OpenCV HSV Masking:** `ros2 launch workcell_bringup sim.launch.py vision:=hsv`
+* **Legacy (Continuous ROS 1 Port):** `ros2 launch workcell_bringup sim.launch.py vision:=legacy`
 
 ### Option B: Real Hardware (UR5e & RealSense)
 
 > [!CAUTION]
-> Follow all safety precautions when working with real robots.
+> Follow all safety precautions when working with real robots. Keep the emergency stop button within reach.
 
 > [!WARNING]
-> **Hardware Specificity:** This project and its configurations are strictly designed and tested for the **UR5e**. Attempting to use this workspace with other Universal Robots models (e.g., UR3e, UR10e) will cause issues. You would need to heavily modify the URDF, MoveIt configurations, and launch files to match your specific robot model's kinematics and limits.
+> **Hardware Specificity:** This project and its configurations are strictly designed and tested for the **UR5e**. Attempting to use this workspace with other UR models will cause issues.
 
 > [!IMPORTANT]
-> Before launching, ensure the **[robot setup](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html#robot-setup)** on the teach pendant is complete. 
-> 
-> Once the ROS 2 driver is running, you MUST start the program with the **external_control** node on the teach pendant so the robot can receive commands from ROS 2.
+> Ensure the physical robot is powered on and the **external control** program is loaded on the teach pendant. The launch file will attempt to automatically "play" the program via the dashboard client.
 
-This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces:
+Connect to the UR5e, start the RealSense stream, and launch all nodes:
 
 ```bash
-# Start the UR5e driver (replace <ROBOT_IP_ADDRESS> with the actual IP, can also be set in the launch file)
-ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
-# Optional: Append launch_rviz:=true to automatically start RViz and visualize the robot
+# Default: Gemini Vision (replace <ROBOT_IP_ADDRESS> with the actual IP)
+ros2 launch workcell_bringup real.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
 ```
 
-Next, open a new terminal and start the RealSense camera stream:
+**Alternative Vision Mode:**
+Append the `vision` argument to use classic OpenCV computer vision:
+* **OpenCV HSV Masking:** `ros2 launch workcell_bringup real.launch.py robot_ip:=<ROBOT_IP_ADDRESS> vision:=hsv`
 
-```bash
-ros2 launch realsense2_camera rs_launch.py depth_module.depth_profile:=1280x720x6 rgb_camera.color_profile:=1280x720x6 camera_name:=d415 align_depth.enable:=true enable_sync:=true spatial_filter.enable:=true pointcloud.enable:=false
-```
+-----
 
+# VI) Triggering the Pick-and-Place Cycle
 
-## Step 2: Start Gemini Vision & RViz
-
-Open 2 new terminals and start the Gemini Vision node and RViz. 
-
-```bash
-# Start Gemini Vision (append 'use_sim_time:=true' if using Webots simulation)
-ros2 launch gemini_vision gemini_vision.launch.py
-
-# Open a new terminal and start RViz (append 'use_sim_time:=true' if using Webots)
-ros2 launch workcell_application rviz.launch.py
-```
+Once the master launch file has finished its sequence, the robot will move to its `ready` pose and wait in STANDBY mode.
 
 > [!NOTE]
-> If you want to test classic, non-AI computer vision, launch `color_detector.launch.py` from the `color_detection` package instead. Keep in mind that this requires the camera to be properly calibrated for HSV masking, and it won't understand natural language prompts.
+> If you launched the system in **`legacy`** vision mode (`vision:=legacy`), the robot will not wait for a manual trigger. It will automatically start sorting as soon as bricks appear in the camera's view and match the configured HSV color bounds.
 
+For the `gemini` and `hsv` modes, open a **new terminal** to interact with the system. You can trigger actions using standard ROS 2 CLI commands or the convenient bash shortcuts (if you configured them as shown in **[Section IV](#iv-workflow-tips-bash-shortcuts)**).
 
-## Step 3: Start Pick-and-Place Application
+## Test the vision system (no robot movement)
 
-Launch the Pick-and-Place application. The robot will move to the `ready` pose and wait in STANDBY mode:
+This calls the active vision service directly to test the object detection and target calculation without moving the physical or simulated arm.
 
-### Option A: Simulation (Webots)
-
-```bash
-ros2 launch workcell_application pick_and_place.launch.py use_sim_time:=true
-```
-
-### Option B: Real Hardware (UR5e & RealSense)
+**Using standard ROS 2 commands:**
 
 ```bash
-ros2 launch workcell_application pick_and_place.launch.py
+# Default call
+ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks
+
+# Custom natural language instruction (Gemini Vision only)
+ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks "{user_prompt: 'Pick the red and blue bricks'}"
 ```
 
-## Step 4: Trigger Pick-and-Place Cycle
+**Using bash shortcuts:**
 
-Once ready, open a new terminal and use the bash shortcuts configured in **[Section IV](#iv-workflow-tips-bash-shortcuts)** to trigger the cycle:
+```bash
+testscan
+testscan Pick the red bricks
+```
 
-### Trigger Option A: Default Mode
+## Trigger the full Pick-and-Place cycle
 
-  Picks all detected bricks and sorts them into their respective color-coded drop-off locations based on the YAML config.
+This publishes to the trigger topic to start the actual physical or simulated pick-and-place cycle.
 
-  ```bash
-  scan
-  ```
+**Using standard ROS 2 commands:**
 
-### Trigger Option B: Custom Prompt Mode - Gemini ONLY
+```bash
+# Default sorting
+ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String "{data: ''}"
 
-  Lets you specify a custom natural language instruction to guide the sorting logic. For example, you can ask it to only pick certain colors, or to calculate specific drop-off locations based on the prompt.
+# Custom natural language instruction (Gemini Vision only)
+ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String "{data: 'Pick the red and blue bricks.'}"
+```
 
-  Simply include your instructions in the command after `scan`. For example:
+**Using bash shortcuts:**
 
-  ```bash
-  scan Pick the red and blue bricks and place them on the left side of the table
-  ```
+```bash
+scan
+scan Pick the red and blue bricks
+```
 
 ---
 
-# VI) Hardware Testing Tools
+# VII) Advanced Usage, Manual Launch & Legacy Systems
 
-The `workcell_application` package includes several utility scripts for hardware commissioning and testing. See its [README](https://www.google.com/search?q=workcell_application/README.md) for details on:
+If you want to debug specific nodes, bypass the automated `workcell_bringup`, or explore the older non-AI systems, please refer to the detailed instructions in the respective package documentation:
 
-  * **`move_to_coords.py`**: Instantly move the TCP to specific X/Y/Z coordinates or named poses.
-  * **`verify_alignment.py`**: A step-by-step interactive script to verify physical workspace alignment against the digital twin.
-  * **Legacy Port**: Instructions for running the old continuous-topic `brick_sorter_legacy.py`.
+* **[Manual Component Launch](./workcell/workcell_application/README.md):** Step-by-step guide to starting the Webots simulation or UR5e driver, RealSense camera, Vision nodes, and the pick-and-place orchestrator individually across multiple terminals.
+* **[Classic Computer Vision (HSV)](./color_detection/README.md):** Details on configuring, calibrating, and running the standard OpenCV HSV masking pipeline instead of the Gemini API.
+* **[Legacy Brick Sorter (ROS 1 Port)](./workcell/workcell_application/README.md):** Instructions for running the older, continuous-loop sorting method (`brick_sorter_legacy`) that does not rely on trigger commands or the Gemini API.
 
 ---
 
-# VII) Documentation and References
+# VIII) Hardware Testing Tools
+
+The `workcell_application` package includes several utility scripts for hardware commissioning and testing. See its [README](/workcell/workcell_application/README.md) for detailed instructions on using:
+
+* **`move_to_coords.py`**: Instantly move the physical or simulated TCP to specific X/Y/Z coordinates or named MoveIt poses.
+* **`verify_alignment.py`**: A step-by-step interactive script to verify the physical workspace and camera alignment against the digital twin in RViz.
+
+---
+
+# IX) Documentation and References
 
 **ROS 2 Ecosystem**
 - [ROS 2 Jazzy](https://docs.ros.org/en/jazzy/index.html)
