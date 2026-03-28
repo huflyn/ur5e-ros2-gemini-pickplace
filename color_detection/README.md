@@ -12,6 +12,8 @@ This package detects colored Lego bricks using a camera stream (RGB + Depth). It
 
 ![Screenshot of the annotated image stream by the color detection node in RQT.](../docs/images/color_detector_rqt.png)
 
+---
+
 - [I) Package Structure](#i-package-structure)
 - [II) Services, Topics \& Custom Messages](#ii-services-topics--custom-messages)
 - [III) Configuration \& Camera Setup (YAML)](#iii-configuration--camera-setup-yaml)
@@ -20,6 +22,7 @@ This package detects colored Lego bricks using a camera stream (RGB + Depth). It
 - [VI) Using the HSV Tuner](#vi-using-the-hsv-tuner)
 - [VII) How to Add a New Color (e.g., 'orange')](#vii-how-to-add-a-new-color-eg-orange)
 
+---
 
 # I) Package Structure
 
@@ -28,6 +31,7 @@ This package detects colored Lego bricks using a camera stream (RGB + Depth). It
 * **`color_functions.py`**: A pure Python helper module containing the OpenCV logic for HSV masking and contour detection. It is completely independent of ROS.
 * **`hsv_tuner.py`**: A standalone ROS 2 GUI tool. It opens an OpenCV window with trackbars, allowing you to fine-tune HSV values in real-time.
 
+---
 
 # II) Services, Topics & Custom Messages
 
@@ -53,6 +57,7 @@ float32 yaw_degrees                  # Calculated brick orientation (0.0 or 30.0
 int32[] bounding_box_px              # Bounding box array [xmin, ymin, xmax, ymax]
 ```
 
+---
 
 # III) Configuration & Camera Setup (YAML)
 
@@ -100,9 +105,15 @@ color_detector_node:
     hsv_blue_upper: [147, 255, 255]
 ```
 
+---
+
 # IV) Launch color_detector (Service Node)
 
 ![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes and their coordinates printed in the terminal.](../docs/images/color_detector_terminal.png)
+
+> [!TIP]
+> **Automated Bringup (Recommended):** Instead of opening multiple separate terminals and manually launching each component, you can simply use the master launch files provided in the **[workcell_bringup](/workcell/workcell_bringup/README.md)** package and launch everything with a single command!
+> To improve debugging and understanding of the individual components, you can of course launch every component individually.
 
 ## Launch Command <!-- omit from toc -->
 
@@ -146,6 +157,8 @@ To ensure reliable grasping and accurate depth calculations, the detector implem
 
 These margins are drawn as a red safe-zone rectangle in the `/annotated_image` stream.
 
+---
+
 # V) Launch color_detector_legacy (Topic-based Node)
 
 ![Screenshot of the color detection node running in Webots simulation, showing detected bricks highlighted with bounding boxes.](../docs/images/color_detector_legacy_terminal.png)
@@ -171,6 +184,8 @@ This node evaluates all targets and publishes only the best target brick to `/le
 
 By default, the legacy node selects the brick with the shortest camera depth (closest to the lens). If the robot repeatedly fails to grasp a specific target, it can get stuck in an endless loop. To prevent this, you can randomize the target selection by using the launch argument `sort_method:=random`.
 
+---
+
 # VI) Using the HSV Tuner
 
 ![Screenshot of the HSV tuner GUI running in Webots simulation, showing the trackbars and live video feed.](../docs/images/hsv_tuner_terminal.png)
@@ -188,6 +203,8 @@ ros2 launch color_detection hsv_tuner.launch.py use_sim_time:=true
 1.  Adjust the trackbars until the `Pure Mask` window clearly shows your target object in solid white and everything else in black.
 2.  The node automatically prints the YAML-formatted values to your terminal every 2 seconds.
 3.  Copy the printed array values from the terminal, and paste them into your **`hsv_bounds.yaml`** configuration file.
+
+---
 
 # VII) How to Add a New Color (e.g., 'orange')
 

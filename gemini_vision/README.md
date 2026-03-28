@@ -16,6 +16,8 @@ This package provides a highly capable, **AI-driven vision system for the pick-a
 
 ![Screenshot of the gemini_vision node running in Webots simulation, showing detected bricks highlighted with bounding boxes in RViz.](../docs/images/gemini_vision_user-prompt-mode_rviz.png)
 
+---
+
 - [I) Package Structure](#i-package-structure)
 - [II) Prerequisites \& API Key](#ii-prerequisites--api-key)
 - [III) Services, Topics \& Custom Messages](#iii-services-topics--custom-messages)
@@ -32,11 +34,13 @@ This package provides a highly capable, **AI-driven vision system for the pick-a
   - [RQT Image View (Alternative)](#rqt-image-view-alternative)
 - [VIII) Models Overview\[^1\]](#viii-models-overview1)
 
+---
 
 # I) Package Structure
 
 * **`gemini_vision.py`**: The core ROS 2 multi-threaded node. It acts as a Service Server, processes images into JPEG bytes, communicates with the Gemini API, calculates 3D transformations via `tf2`, and streams an annotated visualization.
 
+---
 
 # II) Prerequisites & API Key
 
@@ -45,6 +49,7 @@ Because this node relies on cloud-based AI processing, it requires a valid Googl
 > [!NOTE]
 > Please refer to the **[Gemini API Setup Guide](../GEMINI_API.md)** for detailed instructions on how to generate your API key and permanently add it to your environment. This package assumes the API key setup is already completed.
 
+---
 
 # III) Services, Topics & Custom Messages
 
@@ -58,6 +63,7 @@ Because this node relies on cloud-based AI processing, it requires a valid Googl
 **Subscribed Topics:**
 * Camera Info, Color Image, and Depth Image (configurable via parameters).
 
+---
 
 # IV) Configuration (Camera and Gemini)
 
@@ -109,8 +115,13 @@ GEMINI_DEFAULT_PROMPT = textwrap.dedent("""...""")
 GEMINI_SYSTEM_PROMPT = textwrap.dedent("""...""")
 ```
 
+---
 
 # V) Start Gemini Vision
+
+> [!TIP]
+> **Automated Bringup (Recommended):** Instead of opening multiple separate terminals and manually launching each component, you can simply use the master launch files provided in the **[workcell_bringup](/workcell/workcell_bringup/README.md)** package and launch everything with a single command!
+> To improve debugging and understanding of the individual components, you can of course launch every component individually.
 
 > [!IMPORTANT]
 > **Camera Prerequisite:** This node requires an active camera stream to function. Ensure that either the Webots simulation is running or the real RealSense camera stream is active.
@@ -137,6 +148,7 @@ ros2 launch gemini_vision gemini_vision.launch.py model:="gemini-3.1-flash-lite-
 > 
 > Please refer to the **Models Overview** below or the official [Gemini API Models documentation](https://ai.google.dev/gemini-api/docs/models) for the most up-to-date information.
 
+---
 
 # VI) Testing the Service via Terminal
 
@@ -158,6 +170,7 @@ Once the node is running, you can trigger the vision pipeline directly from the 
     ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks "{user_prompt: 'Pick the red and blue bricks'}"
     ```
 
+---
 
 # VII) Reviewing the Gemini Output
 
@@ -198,6 +211,7 @@ rqt
 > [!WARNING]
 > RQT can sometimes drop frames or fail to load the image stream entirely. If the screen remains gray, use the RViz2 method above, which is generally much more stable.
 
+---
 
 # VIII) Models Overview[^1]
 
@@ -212,3 +226,4 @@ For this project, the following models are recommended for experimentation (desc
 | [gemini-robotics-er-1.5-preview](https://ai.google.dev/gemini-api/docs/models/gemini-robotics-er-1.5-preview) | Gemini Robotics-ER 1.5 is a vision-language model (VLM) that brings Gemini's agentic capabilities to robotics. It's designed for advanced reasoning in the physical world, allowing robots to interpret complex visual data, perform spatial reasoning, and plan actions from natural language commands. | 20 | September 2025 | January 2025 |
 
 [^1]: Information from March 2026, please refer to the official [Gemini API Models documentation](https://ai.google.dev/gemini-api/docs/models) for the most up-to-date information on available models and their capabilities.
+

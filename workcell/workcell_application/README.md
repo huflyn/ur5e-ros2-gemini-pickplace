@@ -15,6 +15,8 @@ This package manages high-level robot control for the Pick-and-Place application
 
 ![Screenshot of the Pick-and-Place application running with Webots simulation and Gemini Vision and visualization in RViz.](../../docs/images/workcell_application_pickandplace.png)
 
+---
+
 - [I) Package Structure](#i-package-structure)
 - [II) Workflow of `pick_and_place.py`](#ii-workflow-of-pick_and_placepy)
 - [III) Configuration (YAML)](#iii-configuration-yaml)
@@ -31,10 +33,11 @@ This package manages high-level robot control for the Pick-and-Place application
     - [Trigger Option A: Default Mode](#trigger-option-a-default-mode)
     - [Trigger Option B: Custom Prompt Mode - Gemini ONLY](#trigger-option-b-custom-prompt-mode---gemini-only)
     - [Soft Stop (Return to Ready)](#soft-stop-return-to-ready)
-- [V) Usage of `move_to_coords.py`](#v-usage-of-move_to_coordspy)
-- [VI) Usage of `verify_alignment.py`](#vi-usage-of-verify_alignmentpy)
-- [VII) Usage of `brick_sorter_legacy.py` (ROS 1 Port)](#vii-usage-of-brick_sorter_legacypy-ros-1-port)
+- [V) Starting the legacy Brick Sorter (ROS 1 Port)](#v-starting-the-legacy-brick-sorter-ros-1-port)
+- [VI) Usage of `move_to_coords.py`](#vi-usage-of-move_to_coordspy)
+- [VII) Usage of `verify_alignment.py`](#vii-usage-of-verify_alignmentpy)
 
+---
 
 # I) Package Structure
 
@@ -44,6 +47,7 @@ This package manages high-level robot control for the Pick-and-Place application
 * **`brick_sorter_legacy.py`**: The old continuous-topic-based ROS 1 port (requires the legacy color detector).
 * **`config/`**: Contains drop-off parameters, test poses for alignment, and MoveIt planning configurations.
 
+---
 
 # II) Workflow of `pick_and_place.py`
 
@@ -56,6 +60,7 @@ This node utilizes a hybrid motion planning architecture, seamlessly switching b
    * **Place:** Transports the brick to a custom coordinate (if provided by AI) or a default color-coded drop-off zone, then releases.
 4. **Abort/Reset:** A soft stop can be triggered at any time via `/pick_and_place/stop` to safely abort the batch and return to standby.
 
+---
 
 # III) Configuration (YAML)
 
@@ -80,10 +85,13 @@ pick_and_place_node:
     dropoff_green: [0.275, 0.27]
 ```
 
+---
 
 # IV) Starting the Pick-and-Place Application
 
-You need to open multiple terminals to run the full application:
+> [!TIP]
+> **Automated Bringup (Recommended):** Instead of opening multiple separate terminals and manually launching each component, you can simply use the master launch files provided in the **[workcell_bringup](/workcell/workcell_bringup/README.md)** package and launch everything with a single command!
+> To improve debugging and understanding of the individual components, you can of course launch every component individually.
 
 ## Step 1: Start the Robot and Camera (Real or Simulated)
 
@@ -124,7 +132,6 @@ Next, open a new terminal and start the RealSense camera stream:
 ```bash
 ros2 launch realsense2_camera rs_launch.py depth_module.depth_profile:=1280x720x6 rgb_camera.color_profile:=1280x720x6 camera_name:=d415 align_depth.enable:=true enable_sync:=true spatial_filter.enable:=true pointcloud.enable:=false
 ```
-
 
 ## Step 2: Start a Perception Pipeline (Gemini Vision or Color Detection)
 
@@ -204,38 +211,7 @@ ros2 topic pub --once /pick_and_place/stop std_msgs/msg/Empty
 
 ---
 
-# V) Usage of `move_to_coords.py`
-
-This utility allows you to instantly send the robot to a specific named pose or Cartesian XYZ coordinate. It is highly useful for testing reachability and kinematics.
-
-```bash
-# Move to a named pose defined in the SRDF
-ros2 launch workcell_application move_to_coords.launch.py named_pose:="ready"
-
-# Move to specific XYZ coordinates (optional yaw in degrees)
-ros2 launch workcell_application move_to_coords.launch.py coords:="0 0.6 0.2" yaw:=90.0
-```
-
----
-
-# VI) Usage of `verify_alignment.py`
-
-This script is a manual tool used for hardware commissioning. It allows you to move the robot step-by-step through predefined test poses (configured in `verify_alignment.yaml`) to verify workspace coordinates and TCP alignment safely.
-
-1. **Start the script:**
-    
-    ```bash
-    ros2 launch workcell_application verify_alignment.launch.py
-    ```
-2. **Trigger the next step:** The robot will wait for your command before moving to the next position. In a new terminal, run:
-    
-    ```bash
-    ros2 topic pub --once /trigger/next_step std_msgs/msg/Empty
-    ```
-
----
-
-# VII) Usage of `brick_sorter_legacy.py` (ROS 1 Port)
+# V) Starting the legacy Brick Sorter (ROS 1 Port)
 
 > [!IMPORTANT]
 > The `brick_sorter_legacy` node only works in conjunction with the continuous topic-based `color_detector_legacy` node. It does not support real hardware gripper actuation (only Webots) and does not interface with the Gemini API.
@@ -259,3 +235,36 @@ If you wish to use the old continuous-loop sorting method:
     ```bash
     ros2 launch workcell_application brick_sorter_legacy.launch.py use_sim_time:=true
     ```
+
+---
+
+# VI) Usage of `move_to_coords.py`
+
+This utility allows you to instantly send the robot to a specific named pose or Cartesian XYZ coordinate. It is highly useful for testing reachability and kinematics.
+
+```bash
+# Move to a named pose defined in the SRDF
+ros2 launch workcell_application move_to_coords.launch.py named_pose:="ready"
+
+# Move to specific XYZ coordinates (optional yaw in degrees)
+ros2 launch workcell_application move_to_coords.launch.py coords:="0 0.6 0.2" yaw:=90.0
+```
+
+---
+
+# VII) Usage of `verify_alignment.py`
+
+This script is a manual tool used for hardware commissioning. It allows you to move the robot step-by-step through predefined test poses (configured in `verify_alignment.yaml`) to verify workspace coordinates and TCP alignment safely.
+
+1. **Start the script:**
+    
+    ```bash
+    ros2 launch workcell_application verify_alignment.launch.py
+    ```
+2. **Trigger the next step:** The robot will wait for your command before moving to the next position. In a new terminal, run:
+    
+    ```bash
+    ros2 topic pub --once /trigger/next_step std_msgs/msg/Empty
+    ```
+
+---
