@@ -20,10 +20,17 @@ This package manages high-level robot control for the Pick-and-Place application
 - [III) Configuration (YAML)](#iii-configuration-yaml)
 - [IV) Starting the Pick-and-Place Application](#iv-starting-the-pick-and-place-application)
   - [Step 1: Start the Robot and Camera (Real or Simulated)](#step-1-start-the-robot-and-camera-real-or-simulated)
+    - [Option A: Simulation (Webots)](#option-a-simulation-webots)
+    - [Option B: Real Hardware (UR5e \& RealSense)](#option-b-real-hardware-ur5e--realsense)
   - [Step 2: Start a Perception Pipeline (Gemini Vision or Color Detection)](#step-2-start-a-perception-pipeline-gemini-vision-or-color-detection)
+    - [Option A: Gemini Vision (AI-Driven)](#option-a-gemini-vision-ai-driven)
+    - [Option B: Color Detection (Masking)](#option-b-color-detection-masking)
   - [Step 3: Start the RViz Visualization (Optional, but Recommended)](#step-3-start-the-rviz-visualization-optional-but-recommended)
   - [Step 4: Start the Application](#step-4-start-the-application)
   - [Step 5: Trigger the Pick-and-Place Cycle](#step-5-trigger-the-pick-and-place-cycle)
+    - [Trigger Option A: Default Mode](#trigger-option-a-default-mode)
+    - [Trigger Option B: Custom Prompt Mode - Gemini ONLY](#trigger-option-b-custom-prompt-mode---gemini-only)
+    - [Soft Stop (Return to Ready)](#soft-stop-return-to-ready)
 - [V) Usage of `move_to_coords.py`](#v-usage-of-move_to_coordspy)
 - [VI) Usage of `verify_alignment.py`](#vi-usage-of-verify_alignmentpy)
 - [VII) Usage of `brick_sorter_legacy.py` (ROS 1 Port)](#vii-usage-of-brick_sorter_legacypy-ros-1-port)
@@ -80,66 +87,66 @@ You need to open multiple terminals to run the full application:
 
 ## Step 1: Start the Robot and Camera (Real or Simulated)
 
-* **Option A: Simulation (Webots):**
+### Option A: Simulation (Webots)
 
-  Start the Webots environment. This includes the UR5e robot and a simulated RealSense camera:
+Start the Webots environment. This includes the UR5e robot and a simulated RealSense camera:
 
-  ```bash
-  # Start the Webots simulation
-  ros2 launch workcell_simulation simulation.launch.py
-  ```
-  > [!IMPORTANT]
-  > When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands** to synchronize the ROS 2 clock.
+```bash
+# Start the Webots simulation
+ros2 launch workcell_simulation simulation.launch.py
+```
+> [!IMPORTANT]
+> When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands** to synchronize the ROS 2 clock.
 
-* **Option B: Real Hardware (UR5e & RealSense)**
+### Option B: Real Hardware (UR5e & RealSense)
 
-  > [!CAUTION]
-  > Follow all safety precautions when working with real robots.
+> [!CAUTION]
+> Follow all safety precautions when working with real robots.
 
-  > [!WARNING]
-  > **Hardware Specificity:** This project and its configurations are strictly designed and tested for the **UR5e**. Attempting to use this workspace with other Universal Robots models (e.g., UR3e, UR10e) will cause issues. You would need to heavily modify the URDF, MoveIt configurations, and launch files to match your specific robot model's kinematics and limits.
+> [!WARNING]
+> **Hardware Specificity:** This project and its configurations are strictly designed and tested for the **UR5e**. Attempting to use this workspace with other Universal Robots models (e.g., UR3e, UR10e) will cause issues. You would need to heavily modify the URDF, MoveIt configurations, and launch files to match your specific robot model's kinematics and limits.
 
-  > [!IMPORTANT]
-  > Before launching, ensure the **[robot setup](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html#robot-setup)** on the teach pendant is complete. 
-  > 
-  > Once the ROS 2 driver is running, you MUST start the program with the **external_control** node on the teach pendant so the robot can receive commands from ROS 2.
+> [!IMPORTANT]
+> Before launching, ensure the **[robot setup](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html#robot-setup)** on the teach pendant is complete. 
+> 
+> Once the ROS 2 driver is running, you MUST start the program with the **external_control** node on the teach pendant so the robot can receive commands from ROS 2.
 
-  This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces:
+This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces:
 
-  ```bash
-  # Start the UR5e driver (replace <ROBOT_IP_ADDRESS> with the actual IP, can also be set in the launch file)
-  ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
-  # Optional: Append launch_rviz:=true to automatically start RViz and visualize the robot
-  ```
+```bash
+# Start the UR5e driver (replace <ROBOT_IP_ADDRESS> with the actual IP, can also be set in the launch file)
+ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
+# Optional: Append launch_rviz:=true to automatically start RViz and visualize the robot
+```
 
-  Next, open a new terminal and start the RealSense camera stream:
+Next, open a new terminal and start the RealSense camera stream:
 
-  ```bash
-  ros2 launch realsense2_camera rs_launch.py depth_module.depth_profile:=1280x720x6 rgb_camera.color_profile:=1280x720x6 camera_name:=d415 align_depth.enable:=true enable_sync:=true spatial_filter.enable:=true pointcloud.enable:=false
-  ```
+```bash
+ros2 launch realsense2_camera rs_launch.py depth_module.depth_profile:=1280x720x6 rgb_camera.color_profile:=1280x720x6 camera_name:=d415 align_depth.enable:=true enable_sync:=true spatial_filter.enable:=true pointcloud.enable:=false
+```
 
 
 ## Step 2: Start a Perception Pipeline (Gemini Vision or Color Detection)
 
 Choose **one** of the following vision nodes to provide the `/detect_bricks` service:
 
-* **Option A: Gemini Vision (AI-Driven)**
+### Option A: Gemini Vision (AI-Driven)
 
-  Uses natural language processing and spatial reasoning. Recommended for its performance, adaptability and ease of use, as it doesn't require manual tuning.
+Uses natural language processing and spatial reasoning. Recommended for its performance, adaptability and ease of use, as it doesn't require manual tuning.
 
-  ```bash
-  # Start Gemini Vision (append 'use_sim_time:=true' if using Webots simulation)
-  ros2 launch gemini_vision gemini_vision.launch.py
+```bash
+# Start Gemini Vision (append 'use_sim_time:=true' if using Webots simulation)
+ros2 launch gemini_vision gemini_vision.launch.py
   ```
 
-* **Option B: Color Detection (Masking)**
+### Option B: Color Detection (Masking)
 
-  Uses fast, deterministic OpenCV contour masking, but is harder to set up (requires manual HSV tuning for different lighting conditions).
+Uses fast, deterministic OpenCV contour masking, but is harder to set up (requires manual HSV tuning for different lighting conditions).
 
-  ```bash
-  # Start the Color Detection node (append 'use_sim_time:=true' if using Webots simulation)
-  ros2 launch color_detection color_detector.launch.py
-  ```
+```bash
+# Start the Color Detection node (append 'use_sim_time:=true' if using Webots simulation)
+ros2 launch color_detection color_detector.launch.py
+```
 
 ## Step 3: Start the RViz Visualization (Optional, but Recommended)
 
@@ -165,21 +172,21 @@ Once running, the robot will move to the `ready` pose and wait in STANDBY. Open 
 
 In a new terminal, send a trigger message to start the pick-and-place cycle:
 
-* **Trigger Option A: Default Mode**
+### Trigger Option A: Default Mode
 
-  Works with both Gemini Vision and Color Detector perception nodes. Picks all detected bricks and sorts them into their respective color-coded drop-off locations based on the YAML config.
+Works with both Gemini Vision and Color Detector perception nodes. Picks all detected bricks and sorts them into their respective color-coded drop-off locations based on the YAML config.
 
-  ```bash
-  ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String
-  ```
+```bash
+ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String
+```
 
-* **Trigger Option B: Custom Prompt Mode - Gemini ONLY:**
+### Trigger Option B: Custom Prompt Mode - Gemini ONLY
 
-  Lets you specify a custom natural language instruction to guide the sorting logic. For example, you can ask it to only pick certain colors, or to calculate specific drop-off locations based on the prompt. This option is only available when using the Gemini Vision node, as it relies on the AI's spatial reasoning capabilities.
+Lets you specify a custom natural language instruction to guide the sorting logic. For example, you can ask it to only pick certain colors, or to calculate specific drop-off locations based on the prompt. This option is only available when using the Gemini Vision node, as it relies on the AI's spatial reasoning capabilities.
 
-  ```bash
-  ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String "{data: 'Pick the red and blue bricks.'}"
-  ```
+```bash
+ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String "{data: 'Pick the red and blue bricks.'}"
+```
 
 > [!NOTE]
 > For detailed information on the vision nodes, please refer to the respective README files:
@@ -187,7 +194,7 @@ In a new terminal, send a trigger message to start the pick-and-place cycle:
 > - [Color Detection](../../color_detection/README.md)
 
 
-**Soft Stop (Return to Ready):**
+### Soft Stop (Return to Ready)
 
 At any time during execution, you can trigger a safe abort to stop the robot and return it to the `ready` pose:
 

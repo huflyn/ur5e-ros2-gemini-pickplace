@@ -112,8 +112,8 @@ color_detector_node:
 This launches the service server:
 
 ```bash
+# Launch the color_detector node (append 'use_sim_time:=true' if using Webots simulation)
 ros2 launch color_detection color_detector.launch.py 
-# use_sim_time:=true is required for Webots simulation, but should be false for real hardware
 ```
 ## Interaction <!-- omit from toc -->
 To **test the functionality** manually via the terminal, use:
@@ -125,8 +125,8 @@ ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks
 Launch RViz to **view the live annotated image stream** and **visualize the TF frames** of the detected bricks, as shown in the image above:
 
 ```bash
+# Launch RViz (append 'use_sim_time:=true' if using Webots simulation)
 ros2 launch workcell_application rviz.launch.py
-# use_sim_time:=true is required for Webots simulation, but should be false for real hardware
 ```
 
 Alternatively, you can use RQT to view the `/annotated_image` topic, but it may be less stable than RViz (sometimes no image):
@@ -181,7 +181,8 @@ By default, the legacy node selects the brick with the shortest camera depth (cl
 To find the perfect HSV color thresholds for your environment, use the built-in tuning tool. It opens a live video feed with trackbars and automatically loads the correct camera topics based on your configuration.
 
 ```bash
-ros2 launch color_detection hsv_tuner.launch.py use_sim_time:=true # must be true for Webots simulation
+# Launch the HSV tuner (append 'use_sim_time:=true' if using Webots simulation)
+ros2 launch color_detection hsv_tuner.launch.py use_sim_time:=true
 ```
 
 1.  Adjust the trackbars until the `Pure Mask` window clearly shows your target object in solid white and everything else in black.
@@ -207,17 +208,19 @@ Adding a new color requires exactly three steps, without touching the core image
 In the `__init__` function of your detector node (`color_detector.py`), declare the parameters and map them into the dictionary:
 
 ```python
-        self.declare_parameter('hsv_orange_lower', [0, 0, 0])
-        self.declare_parameter('hsv_orange_upper', [255, 255, 255])
-        
-        # Add to self.color_bounds dictionary:
-        self.color_bounds = {
-            # ... existing colors ...
-            'orange': {
-                'lower': np.array(self.get_parameter('hsv_orange_lower').value),
-                'upper': np.array(self.get_parameter('hsv_orange_upper').value)
-            }
-        }
+...
+
+self.declare_parameter('hsv_orange_lower', [0, 0, 0])
+self.declare_parameter('hsv_orange_upper', [255, 255, 255])
+
+# Add to self.color_bounds dictionary:
+self.color_bounds = {
+    # ... existing colors ...
+    'orange': {
+        'lower': np.array(self.get_parameter('hsv_orange_lower').value),
+        'upper': np.array(self.get_parameter('hsv_orange_upper').value)
+    }
+}
 ```
 
 ## Step 3: Add the color to the processing list <!-- omit from toc -->
@@ -225,7 +228,7 @@ In the `__init__` function of your detector node (`color_detector.py`), declare 
 Inside the `detect_callback` function in `color_detector` (or `image_callback` in `color_detector_legacy`), simply add the string to the list:
 
 ```python
-        colors = ['green', 'yellow', 'red', 'blue', 'orange']
+colors = ['green', 'yellow', 'red', 'blue', 'orange']
 ```
 
 ---

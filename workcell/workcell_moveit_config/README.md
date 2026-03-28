@@ -16,6 +16,8 @@ This package contains the semantic representation (SRDF), kinematics, and motion
 - [I) Package Structure](#i-package-structure)
 - [II) Usage](#ii-usage)
   - [Step 1: Start the Robot (Real or Simulated)](#step-1-start-the-robot-real-or-simulated)
+    - [Option A: Webots Simulation](#option-a-webots-simulation)
+    - [Option B: Real Hardware (UR5e)](#option-b-real-hardware-ur5e)
   - [Step 2: Start MoveIt](#step-2-start-moveit)
 
 # I) Package Structure
@@ -29,31 +31,31 @@ Normally, MoveIt is launched automatically by the higher-level application launc
 
 ## Step 1: Start the Robot (Real or Simulated)
 
-- ### Option A: Webots Simulation
+### Option A: Webots Simulation
 
-  ```bash
-  ros2 launch workcell_simulation simulation.launch.py
-  ```
-  
-  > [!IMPORTANT]
-  > **``use_sim_time``:** When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands**! This ensures proper time synchronization between the simulator, MoveIt, and all ROS nodes.
+```bash
+ros2 launch workcell_simulation simulation.launch.py
+```
 
-- ### Option B: Real Hardware (UR5e)
+> [!IMPORTANT]
+> **``use_sim_time``:** When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands**! This ensures proper time synchronization between the simulator, MoveIt, and all ROS nodes.
 
-  If you want to start a real robot, make sure that the **[robot setup](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html#robot-setup)** is done and **external_control** is active on the robot.
-  Make sure to set the correct **robot_ip** in the command below or in the ``start_robot.launch.py`` file in the ``workcell_control`` package!
+### Option B: Real Hardware (UR5e)
 
-  ```bash
-  # You can set the robot_ip either via command line argument or directly in the start_robot.launch.py file
-  ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
-  ```
+If you want to start a real robot, make sure that the **[robot setup](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html#robot-setup)** is done and **external_control** is active on the robot.
+Make sure to set the correct **robot_ip** in the command below or in the ``start_robot.launch.py`` file in the ``workcell_control`` package!
+
+```bash
+# You can set the robot_ip either via command line argument or directly in the start_robot.launch.py file
+ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
+```
 
 ## Step 2: Start MoveIt
 
 1. ### ``move_group`` Node
 
     Now that we have a robot running (either simulated or real), we can launch the MoveIt **move_group** node. 
-    
+
     ```bash
     ros2 launch workcell_moveit_config move_group.launch.py
     # use_sim_time:=true is required if using the Webots simulation, but can be left out for real hardware

@@ -22,12 +22,14 @@ This package provides a highly capable, **AI-driven vision system for the pick-a
 - [IV) Configuration (Camera and Gemini)](#iv-configuration-camera-and-gemini)
   - [Camera \& Hardware Configuration (YAML)](#camera--hardware-configuration-yaml)
   - [Gemini Configuration (Python)](#gemini-configuration-python)
-- [V) Launch Gemini Vision](#v-launch-gemini-vision)
+- [V) Start Gemini Vision](#v-start-gemini-vision)
+  - [Launch the Node](#launch-the-node)
+  - [Override the Gemini Model](#override-the-gemini-model)
 - [VI) Testing the Service via Terminal](#vi-testing-the-service-via-terminal)
 - [VII) Reviewing the Gemini Output](#vii-reviewing-the-gemini-output)
-  - [1. Terminal Logs](#1-terminal-logs)
-  - [2. RViz2 Visualization (Recommended)](#2-rviz2-visualization-recommended)
-  - [3. RQT Image View (Alternative)](#3-rqt-image-view-alternative)
+  - [Terminal Logs](#terminal-logs)
+  - [RViz2 Visualization (Recommended)](#rviz2-visualization-recommended)
+  - [RQT Image View (Alternative)](#rqt-image-view-alternative)
 - [VIII) Models Overview\[^1\]](#viii-models-overview1)
 
 
@@ -108,26 +110,21 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""...""")
 ```
 
 
-# V) Launch Gemini Vision
+# V) Start Gemini Vision
 
 > [!IMPORTANT]
 > **Camera Prerequisite:** This node requires an active camera stream to function. Ensure that either the Webots simulation is running or the real RealSense camera stream is active.
 
+## Launch the Node
+
 You can launch the node using the provided launch file:
 
-* **Option A: Simulation (Webots)**
+```bash
+# Launch the Gemini Vision node (append 'use_sim_time:=true' if using Webots simulation)
+ros2 launch gemini_vision gemini_vision.launch.py
+```
 
-    When running the simulation in Webots, you **must** append the `use_sim_time` argument so the node synchronizes with the simulated ROS clock:
-    ```bash
-    ros2 launch gemini_vision gemini_vision.launch.py use_sim_time:=true
-    ```
-
-* **Option B: Real Hardware (UR5e & RealSense)**
-    ```bash
-    ros2 launch gemini_vision gemini_vision.launch.py
-    ```
-
-**Override the Gemini Model:**
+## Override the Gemini Model
 
 If you want to use a specific model for a complex task without altering the Python script defaults, pass the **`model`** argument:
 
@@ -166,7 +163,7 @@ Once the node is running, you can trigger the vision pipeline directly from the 
 
 To evaluate what the Gemini is "seeing" and deciding, you have three primary tools at your disposal:
 
-## 1. Terminal Logs
+## Terminal Logs
 
 The most detailed information is printed directly in the terminal where the `gemini_vision` node is running. After every scan, the node outputs:
 * Its "Thoughts" (the Gemini's internal reasoning process).
@@ -174,7 +171,7 @@ The most detailed information is printed directly in the terminal where the `gem
 * The exact 3D pick coordinates [X, Y, Z].
 * The calculated drop-off targets (if requested via a custom prompt).
 
-## 2. RViz2 Visualization (Recommended)
+## RViz2 Visualization (Recommended)
 
 To view the live annotated image stream (bounding boxes, coordinates, target crosshairs) and the dynamically generated 3D `tf2` frames in real-time, launch the pre-configured RViz workspace:
 
@@ -190,7 +187,7 @@ To view the live annotated image stream (bounding boxes, coordinates, target cro
     ros2 launch workcell_application rviz.launch.py
     ```
 
-## 3. RQT Image View (Alternative)
+## RQT Image View (Alternative)
 Alternatively, you can view just the raw 2D image overlay using RQT. 
 
 ```bash
