@@ -110,6 +110,9 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""...""")
 
 # V) Launch Gemini Vision
 
+> [!IMPORTANT]
+> **Camera Prerequisite:** This node requires an active camera stream to function. Ensure that either the Webots simulation is running or the real RealSense camera stream is active.
+
 You can launch the node using the provided launch file:
 
 * **Option A: Simulation (Webots)**
