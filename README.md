@@ -25,7 +25,7 @@ https://github.com/user-attachments/assets/ba4a9620-bd2b-4814-b3d8-9d6d37d2f78e
 - [III) Workspace Overview](#iii-workspace-overview)
 - [IV) Workflow Tips (Bash Shortcuts)](#iv-workflow-tips-bash-shortcuts)
 - [V) Quick Start: Pick-and-Place with Gemini Vision](#v-quick-start-pick-and-place-with-gemini-vision)
-  - [Step 1: Start the Robot Driver (Real or Simulated)](#step-1-start-the-robot-driver-real-or-simulated)
+  - [Step 1: Start the Robot and Camera (Real or Simulated)](#step-1-start-the-robot-and-camera-real-or-simulated)
   - [Step 2: Start Gemini Vision \& RViz](#step-2-start-gemini-vision--rviz)
   - [Step 3: Start Pick-and-Place Application](#step-3-start-pick-and-place-application)
   - [Step 4: Trigger Pick-and-Place Cycle](#step-4-trigger-pick-and-place-cycle)
@@ -139,63 +139,65 @@ testscan Pick the red and blue bricks and place them on the left side of the tab
 
 # V) Quick Start: Pick-and-Place with Gemini Vision
 
-This section outlines how to start the primary Gemini-driven application. Open **three separate terminals**.
+This section outlines how to start the primary Gemini-driven application. You will need to open multiple terminals:
 
-> [!IMPORTANT]
-> When using the Webots simulation, you MUST append `use_sim_time:=true` to **all** launch commands to synchronize the ROS 2 clock.
-
-## Step 1: Start the Robot Driver (Real or Simulated)
+## Step 1: Start the Robot and Camera (Real or Simulated)
 
 * **Option A: Simulation (Webots):**
 
+  Start the Webots environment. This includes the UR5e robot and a simulated RealSense camera:
+
   ```bash
+  # Start the Webots simulation
   ros2 launch workcell_simulation simulation.launch.py
   ```
+  > [!IMPORTANT]
+  > When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands** to synchronize the ROS 2 clock.
 
 * **Option B: Real Hardware (UR5e & RealSense)**
-  
+
   > [!CAUTION]
   > Follow all safety precautions when working with real robots.
 
-  First, start the connection to the UR5e controller:
-
-  ```bash
-  ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
-  ```
+  > [!WARNING]
+  > **Hardware Specificity:** This project and its configurations are strictly designed and tested for the **UR5e**. Attempting to use this workspace with other Universal Robots models (e.g., UR3e, UR10e) will cause issues. You would need to heavily modify the URDF, MoveIt configurations, and launch files to match your specific robot model's kinematics and limits.
 
   > [!IMPORTANT]
-  > Start the program with the **external control** node on the teach pendant, to ensure the robot can receive commands from ROS 2.
-  > For detailed instructions on setting up the UR5e for ROS 2 control, see the **[workcell_control README](./workcell/workcell_control/README.md#option-a-real-hardware-ur5e)**.
+  > Before launching, ensure the **[robot setup](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html#robot-setup)** on the teach pendant is complete. 
+  > 
+  > Once the ROS 2 driver is running, you MUST start the program with the **external_control** node on the teach pendant so the robot can receive commands from ROS 2.
+
+  This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces:
+
+  ```bash
+  # Start the UR5e driver (replace <ROBOT_IP_ADDRESS> with the actual IP, can also be set in the launch file)
+  ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
+  # Optional: Append launch_rviz:=true to automatically start RViz and visualize the robot
+  ```
+
+  Next, open a new terminal and start the RealSense camera stream:
+
+  ```bash
+  ros2 launch realsense2_camera rs_launch.py depth_module.depth_profile:=1280x720x6 rgb_camera.color_profile:=1280x720x6 camera_name:=d415 align_depth.enable:=true enable_sync:=true spatial_filter.enable:=true pointcloud.enable:=false
+  ```
 
 
 ## Step 2: Start Gemini Vision & RViz
 
-* **Option A: Simulation (Webots)**
+Open 2 new terminal and start the Gemini Vision node and RViz. 
 
-  Start Gemini Vision and RViz (simulation clock is required):
+```bash
+# Start Gemini Vision (append 'use_sim_time:=true' if using Webots simulation)
+ros2 launch gemini_vision gemini_vision.launch.py
 
-  ```bash
-  ros2 launch gemini_vision gemini_vision.launch.py use_sim_time:=true
-  ros2 launch workcell_application rviz.launch.py use_sim_time:=true
-  ```
-
-* **Option B: Real Hardware (UR5e & RealSense)**
-
-  First, start the RealSense camera stream in a new terminal:
-
-  ```bash
-  ros2 launch realsense2_camera rs_launch.py depth_module.depth_profile:=1280x720x30 camera_name:=d415 align_depth.enable:=true enable_sync:=true pointcloud.enable:=true
-  ```
-
-  Then, start the Gemini Vision node and RViz:
-
-  ```bash
-  ros2 launch gemini_vision gemini_vision.launch.py
-  ros2 launch workcell_application rviz.launch.py
-  ```
+# Open a new terminal and start RViz (append 'use_sim_time:=true' if using Webots)
+ros2 launch workcell_application rviz.launch.py
+```
 
 > [!NOTE]
 > If you want to test classic, non-AI computer vision, launch `color_detector.launch.py` from the `color_detection` package instead. Keep in mind that this requires the camera to be properly calibrated for HSV masking, and it won't understand natural language prompts.
+
+
 
 ## Step 3: Start Pick-and-Place Application
 
