@@ -18,6 +18,8 @@ The project features a complete perception-to-action pipeline. It utilizes the G
 
 https://github.com/user-attachments/assets/ba4a9620-bd2b-4814-b3d8-9d6d37d2f78e
 
+---
+
 - [I) Prerequisites](#i-prerequisites)
 - [II) Installation and Setup](#ii-installation-and-setup)
   - [ROS 2 Packages and Tools](#ros-2-packages-and-tools)
@@ -38,6 +40,7 @@ https://github.com/user-attachments/assets/ba4a9620-bd2b-4814-b3d8-9d6d37d2f78e
 - [VI) Hardware Testing Tools](#vi-hardware-testing-tools)
 - [VII) Documentation and References](#vii-documentation-and-references)
 
+---
 
 # I) Prerequisites
 
@@ -51,6 +54,7 @@ https://github.com/user-attachments/assets/ba4a9620-bd2b-4814-b3d8-9d6d37d2f78e
 - [Piab piSOFTGRIP](https://www.piab.com/suction-cups-and-soft-grippers/soft-grippers/pisoftgrip-vacuum-driven-soft-gripper-/sg.x)
 - [Intel RealSense D415 camera](https://www.intel.com/content/www/us/en/products/sku/128256/intel-realsense-depth-camera-d415/specifications.html)
 
+---
 
 # II) Installation and Setup
 
@@ -73,6 +77,7 @@ To make sure all components of this workspace function correctly, you need to in
 
 - [Google Gen AI SDK](https://ai.google.dev/gemini-api/docs/quickstart)
 
+---
 
 # III) Workspace Overview
 
@@ -104,6 +109,7 @@ For detailed instructions, please refer to the `README.md` files located inside 
   * **[`workcell_simulation`](https://www.google.com/search?q=workcell/workcell_simulation/)**: Launch files and worlds for the Webots digital twin environment.
   * **[`workcell_moveit_config`](https://www.google.com/search?q=workcell/workcell_moveit_config/)**: The MoveIt 2 setup package, containing SRDFs, kinematics, and Pilz/OMPL controller configurations.
 
+---
 
 # IV) Workflow Tips (Bash Shortcuts)
 
@@ -142,6 +148,7 @@ scan Pick the red and blue bricks and place them on the left side of the table
 testscan Pick the red and blue bricks and place them on the left side of the table
 ```
 
+---
 
 # V) Quick Start: Pick-and-Place with Gemini Vision
 
@@ -204,7 +211,6 @@ ros2 launch workcell_application rviz.launch.py
 > If you want to test classic, non-AI computer vision, launch `color_detector.launch.py` from the `color_detection` package instead. Keep in mind that this requires the camera to be properly calibrated for HSV masking, and it won't understand natural language prompts.
 
 
-
 ## Step 3: Start Pick-and-Place Application
 
 Launch the Pick-and-Place application. The robot will move to the `ready` pose and wait in STANDBY mode:
@@ -243,6 +249,8 @@ Once ready, open a new terminal and use the bash shortcuts configured in **[Sect
   scan Pick the red and blue bricks and place them on the left side of the table
   ```
 
+---
+
 # VI) Hardware Testing Tools
 
 The `workcell_application` package includes several utility scripts for hardware commissioning and testing. See its [README](https://www.google.com/search?q=workcell_application/README.md) for details on:
@@ -250,6 +258,8 @@ The `workcell_application` package includes several utility scripts for hardware
   * **`move_to_coords.py`**: Instantly move the TCP to specific X/Y/Z coordinates or named poses.
   * **`verify_alignment.py`**: A step-by-step interactive script to verify physical workspace alignment against the digital twin.
   * **Legacy Port**: Instructions for running the old continuous-topic `brick_sorter_legacy.py`.
+
+---
 
 # VII) Documentation and References
 
@@ -273,3 +283,4 @@ The `workcell_application` package includes several utility scripts for hardware
 - [Google Gemini API](https://ai.google.dev/gemini-api/docs/)
 - [Google Gemini Robotics-ER 1.5](https://ai.google.dev/gemini-api/docs/robotics-overview)
 
+---
