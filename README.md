@@ -28,7 +28,7 @@ https://github.com/user-attachments/assets/ba4a9620-bd2b-4814-b3d8-9d6d37d2f78e
 - [IV) Workflow Tips (Bash Shortcuts)](#iv-workflow-tips-bash-shortcuts)
 - [V) Quick Start: Automated Bringup (Recommended)](#v-quick-start-automated-bringup-recommended)
   - [Option A: Simulation (Webots)](#option-a-simulation-webots)
-    - [Option B: Real Hardware (UR5e \& RealSense)](#option-b-real-hardware-ur5e--realsense)
+  - [Option B: Real Hardware (UR5e \& RealSense)](#option-b-real-hardware-ur5e--realsense)
 - [VI) Triggering the Pick-and-Place Cycle](#vi-triggering-the-pick-and-place-cycle)
   - [Test the vision system (no robot movement)](#test-the-vision-system-no-robot-movement)
   - [Trigger the full Pick-and-Place cycle](#trigger-the-full-pick-and-place-cycle)
@@ -170,7 +170,7 @@ Append the `vision` argument to use classic computer vision methods instead of t
 * **OpenCV HSV Masking:** `ros2 launch workcell_bringup sim.launch.py vision:=hsv`
 * **Legacy (Continuous ROS 1 Port):** `ros2 launch workcell_bringup sim.launch.py vision:=legacy`
 
-### Option B: Real Hardware (UR5e & RealSense)
+## Option B: Real Hardware (UR5e & RealSense)
 
 > [!CAUTION]
 > Follow all safety precautions when working with real robots. Keep the emergency stop button within reach.
