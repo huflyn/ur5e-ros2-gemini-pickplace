@@ -167,7 +167,7 @@ testscan Pick the red and blue bricks and place them on the left side of the tab
 
 # VI) Quick Start: Automated Bringup (Recommended)
 
-The easiest way to start the complete perception-to-action pipeline is using the centralized master launch files from the `workcell_bringup` package. These files use staggered timers to automatically start the hardware/simulation, the selected vision system, RViz, and the MoveIt application in the correct order.
+The easiest way to start the complete perception-to-action pipeline is using the centralized master launch files from the [`workcell_bringup`](/workcell/workcell_bringup/README.md) package. These files use staggered timers to automatically start the hardware/simulation, the selected vision system, RViz, and the MoveIt application in the correct order.
 
 > [!IMPORTANT]
 > **API Key Required:** Because the Gemini Vision pipeline is the default mode, ensure you have exported your `GEMINI_API_KEY` in your terminal before running these launch files.
