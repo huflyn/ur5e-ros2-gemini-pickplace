@@ -112,7 +112,9 @@ For detailed instructions, please refer to the `README.md` files located inside 
 
 # IV) Global Configuration (YAML)
 
-Before running the physical hardware or modifying the workspace layout, you may need to adjust the centralized configuration files. These YAML files allow you to adapt the system to your specific environment without changing the source code.
+
+> [!NOTE]
+> Before running the physical hardware or modifying the workspace layout, you may need to adjust the centralized configuration files. These YAML files allow you to adapt the system to your specific environment without changing the source code.
 
 * **Workspace Layout (`workcell_application`):** Defines the safe hover/grasp heights, brick center offsets, and specific Cartesian drop-off coordinates for the pick-and-place orchestrator.
   * `workcell/workcell_application/config/pick_and_place_parameters.yaml`
