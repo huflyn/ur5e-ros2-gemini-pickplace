@@ -26,9 +26,15 @@ https://github.com/user-attachments/assets/ba4a9620-bd2b-4814-b3d8-9d6d37d2f78e
 - [IV) Workflow Tips (Bash Shortcuts)](#iv-workflow-tips-bash-shortcuts)
 - [V) Quick Start: Pick-and-Place with Gemini Vision](#v-quick-start-pick-and-place-with-gemini-vision)
   - [Step 1: Start the Robot and Camera (Real or Simulated)](#step-1-start-the-robot-and-camera-real-or-simulated)
+    - [Option A: Simulation (Webots)](#option-a-simulation-webots)
+    - [Option B: Real Hardware (UR5e \& RealSense)](#option-b-real-hardware-ur5e--realsense)
   - [Step 2: Start Gemini Vision \& RViz](#step-2-start-gemini-vision--rviz)
   - [Step 3: Start Pick-and-Place Application](#step-3-start-pick-and-place-application)
+    - [Option A: Simulation (Webots)](#option-a-simulation-webots-1)
+    - [Option B: Real Hardware (UR5e \& RealSense)](#option-b-real-hardware-ur5e--realsense-1)
   - [Step 4: Trigger Pick-and-Place Cycle](#step-4-trigger-pick-and-place-cycle)
+    - [Trigger Option A: Default Mode](#trigger-option-a-default-mode)
+    - [Trigger Option B: Custom Prompt Mode - Gemini ONLY](#trigger-option-b-custom-prompt-mode---gemini-only)
 - [VI) Hardware Testing Tools](#vi-hardware-testing-tools)
 - [VII) Documentation and References](#vii-documentation-and-references)
 
@@ -143,18 +149,18 @@ This section outlines how to start the primary Gemini-driven application. You wi
 
 ## Step 1: Start the Robot and Camera (Real or Simulated)
 
-* **Option A: Simulation (Webots):**
+### Option A: Simulation (Webots)
   
-  Start the Webots environment. This includes the UR5e robot and a simulated RealSense camera:
-  
-  ```bash
-  # Start the Webots simulation
-  ros2 launch workcell_simulation simulation.launch.py
-  ```
+Start the Webots environment. This includes the UR5e robot and a simulated RealSense camera:
+
+```bash
+# Start the Webots simulation
+ros2 launch workcell_simulation simulation.launch.py
+```
 > [!IMPORTANT]
 > When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands** to synchronize the ROS 2 clock.
 
-* **Option B: Real Hardware (UR5e & RealSense)**
+### Option B: Real Hardware (UR5e & RealSense)
 
 > [!CAUTION]
 > Follow all safety precautions when working with real robots.
@@ -167,24 +173,24 @@ This section outlines how to start the primary Gemini-driven application. You wi
 > 
 > Once the ROS 2 driver is running, you MUST start the program with the **external_control** node on the teach pendant so the robot can receive commands from ROS 2.
 
-  This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces:
+This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces:
 
-  ```bash
-  # Start the UR5e driver (replace <ROBOT_IP_ADDRESS> with the actual IP, can also be set in the launch file)
-  ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
-  # Optional: Append launch_rviz:=true to automatically start RViz and visualize the robot
-  ```
+```bash
+# Start the UR5e driver (replace <ROBOT_IP_ADDRESS> with the actual IP, can also be set in the launch file)
+ros2 launch workcell_control start_robot.launch.py robot_ip:=<ROBOT_IP_ADDRESS>
+# Optional: Append launch_rviz:=true to automatically start RViz and visualize the robot
+```
 
-  Next, open a new terminal and start the RealSense camera stream:
+Next, open a new terminal and start the RealSense camera stream:
 
-  ```bash
-  ros2 launch realsense2_camera rs_launch.py depth_module.depth_profile:=1280x720x6 rgb_camera.color_profile:=1280x720x6 camera_name:=d415 align_depth.enable:=true enable_sync:=true spatial_filter.enable:=true pointcloud.enable:=false
-  ```
+```bash
+ros2 launch realsense2_camera rs_launch.py depth_module.depth_profile:=1280x720x6 rgb_camera.color_profile:=1280x720x6 camera_name:=d415 align_depth.enable:=true enable_sync:=true spatial_filter.enable:=true pointcloud.enable:=false
+```
 
 
 ## Step 2: Start Gemini Vision & RViz
 
-Open 2 new terminal and start the Gemini Vision node and RViz. 
+Open 2 new terminals and start the Gemini Vision node and RViz. 
 
 ```bash
 # Start Gemini Vision (append 'use_sim_time:=true' if using Webots simulation)
@@ -203,23 +209,23 @@ ros2 launch workcell_application rviz.launch.py
 
 Launch the Pick-and-Place application. The robot will move to the `ready` pose and wait in STANDBY mode:
 
-* **Option A: Simulation (Webots)**
+### Option A: Simulation (Webots)
 
-  ```bash
-  ros2 launch workcell_application pick_and_place.launch.py use_sim_time:=true
-  ```
+```bash
+ros2 launch workcell_application pick_and_place.launch.py use_sim_time:=true
+```
 
-* **Option B: Real Hardware (UR5e & RealSense)**
+### Option B: Real Hardware (UR5e & RealSense)
 
-  ```bash
-  ros2 launch workcell_application pick_and_place.launch.py
-  ```
+```bash
+ros2 launch workcell_application pick_and_place.launch.py
+```
 
 ## Step 4: Trigger Pick-and-Place Cycle
 
 Once ready, open a new terminal and use the bash shortcuts configured in **[Section IV](#iv-workflow-tips-bash-shortcuts)** to trigger the cycle:
 
-* **Trigger Option A: Default Mode**
+### Trigger Option A: Default Mode
 
   Picks all detected bricks and sorts them into their respective color-coded drop-off locations based on the YAML config.
 
@@ -227,7 +233,7 @@ Once ready, open a new terminal and use the bash shortcuts configured in **[Sect
   scan
   ```
 
-* **Trigger Option B: Custom Prompt Mode - Gemini ONLY:**
+### Trigger Option B: Custom Prompt Mode - Gemini ONLY
 
   Lets you specify a custom natural language instruction to guide the sorting logic. For example, you can ask it to only pick certain colors, or to calculate specific drop-off locations based on the prompt.
 
