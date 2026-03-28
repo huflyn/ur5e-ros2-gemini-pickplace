@@ -144,28 +144,28 @@ This section outlines how to start the primary Gemini-driven application. You wi
 ## Step 1: Start the Robot and Camera (Real or Simulated)
 
 * **Option A: Simulation (Webots):**
-
+  
   Start the Webots environment. This includes the UR5e robot and a simulated RealSense camera:
-
+  
   ```bash
   # Start the Webots simulation
   ros2 launch workcell_simulation simulation.launch.py
   ```
-  > [!IMPORTANT]
-  > When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands** to synchronize the ROS 2 clock.
+> [!IMPORTANT]
+> When using the Webots simulation, you MUST append `use_sim_time:=true` to **all subsequent launch commands** to synchronize the ROS 2 clock.
 
 * **Option B: Real Hardware (UR5e & RealSense)**
 
-  > [!CAUTION]
-  > Follow all safety precautions when working with real robots.
+> [!CAUTION]
+> Follow all safety precautions when working with real robots.
 
-  > [!WARNING]
-  > **Hardware Specificity:** This project and its configurations are strictly designed and tested for the **UR5e**. Attempting to use this workspace with other Universal Robots models (e.g., UR3e, UR10e) will cause issues. You would need to heavily modify the URDF, MoveIt configurations, and launch files to match your specific robot model's kinematics and limits.
+> [!WARNING]
+> **Hardware Specificity:** This project and its configurations are strictly designed and tested for the **UR5e**. Attempting to use this workspace with other Universal Robots models (e.g., UR3e, UR10e) will cause issues. You would need to heavily modify the URDF, MoveIt configurations, and launch files to match your specific robot model's kinematics and limits.
 
-  > [!IMPORTANT]
-  > Before launching, ensure the **[robot setup](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html#robot-setup)** on the teach pendant is complete. 
-  > 
-  > Once the ROS 2 driver is running, you MUST start the program with the **external_control** node on the teach pendant so the robot can receive commands from ROS 2.
+> [!IMPORTANT]
+> Before launching, ensure the **[robot setup](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html#robot-setup)** on the teach pendant is complete. 
+> 
+> Once the ROS 2 driver is running, you MUST start the program with the **external_control** node on the teach pendant so the robot can receive commands from ROS 2.
 
   This will start the ROS 2 driver for the UR5e robot, allowing you to control the physical robot using ROS 2 interfaces:
 
