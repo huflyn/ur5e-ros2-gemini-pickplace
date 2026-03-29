@@ -5,8 +5,8 @@ Color Detection Legacy Node - Old Version adapted from ROS 1 Version (Refactored
 Note: The Brick Sorter Legacy only works with Color Detector Legacy (color_detector_legacy.py) and vice versa!
 It does not work with the real hardware (gripper control) yet, only simulated in Webots.
 
-This node subscribes to camera topics, detects colored bricks, and publishes their information.
-It uses HSV color thresholds to identify bricks and transforms their coordinates to the robot's base frame.
+This node subscribes to camera topics, detects colored objects, and publishes their information.
+It uses HSV color thresholds to identify objects and transforms their coordinates to the robot's base frame.
 
 brick_sorter.py is a replication of the original sorting logic used in the ROS 1 version
 '''
@@ -237,7 +237,7 @@ class ColorDetectorOldNode(Node):
             sort_method = self.get_parameter('sort_method').get_parameter_value().string_value
             
             if sort_method == 'random':
-                # Shuffle the list randomly to break deterministic endless loops on unreachable bricks
+                # Shuffle the list randomly to break deterministic endless loops on unreachable objects
                 random.shuffle(self.detected_detected_objects)
                 picked_object = self.detected_detected_objects[0]
             else:

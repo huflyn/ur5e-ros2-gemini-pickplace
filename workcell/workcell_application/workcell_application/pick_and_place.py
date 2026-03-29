@@ -423,7 +423,7 @@ def main(args=None):
                 f"{node.workspace_safety_str}\n" +
                 "⏸️  STANDBY: Waiting for SCAN trigger.\n\n" +
                 "🅰️  Default Mode - 'Detects all bricks on the table':\n" +
-                "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: ''}\"\n\n" +
+                "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String\n\n" +
                 "🅱️  User Prompt Mode - add your instructions to the data field:\n" +
                 "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: 'Pick the red object and place it somewhere safe.'}\"\n\n" +
                 "⏹️  To manually STOP the Pick and Place process and return to STANDBY:\n" +

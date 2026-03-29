@@ -2,8 +2,8 @@
 
 ''' 
 A vision system for a robotic pick-and-place task using the Gemini API.
-Input: RGB image. Output: Detected bricks with bounding boxes, colors, and potential drop-off locations based on user instructions (optional).
-The node subscribes to camera topics, processes images with Gemini, and returns 3D coordinates for detected bricks.
+Input: RGB image. Output: Detected objects with bounding boxes, colors, and potential drop-off locations based on user instructions (optional).
+The node subscribes to camera topics, processes images with Gemini, and returns 3D coordinates for detected objects.
 '''
 
 import os
@@ -72,7 +72,7 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
 
     Return a JSON list matching this exact schema:
     {
-      "bricks": [
+      "objects": [
         {
           "object_name": "<name of the object, e.g., toy object, pen, screw>",
           "label": "<dominant color, e.g., red, blue, green>",
@@ -113,7 +113,7 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
 
 # --- PYDANTIC MODELS ---
 
-class BrickDetection(BaseModel):
+class ObjectDetection(BaseModel):
     object_name: str = Field(description="Name/type of the object (e.g., 'building object', 'pen')")
     label: str = Field(description="Dominant color of the object (e.g., 'red', 'blue')")
     box_2d: List[int] = Field(description="[ymin, xmin, ymax, xmax] normalized 0-1000")
@@ -135,7 +135,7 @@ class BrickDetection(BaseModel):
     yaw_degrees: float = Field(default=0.0, exclude=True)
 
 class DetectionResult(BaseModel):
-    bricks: List[BrickDetection]
+    objects: List[ObjectDetection]
 
 
 #  --- HELPER FUNCTIONS ---
@@ -294,12 +294,12 @@ def draw_point(image, label, y, x, color=(72, 255, 140)):
                 0.45, color, 1, cv2.LINE_AA)
 
 
-def draw_all_annotations(image: np.ndarray, detections: List[BrickDetection], img_w: int, img_h: int) -> np.ndarray:
+def draw_all_annotations(image: np.ndarray, detections: List[ObjectDetection], img_w: int, img_h: int) -> np.ndarray:
     """Draws all bounding boxes and dropoff points on the image."""
     for object in detections:
         object_color = get_color_for_label(object.label)
 
-        # 1. Draw Brick Box (jetzt mit 3D-Koordinatenübergabe)
+        # 1. Draw Object Box (jetzt mit 3D-Koordinatenübergabe)
         ymin, xmin, ymax, xmax = normalized_to_pixel(object.box_2d, img_w, img_h)
         draw_bbox(image, object.label, ymin, xmin, ymax, xmax, pt_3d=object.position_3d, color=object_color)
 
@@ -402,7 +402,7 @@ class GeminiVisionNode(Node):
         self.camera_info_ready = False
         self.latest_color_msg: Optional[Image] = None
         self.latest_depth_msg: Optional[Image] = None
-        self.last_detections: List[BrickDetection] = []
+        self.last_detections: List[ObjectDetection] = []
         self._detection_lock = Lock() # Thread safety lock
 
         # --- ROS Interface (Subscriptions & Publishers) ---
@@ -475,13 +475,13 @@ class GeminiVisionNode(Node):
                     self.last_detections = detections
                 
                 response.success = True
-                response.message = f"Detected {len(target_object_msgs)} valid 3D bricks."
-                response.bricks = target_object_msgs
+                response.message = f"Detected {len(target_object_msgs)} valid objects."
+                response.objects = target_object_msgs
 
                 # --- Logging the 3D Coordinates ---
                 if len(target_object_msgs) > 0:
                     log_msg = f"\n{'='*60}\n"
-                    log_msg += f"🏁 Detected {len(target_object_msgs)} valid bricks:\n"
+                    log_msg += f"🏁 Detected {len(target_object_msgs)} valid objects:\n"
                     object_number = 0
                     for object in target_object_msgs:
                         object_number += 1
@@ -501,7 +501,7 @@ class GeminiVisionNode(Node):
                             dropoff_str = " | Default Drop-off (see pick_and_place_parameters.yaml)"
 
                         # Log format: "- Red: [X: 0.123, Y: 0.456, Z: 0.789] | Distance: 500 mm | Drop-off: [X: 0.200, Y: 0.300]"
-                        log_msg += f"{object_number} - {color.capitalize()}: [X: {x:.3f}, Y: {y:.3f}, Z: {z:.3f}] | Distanz: {distance:.0f} mm{dropoff_str}\n"
+                        log_msg += f"{object_number} - {color.capitalize()}: [X: {x:.3f}, Y: {y:.3f}, Z: {z:.3f}] | Distance: {distance:.0f} mm{dropoff_str}\n"
                         
                     log_msg += f"{'='*60}"
                     self.get_logger().info(log_msg)
@@ -616,7 +616,7 @@ class GeminiVisionNode(Node):
         return image_annotated
 
 
-    def _call_gemini(self, img_bytes: bytes, user_prompt: Optional[str] = None) -> Optional[List[BrickDetection]]:
+    def _call_gemini(self, img_bytes: bytes, user_prompt: Optional[str] = None) -> Optional[List[ObjectDetection]]:
         """Calls the Gemini API with the image and prompt, returns list of detections."""
         start = time.time()
         prompt = build_prompt(user_prompt)
@@ -694,7 +694,7 @@ class GeminiVisionNode(Node):
             self.get_logger().info(f"⏱️  Processing time: {time.time() - start:.2f}s")
 
             result = DetectionResult.model_validate_json(resp.text)
-            return result.bricks
+            return result.objects
 
         except Exception as e:
             self.get_logger().error(f"🔴 Gemini error: {e}")
@@ -710,7 +710,7 @@ class GeminiVisionNode(Node):
             self.get_logger().info(f"\n{'='*60}\n{tag}:\n{part.text}")
 
 
-    def _process_3d_detections(self, detections: List[BrickDetection], cv_depth: np.ndarray, img_w: int, img_h: int) -> List[DetectedObject]:
+    def _process_3d_detections(self, detections: List[ObjectDetection], cv_depth: np.ndarray, img_w: int, img_h: int) -> List[DetectedObject]:
         """Calculates 3D coordinates, updates Pydantic objects, and builds ROS messages."""
         target_object_msgs = [] # 
         object_counter = {}
@@ -735,7 +735,7 @@ class GeminiVisionNode(Node):
             aspect_ratio = w / h if h > 0 else 0.0
             object.yaw_degrees = 0.0 if 0 < aspect_ratio < 1.41 else 30.0
 
-            # --- Robust Depth for Brick ---
+            # --- Robust Depth for Object ---
             depth_mm = get_robust_depth(object.box_2d, cv_depth, img_w, img_h)
             
             if depth_mm is not None:

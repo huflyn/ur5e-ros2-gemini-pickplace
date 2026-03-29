@@ -284,7 +284,7 @@ class ColorDetectorNode(Node):
         new_object_anns = []
         new_no_depth_anns = []
 
-        # Find bricks using HSV masks
+        # Find objects using HSV masks
         for color in colors:
             mask = detect_color(hsv, color, self.color_bounds)
             contours = process_mask(mask)
@@ -299,7 +299,7 @@ class ColorDetectorNode(Node):
                     # Calculate aspect ratio based on horizontal camera perspective
                     aspect_ratio = w / h if h > 0 else 0.0
 
-                    # Orientation logic for 4x2 bricks from side-view:
+                    # Orientation logic for 4x2 objects from side-view:
                     if aspect_ratio >= 1.41:
                         yaw_degrees = 0.0 # Brick is horizontal (parallel to camera plane)
                     elif aspect_ratio > 0:
@@ -362,10 +362,10 @@ class ColorDetectorNode(Node):
         # Construct and send response
         response.success = True
         response.message = ""
-        response.bricks = detected_objects
+        response.objects = detected_objects
 
         # --- Broadcast TF Frames for RViz ---
-        # Iterate through the final list of detected bricks and send a TF for each
+        # Iterate through the final list of detected objects and send a TF for each
         object_counter = {}
         for object in detected_objects:
             color = object.color.data
