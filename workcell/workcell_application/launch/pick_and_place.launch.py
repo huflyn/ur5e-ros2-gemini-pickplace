@@ -3,7 +3,8 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument, LogInfo
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression, PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
 from moveit_configs_utils import MoveItConfigsBuilder
 
 def generate_launch_description():
@@ -39,7 +40,15 @@ def generate_launch_description():
         'pick_and_place_parameters.yaml'
     )
 
-    # 3. Define the main sorting node
+    # 3. Workspace parameters file (sim vs real)
+    workspace_params_file = PathJoinSubstitution([
+        FindPackageShare('workcell_bringup'),
+        'config',
+        PythonExpression(["'sim_workspace_parameters.yaml' if '", use_sim_time, "' == 'true' else 'real_workspace_parameters.yaml'"])
+    ])
+
+
+    # 4. Define the main sorting node
     pick_and_place_node = Node(
         package="workcell_application",
         executable="pick_and_place",
@@ -47,6 +56,7 @@ def generate_launch_description():
         parameters=[
             moveit_config.to_dict(),      # Loads URDF, SRDF, Kinematics, etc.
             pick_and_place_params_file,           # Loads your custom drop-off coordinates
+            workspace_params_file,                 # Loads workspace safety parameters based on sim vs real
             {
                 "use_sim_time": use_sim_time,
                 "use_sim_gripper": use_sim_time,  # Use sim gripper if using sim time (Webots)
