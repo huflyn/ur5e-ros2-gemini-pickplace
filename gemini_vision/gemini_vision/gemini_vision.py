@@ -418,7 +418,7 @@ class GeminiVisionNode(Node):
         self.get_logger().info(
             "Status:\n" +
             "="*60 + "\n" +
-            "🟢 GeminiVisionNode (Service Node) ready.\n" +
+            "🟢 GeminiVisionNode (Service Node) ready. 🟢\n" +
             f"📷 Subscribed to camera topics: {self.camera_info_topic}, {self.camera_color_image_topic}, {self.camera_depth_image_topic}\n" +
             "👂 Waiting for service call...\n" +
             "\nTo test functionality manually, use:\n" +
@@ -519,7 +519,7 @@ class GeminiVisionNode(Node):
 
         self.get_logger().info(
             "Status:\n" + "="*60 + "\n" +
-            "🟢 GeminiVisionNode (Service Node) ready.\n" +
+            "🟢 GeminiVisionNode (Service Node) ready. 🟢\n" +
             "👂 Waiting for service call...\n" +
             "="*60
         )
