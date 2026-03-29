@@ -54,11 +54,11 @@ Because this node relies on cloud-based AI processing, it requires a valid Googl
 # III) Services, Topics & Custom Messages
 
 **Service Server:**
-* `/detect_bricks` (`brick_interfaces/srv/DetectBricks`): Evaluates the current camera frame. You can pass an empty prompt for default detection, or a custom natural language instruction (e.g., "Sort the red bricks to the left"). Returns an array of valid `LegoBrick` objects.
+* `/detect_objects` (`object_interfaces/srv/DetectObjects`): Evaluates the current camera frame. You can pass an empty prompt for default detection, or a custom natural language instruction (e.g., "Sort the red bricks to the left"). Returns an array of valid `DetectedObject` objects.
 
 **Published Topics:**
 * `/annotated_image` (`sensor_msgs/Image`): Publishes a live, non-blocking visualization at 10 Hz. It draws the bounding boxes, labels, 3D coordinates, and calculated drop-off targets for RViz/RQT.
-* `/tf`: Broadcasts individual `TransformStamped` frames for every detected brick relative to the robot's base frame.
+* `/tf`: Broadcasts individual `TransformStamped` frames for every detected object relative to the robot's base frame.
 
 **Subscribed Topics:**
 * Camera Info, Color Image, and Depth Image (configurable via parameters).
@@ -142,7 +142,7 @@ Once the node is running, you can trigger the vision pipeline directly from the 
     Detects all bricks on the table (default prompt).
 
     ```bash
-    ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks
+    ros2 service call /detect_objects object_interfaces/srv/DetectObjects
     ```
 
 * **Option B: User Prompt Mode** 
@@ -150,7 +150,7 @@ Once the node is running, you can trigger the vision pipeline directly from the 
     Lets you specify a custom natural language instruction to guide the detection and sorting logic. For example, you can ask it to only detect certain colors, or to calculate specific drop-off locations based on the prompt.
 
     ```bash
-    ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks "{user_prompt: 'Pick the red and blue bricks'}"
+    ros2 service call /detect_objects object_interfaces/srv/DetectObjects "{user_prompt: 'Pick the red and blue bricks'}"
     ```
 
 ---

@@ -82,7 +82,7 @@ This repository uses a modular architecture, strictly separating hardware driver
 
 ```bash
 ros2_ws/src/
-├── brick_interfaces              # Custom ROS 2 messages and services
+├── object_interfaces              # Custom ROS 2 messages and services
 ├── color_detection               # Alternative classic perception (OpenCV HSV masking)
 ├── descriptions                  # URDF/Xacro models for the robot, gripper, and environment
 ├── gemini_vision                 # Main AI perception (Gemini API)
@@ -106,7 +106,7 @@ For detailed instructions, please refer to the `README.md` files located inside 
   * **[`workcell_simulation`](/workcell/workcell_simulation/README.md)**: Launch files and worlds for the Webots digital twin environment.
   * **[`workcell_moveit_config`](/workcell/workcell_moveit_config/README.md)**: The MoveIt 2 setup package, containing SRDFs, kinematics, and Pilz/OMPL controller configurations.
   * **[`descriptions`](/descriptions/README.md)**: URDF/Xacro models for the UR5e, the vacuum gripper, and the workcell environment. Used for both simulation and RViz visualization.
-  * **[`brick_interfaces`](/brick_interfaces/README.md)**: Custom ROS 2 messages and services for communication between the vision system and the pick-and-place orchestrator.
+  * **[`object_interfaces`](/object_interfaces/README.md)**: Custom ROS 2 messages and services for communication between the vision system and the pick-and-place orchestrator.
 
 ---
 
@@ -119,7 +119,7 @@ This project uses YAML files to easily adapt to different setups without requiri
 > 
 > **Adapting to your Hardware:** To run this project in your own physical environment, adjust the configuration files to match your specific camera topics, workspace boundaries, and drop-off coordinates.
 
-* **[Grasping Heights & Drop-off Zones](/workcell/workcell_application/README.md#grasping-heights--drop-off-zones) (`workcell_application`):** Defines the safe hover/grasp heights, brick center offsets, and specific Cartesian drop-off coordinates for the pick-and-place orchestrator.
+* **[Grasping Heights & Drop-off Zones](/workcell/workcell_application/README.md#grasping-heights--drop-off-zones) (`workcell_application`):** Defines the safe hover/grasp heights, object center offsets, and specific Cartesian drop-off coordinates for the pick-and-place orchestrator.
   * `workcell/workcell_application/config/pick_and_place_parameters.yaml`
 * **[Workspace Boundaries, Camera & TF Frames](/workcell/workcell_bringup/README.md#ii-workspace-configuration-yaml)  (`workcell_bringup`):** Defines the physical table dimensions (hardware safety limits), camera topic names, and target `tf2` reference frames for both simulation and real hardware.
   * `workcell/workcell_bringup/config/sim_workspace_parameters.yaml`
@@ -138,7 +138,7 @@ To significantly speed up testing and avoid typing long ROS 2 commands, add thes
 
 # Call the vision service directly to test AI reasoning without moving the robot.
 testscan() {
-    ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks "{user_prompt: '$*'}"
+    ros2 service call /detect_objects object_interfaces/srv/DetectObjects "{user_prompt: '$*'}"
 }
 
 # Trigger the actual Pick-and-Place cycle
@@ -233,10 +233,10 @@ This calls the active vision service directly to test the object detection and t
 
 ```bash
 # Default call
-ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks
+ros2 service call /detect_objects object_interfaces/srv/DetectObjects
 
 # Custom natural language instruction (Gemini Vision only)
-ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks "{user_prompt: 'Pick the red and blue bricks'}"
+ros2 service call /detect_objects object_interfaces/srv/DetectObjects "{user_prompt: 'Pick the red and blue bricks'}"
 ```
 
 **Using bash shortcuts:**

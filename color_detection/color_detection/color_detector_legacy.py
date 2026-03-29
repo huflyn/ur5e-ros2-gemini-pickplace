@@ -28,7 +28,7 @@ import tf2_geometry_msgs
 from image_geometry import PinholeCameraModel
 
 # Eigene MSG und Funktionen
-from brick_interfaces.msg import LegoBrick
+from object_interfaces.msg import DetectedObject
 from color_detection.color_functions import detect_color, process_mask, display_information
 
 
@@ -40,7 +40,7 @@ class ColorDetectorOldNode(Node):
         self.bridge = CvBridge()
         self.camera_model = PinholeCameraModel()
         self.depth_image = None
-        self.detected_lego_bricks = []
+        self.detected_detected_objects = []
         self.image_processed = False
         
         # --- TF2 Setup ---
@@ -48,9 +48,9 @@ class ColorDetectorOldNode(Node):
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
         
         # --- Publisher ---
-        self.lego_brick_pub = self.create_publisher(LegoBrick, '/lego_brick_info', 10)
-        self.lego_brick_coords_pub = self.create_publisher(PointStamped, '/lego_brick_coords', 10)
-        self.lego_brick_color_pub = self.create_publisher(String, '/lego_brick_color', 10)
+        self.detected_object_pub = self.create_publisher(DetectedObject, '/detected_object_info', 10)
+        self.detected_object_coords_pub = self.create_publisher(PointStamped, '/detected_object_coords', 10)
+        self.detected_object_color_pub = self.create_publisher(String, '/detected_object_color', 10)
 
         # --- Parameters ---
         # --- Declare basic parameters ---
@@ -60,8 +60,8 @@ class ColorDetectorOldNode(Node):
         self.declare_parameter('camera_frame', 'camera_color_optical_frame')
         self.declare_parameter('robot_base_frame', 'base_link')        
         self.declare_parameter('sort_method', 'y_axis') # Options: 'y_axis' (default, deterministic) or 'random' (prevents endless loops on edge cases)
-        self.declare_parameter('verbose', False) # If True, detailed info about the targeted brick will be printed in the console. Set to False for cleaner output or if you only care about the published messages.
-        self.declare_parameter('brick_width_offset', 0.01) # brick_width_offset since the robot should not aim for the front face of the brick (which the depth sensor detects) but for the center of the brick (beacause camera horizontal, not birds-eye view). Set to 0 if not needed.
+        self.declare_parameter('verbose', False) # If True, detailed info about the targeted object will be printed in the console. Set to False for cleaner output or if you only care about the published messages.
+        self.declare_parameter('object_width_offset', 0.01) # object_width_offset since the robot should not aim for the front face of the object (which the depth sensor detects) but for the center of the object (beacause camera horizontal, not birds-eye view). Set to 0 if not needed.
 
         # --- Read basic parameters ---
         info_topic = self.get_parameter('camera_info_topic').get_parameter_value().string_value
@@ -111,7 +111,7 @@ class ColorDetectorOldNode(Node):
         
         # --- Timer für das Senden ---
         # Führt die Funktion alle 1.0 Sekunden aus
-        self.publish_timer = self.create_timer(1.0, self.publish_bricks_timer_callback)
+        self.publish_timer = self.create_timer(1.0, self.publish_objects_timer_callback)
         
         self.get_logger().info("Color Detector Node (ROS 2) successfully started.") 
 
@@ -155,11 +155,11 @@ class ColorDetectorOldNode(Node):
             return None
 
 
-    def is_duplicate(self, new_point, new_color, existing_bricks, position_threshold=0.1):
-        # Update: existing_bricks now contains tuples of 3 elements (point, color, depth)
-        for brick_data in existing_bricks:
-            existing_point = brick_data[0]
-            existing_color = brick_data[1]
+    def is_duplicate(self, new_point, new_color, existing_objects, position_threshold=0.1):
+        # Update: existing_objects now contains tuples of 3 elements (point, color, depth)
+        for object_data in existing_objects:
+            existing_point = object_data[0]
+            existing_color = object_data[1]
             
             distance = np.sqrt((new_point.point.x - existing_point.point.x) ** 2 +
                                (new_point.point.y - existing_point.point.y) ** 2 +
@@ -209,17 +209,17 @@ class ColorDetectorOldNode(Node):
                     center_y = y + h // 2
                     
                     # Fetch the depth distance silently
-                    brick_depth = display_information(cv2_img, color, x, y, w, h, center_x, center_y, self.depth_image, self.get_logger())
+                    object_depth = display_information(cv2_img, color, x, y, w, h, center_x, center_y, self.depth_image, self.get_logger())
 
-                    if brick_depth is not None:
+                    if object_depth is not None:
                         if self.camera_model.fx() and self.camera_model.fy():
                             ray = self.camera_model.projectPixelTo3dRay((center_x, center_y))
-                            transformed_point = self.transform_point(ray[0] * brick_depth, ray[1] * brick_depth, brick_depth)
+                            transformed_point = self.transform_point(ray[0] * object_depth, ray[1] * object_depth, object_depth)
                             
                             if transformed_point is not None:
-                                if not self.is_duplicate(transformed_point, color, self.detected_lego_bricks):
+                                if not self.is_duplicate(transformed_point, color, self.detected_detected_objects):
                                     # Append ALL 3 values to the list
-                                    self.detected_lego_bricks.append((transformed_point, color, brick_depth))
+                                    self.detected_detected_objects.append((transformed_point, color, object_depth))
 
         # Draw a red rectangle to indicate the safe zone (optional, for debugging)
         cv2.rectangle(cv2_img, (edge_margin_x, edge_margin_y), (img_w - edge_margin_x, img_h - edge_margin_y), (0, 0, 255), 2)
@@ -229,47 +229,47 @@ class ColorDetectorOldNode(Node):
         cv2.waitKey(1)
 
 
-    def publish_bricks_timer_callback(self):
-        """Called by the timer to publish the detected brick(s)."""
-        if self.detected_lego_bricks:
+    def publish_objects_timer_callback(self):
+        """Called by the timer to publish the detected object(s)."""
+        if self.detected_detected_objects:
             
             # Fetch the current sorting method dynamically
             sort_method = self.get_parameter('sort_method').get_parameter_value().string_value
             
             if sort_method == 'random':
                 # Shuffle the list randomly to break deterministic endless loops on unreachable bricks
-                random.shuffle(self.detected_lego_bricks)
-                picked_brick = self.detected_lego_bricks[0]
+                random.shuffle(self.detected_detected_objects)
+                picked_object = self.detected_detected_objects[0]
             else:
-                # Sort ascending by camera depth (brick[2]). 
-                # The closest brick will be at index 0.
-                sorted_bricks = sorted(self.detected_lego_bricks, key=lambda brick: brick[2])
-                picked_brick = sorted_bricks[0]
+                # Sort ascending by camera depth (object[2]). 
+                # The closest object will be at index 0.
+                sorted_objects = sorted(self.detected_detected_objects, key=lambda object: object[2])
+                picked_object = sorted_objects[0]
            
             # Unpack all 3 values
-            brick_point, brick_color, brick_depth = picked_brick
+            object_point, object_color, object_depth = picked_object
 
-            lego_brick_msg = LegoBrick()
-            lego_brick_msg.position = brick_point
-            lego_brick_msg.color.data = brick_color
-            lego_brick_msg.camera_distance_mm = brick_depth
+            detected_object_msg = DetectedObject()
+            detected_object_msg.position = object_point
+            detected_object_msg.color.data = object_color
+            detected_object_msg.camera_distance_mm = object_depth
 
             # Fetch the current logging state dynamically
             verbose = self.get_parameter('verbose').get_parameter_value().bool_value
 
             if verbose:
-                self.get_logger().info(f"\nTargeting {brick_color.upper()} brick at X:{brick_point.point.x:.3f}, Y:{brick_point.point.y:.3f}, Depth:{brick_depth:.1f}mm")
+                self.get_logger().info(f"\nTargeting {object_color.upper()} object at X:{object_point.point.x:.3f}, Y:{object_point.point.y:.3f}, Depth:{object_depth:.1f}mm")
             
-            # brick_width_offset since the robot should not aim for the front face of the brick (which the depth sensor detects) but for the center of the brick (beacause camera horizontal, not birds-eye view)
-            brick_width_offset = self.get_parameter('brick_width_offset').get_parameter_value().double_value
+            # object_width_offset since the robot should not aim for the front face of the object (which the depth sensor detects) but for the center of the object (beacause camera horizontal, not birds-eye view)
+            object_width_offset = self.get_parameter('object_width_offset').get_parameter_value().double_value
 
-            # Adjust the z-coordinate of the brick position by the offset
-            brick_point.point.z -= brick_width_offset
+            # Adjust the z-coordinate of the object position by the offset
+            object_point.point.z -= object_width_offset
 
-            # Publish ONLY the best brick
-            self.lego_brick_pub.publish(lego_brick_msg)
+            # Publish ONLY the best object
+            self.detected_object_pub.publish(detected_object_msg)
                 
-            self.detected_lego_bricks.clear()
+            self.detected_detected_objects.clear()
         
         # Reset flag for the next camera frame
         self.image_processed = False

@@ -1,4 +1,4 @@
-# Brick Interfaces Package (`brick_interfaces`) <!-- omit from toc -->
+# Object Interfaces Package (`object_interfaces`) <!-- omit from toc -->
 
 [![jazzy][jazzy-badge]][jazzy]
 [![ubuntu24][ubuntu24-badge]][ubuntu24]
@@ -12,12 +12,12 @@ This package defines the custom ROS 2 messages (`.msg`) and services (`.srv`) us
 
 ---
 
-- [Custom Message: `LegoBrick.msg`](#custom-message-legobrickmsg)
-- [Custom Service: `DetectBricks.srv`](#custom-service-detectbrickssrv)
+- [Custom Message: `DetectedObject.msg`](#custom-message-detectedobjectmsg)
+- [Custom Service: `DetectObjects.srv`](#custom-service-detectobjectssrv)
 
 ---
 
-# Custom Message: `LegoBrick.msg`
+# Custom Message: `DetectedObject.msg`
 
 Used to encapsulate all consolidated data of a detected object, including its 3D position, orientation, color, bounding box, and optional AI-generated drop-off coordinates.
 
@@ -34,7 +34,7 @@ geometry_msgs/Point user_dropoff_position   # Transformed 3D coordinates of the 
 
 ---
 
-# Custom Service: `DetectBricks.srv`
+# Custom Service: `DetectObjects.srv`
 
 Used to trigger an on-demand image scan and object detection process. It allows passing optional text instructions to the ``gemini_vision`` node to guide the detection and placement logic.
 
@@ -46,6 +46,6 @@ string user_prompt  # Optional: Instructions for the vision model (e.g., "Put al
 # Response
 bool success        # True if the detection process completed without errors
 string message      # Status or error message from the vision node
-LegoBrick[] bricks  # Array of all successfully detected and processed objects
+DetectedObject[] bricks  # Array of all successfully detected and processed objects
 ```
 ---

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(brick_interfaces)
+project(object_interfaces)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -13,8 +13,8 @@ find_package(geometry_msgs REQUIRED)
 
 # 2. Nachrichten generieren
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/LegoBrick.msg"
-  "srv/DetectBricks.srv"
+  "msg/DetectedObject.msg"
+  "srv/DetectObjects.srv"
   DEPENDENCIES std_msgs geometry_msgs
 )
 

@@ -11,7 +11,7 @@
   <depend>moveit_configs_utils</depend>
   <depend>geometry_msgs</depend>
 
-  <depend>brick_interfaces</depend>
+  <depend>object_interfaces</depend>
   
   <exec_depend>tf_transformations</exec_depend>
 

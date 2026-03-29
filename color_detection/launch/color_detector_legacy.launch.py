@@ -31,7 +31,7 @@ def generate_launch_description():
     verbose_arg = DeclareLaunchArgument(
         'verbose',
         default_value='false',
-        description='Set to true to print detected brick coordinates to the terminal'
+        description='Set to true to print detected object coordinates to the terminal'
     )
 
     # Paths to the YAML parameter files
@@ -72,7 +72,7 @@ def generate_launch_description():
             '\nValid Arguments:\n',
             '- use_sim_time (default: false) - Set to true to use Webots simulation topics \n',
             '- sort_method (default: closest) - Can be set to "random" \n',
-            '- verbose (default: false) - Set to true to print detected brick coordinates to the terminal \n',
+            '- verbose (default: false) - Set to true to print detected object coordinates to the terminal \n',
             '========================================='
         ]
     )

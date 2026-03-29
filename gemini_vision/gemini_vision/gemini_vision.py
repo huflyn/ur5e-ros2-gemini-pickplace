@@ -25,8 +25,8 @@ from tf2_geometry_msgs import do_transform_point
 from image_geometry import PinholeCameraModel
 from geometry_msgs.msg import PointStamped, TransformStamped
 
-from brick_interfaces.msg import LegoBrick
-from brick_interfaces.srv import DetectBricks
+from object_interfaces.msg import DetectedObject
+from object_interfaces.srv import DetectObjects
 
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
@@ -74,7 +74,7 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
     {
       "bricks": [
         {
-          "object_name": "<name of the object, e.g., toy brick, pen, screw>",
+          "object_name": "<name of the object, e.g., toy object, pen, screw>",
           "label": "<dominant color, e.g., red, blue, green>",
           "box_2d": [ymin, xmin, ymax, xmax],
           "user_dropoff": boolean,
@@ -114,12 +114,12 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
 # --- PYDANTIC MODELS ---
 
 class BrickDetection(BaseModel):
-    object_name: str = Field(description="Name/type of the object (e.g., 'building brick', 'pen')")
+    object_name: str = Field(description="Name/type of the object (e.g., 'building object', 'pen')")
     label: str = Field(description="Dominant color of the object (e.g., 'red', 'blue')")
     box_2d: List[int] = Field(description="[ymin, xmin, ymax, xmax] normalized 0-1000")
     user_dropoff: bool = Field(
         default=False, 
-        description="True ONLY if the user explicitly specified a custom drop-off location or target for this brick. Otherwise False."
+        description="True ONLY if the user explicitly specified a custom drop-off location or target for this object. Otherwise False."
     )
     dropoff_point_2d: Optional[List[int]] = Field(
         default=None, 
@@ -296,17 +296,17 @@ def draw_point(image, label, y, x, color=(72, 255, 140)):
 
 def draw_all_annotations(image: np.ndarray, detections: List[BrickDetection], img_w: int, img_h: int) -> np.ndarray:
     """Draws all bounding boxes and dropoff points on the image."""
-    for brick in detections:
-        brick_color = get_color_for_label(brick.label)
+    for object in detections:
+        object_color = get_color_for_label(object.label)
 
         # 1. Draw Brick Box (jetzt mit 3D-Koordinatenübergabe)
-        ymin, xmin, ymax, xmax = normalized_to_pixel(brick.box_2d, img_w, img_h)
-        draw_bbox(image, brick.label, ymin, xmin, ymax, xmax, pt_3d=brick.position_3d, color=brick_color)
+        ymin, xmin, ymax, xmax = normalized_to_pixel(object.box_2d, img_w, img_h)
+        draw_bbox(image, object.label, ymin, xmin, ymax, xmax, pt_3d=object.position_3d, color=object_color)
 
         # 2. Draw Dropoff Point
-        if brick.dropoff_point_2d is not None:
-            py, px = normalized_to_pixel(brick.dropoff_point_2d, img_w, img_h)
-            draw_point(image, f"{brick.label} dropoff", py, px, color=brick_color)
+        if object.dropoff_point_2d is not None:
+            py, px = normalized_to_pixel(object.dropoff_point_2d, img_w, img_h)
+            draw_point(image, f"{object.label} dropoff", py, px, color=object_color)
 
     return image
 
@@ -383,12 +383,12 @@ class GeminiVisionNode(Node):
         # 3D & TF2 Parameters
         self.declare_parameter('camera_frame', 'camera_color_optical_frame')
         self.declare_parameter('robot_base_frame', 'base_link')
-        self.declare_parameter('brick_center_offset', 0.0) # Offset from front face to center of brick in meters (for 3D grasping)
+        self.declare_parameter('object_center_offset', 0.0) # Offset from front face to center of object in meters (for 3D grasping)
         self.declare_parameter('max_depth_m', 10.0) # Ignore detections beyond this depth (in meters)
 
         self.camera_frame = self.get_parameter('camera_frame').value
         self.robot_base_frame = self.get_parameter('robot_base_frame').value
-        self.brick_center_offset = self.get_parameter('brick_center_offset').value
+        self.object_center_offset = self.get_parameter('object_center_offset').value
         self.max_depth_m = self.get_parameter('max_depth_m').value
 
         # --- TF2 Setup ---
@@ -415,7 +415,7 @@ class GeminiVisionNode(Node):
 
         # --- Service Server (Multithreaded) ---
         self.srv_cb_group = MutuallyExclusiveCallbackGroup()
-        self.create_service(DetectBricks, '/detect_bricks', self.execute_detection_pipeline, callback_group=self.srv_cb_group)
+        self.create_service(DetectObjects, '/detect_objects', self.execute_detection_pipeline, callback_group=self.srv_cb_group)
         
         # --- Startup Status ---
         self.get_logger().info(
@@ -426,9 +426,9 @@ class GeminiVisionNode(Node):
             "👂 Waiting for service call...\n" +
             "\nTo test functionality manually, use:\n" +
             "🅰️  Default Mode - 'Detects all bricks on the table':\n" +
-            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks\n" +
+            "ros2 service call /detect_objects object_interfaces/srv/DetectObjects\n" +
             "🅱️  User Prompt Mode - add your instructions to the data field:\n" +
-            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks \"{user_prompt: 'Pick the red bricks'}\"\n" +
+            "ros2 service call /detect_objects object_interfaces/srv/DetectObjects \"{user_prompt: 'Pick the red bricks'}\"\n" +
             "="*60
         )
 
@@ -469,39 +469,39 @@ class GeminiVisionNode(Node):
                 # 4. Process 3D Coordinates & build ROS Messages
                 img_h = self.latest_color_msg.height
                 img_w = self.latest_color_msg.width
-                target_brick_msgs = self._process_3d_detections(detections, cv_depth, img_w, img_h)
+                target_object_msgs = self._process_3d_detections(detections, cv_depth, img_w, img_h)
 
                 with self._detection_lock:
                     self.last_detections = detections
                 
                 response.success = True
-                response.message = f"Detected {len(target_brick_msgs)} valid 3D bricks."
-                response.bricks = target_brick_msgs
+                response.message = f"Detected {len(target_object_msgs)} valid 3D bricks."
+                response.bricks = target_object_msgs
 
                 # --- Logging the 3D Coordinates ---
-                if len(target_brick_msgs) > 0:
+                if len(target_object_msgs) > 0:
                     log_msg = f"\n{'='*60}\n"
-                    log_msg += f"🏁 Detected {len(target_brick_msgs)} valid bricks:\n"
-                    brick_number = 0
-                    for brick in target_brick_msgs:
-                        brick_number += 1
-                        x = brick.position.point.x
-                        y = brick.position.point.y
-                        z = brick.position.point.z
-                        color = brick.color.data
-                        distance = brick.camera_distance_mm
+                    log_msg += f"🏁 Detected {len(target_object_msgs)} valid bricks:\n"
+                    object_number = 0
+                    for object in target_object_msgs:
+                        object_number += 1
+                        x = object.position.point.x
+                        y = object.position.point.y
+                        z = object.position.point.z
+                        color = object.color.data
+                        distance = object.camera_distance_mm
                         
                         # String for drop-off coordinates (only if user_dropoff is True)
                         dropoff_str = ""
-                        if brick.has_user_dropoff:
-                            dx = brick.user_dropoff_position.x
-                            dy = brick.user_dropoff_position.y
+                        if object.has_user_dropoff:
+                            dx = object.user_dropoff_position.x
+                            dy = object.user_dropoff_position.y
                             dropoff_str = f" | User-Drop-off: [X: {dx:.3f}, Y: {dy:.3f}]"
                         else:
                             dropoff_str = " | Default Drop-off (see pick_and_place_parameters.yaml)"
 
                         # Log format: "- Red: [X: 0.123, Y: 0.456, Z: 0.789] | Distance: 500 mm | Drop-off: [X: 0.200, Y: 0.300]"
-                        log_msg += f"{brick_number} - {color.capitalize()}: [X: {x:.3f}, Y: {y:.3f}, Z: {z:.3f}] | Distanz: {distance:.0f} mm{dropoff_str}\n"
+                        log_msg += f"{object_number} - {color.capitalize()}: [X: {x:.3f}, Y: {y:.3f}, Z: {z:.3f}] | Distanz: {distance:.0f} mm{dropoff_str}\n"
                         
                     log_msg += f"{'='*60}"
                     self.get_logger().info(log_msg)
@@ -710,10 +710,10 @@ class GeminiVisionNode(Node):
             self.get_logger().info(f"\n{'='*60}\n{tag}:\n{part.text}")
 
 
-    def _process_3d_detections(self, detections: List[BrickDetection], cv_depth: np.ndarray, img_w: int, img_h: int) -> List[LegoBrick]:
+    def _process_3d_detections(self, detections: List[BrickDetection], cv_depth: np.ndarray, img_w: int, img_h: int) -> List[DetectedObject]:
         """Calculates 3D coordinates, updates Pydantic objects, and builds ROS messages."""
-        target_brick_msgs = [] # 
-        brick_counter = {}
+        target_object_msgs = [] # 
+        object_counter = {}
 
         # 1. Look up the TF transform once for the entire batch
         try:
@@ -725,21 +725,21 @@ class GeminiVisionNode(Node):
             self.get_logger().error(f"TF lookup failed: {e}")
             return []
 
-        for brick in detections:
-            color = brick.label.lower()
-            ymin, xmin, ymax, xmax = normalized_to_pixel(brick.box_2d, img_w, img_h)
+        for object in detections:
+            color = object.label.lower()
+            ymin, xmin, ymax, xmax = normalized_to_pixel(object.box_2d, img_w, img_h)
             
             # --- Aspect Ratio & Yaw ---
             w = xmax - xmin
             h = ymax - ymin
             aspect_ratio = w / h if h > 0 else 0.0
-            brick.yaw_degrees = 0.0 if 0 < aspect_ratio < 1.41 else 30.0
+            object.yaw_degrees = 0.0 if 0 < aspect_ratio < 1.41 else 30.0
 
             # --- Robust Depth for Brick ---
-            depth_mm = get_robust_depth(brick.box_2d, cv_depth, img_w, img_h)
+            depth_mm = get_robust_depth(object.box_2d, cv_depth, img_w, img_h)
             
             if depth_mm is not None:
-                z = (depth_mm / 1000.0) + self.brick_center_offset
+                z = (depth_mm / 1000.0) + self.object_center_offset
                 
                 if 0.03 < z <= self.max_depth_m:
                     # 2D Center to 3D Ray projection
@@ -759,7 +759,7 @@ class GeminiVisionNode(Node):
                     pt_base = do_transform_point(pt_cam, tf_cam_to_base)
                     
                     # Store in Pydantic for drawing
-                    brick.position_3d = [pt_base.point.x, pt_base.point.y, pt_base.point.z]
+                    object.position_3d = [pt_base.point.x, pt_base.point.y, pt_base.point.z]
                     
                     # --- Debug ---
                     self.get_logger().info(
@@ -771,30 +771,30 @@ class GeminiVisionNode(Node):
                     )
 
                     # --- Build ROS Message ---
-                    msg = LegoBrick()
+                    msg = DetectedObject()
                     msg.color.data = color
                     msg.position = pt_base
                     msg.camera_distance_mm = z * 1000.0
-                    msg.yaw_degrees = brick.yaw_degrees
+                    msg.yaw_degrees = object.yaw_degrees
                     msg.bounding_box_px = [ymin, xmin, ymax, xmax]
                     msg.has_user_dropoff = False
 
                     # --- Robust Depth for Drop-off ---
                     # --- 1. Visual Drop-off (2D Point provided by Gemini) ---
-                    if brick.dropoff_point_2d:
-                        drop_depth_mm = get_robust_depth(brick.dropoff_point_2d, cv_depth, img_w, img_h)
+                    if object.dropoff_point_2d:
+                        drop_depth_mm = get_robust_depth(object.dropoff_point_2d, cv_depth, img_w, img_h)
 
-                        # Fallback to brick depth if dropoff pixel has no depth
+                        # Fallback to object depth if dropoff pixel has no depth
                         if drop_depth_mm is None:
                             self.get_logger().warn(
-                                f"No depth at dropoff for '{color}'. Using brick depth as fallback."
+                                f"No depth at dropoff for '{color}'. Using object depth as fallback."
                             )
                             drop_depth_mm = depth_mm
     
 
                         if drop_depth_mm is not None:
                             drop_z = drop_depth_mm / 1000.0
-                            dy, dx = normalized_to_pixel(brick.dropoff_point_2d, img_w, img_h)
+                            dy, dx = normalized_to_pixel(object.dropoff_point_2d, img_w, img_h)
                             drop_ray = self.camera_model.projectPixelTo3dRay((dx, dy))
                             scale = drop_z / drop_ray[2]
                             
@@ -805,28 +805,28 @@ class GeminiVisionNode(Node):
                             drop_cam.point.z = drop_z
                             
                             drop_base = do_transform_point(drop_cam, tf_cam_to_base)
-                            brick.dropoff_3d = [drop_base.point.x, drop_base.point.y, drop_base.point.z]
+                            object.dropoff_3d = [drop_base.point.x, drop_base.point.y, drop_base.point.z]
                             
                             msg.has_user_dropoff = True
                             msg.user_dropoff_position = drop_base.point
 
                     # --- 2. Direct Metric Drop-off (Explicit X/Y provided by Gemini) ---
-                    elif brick.dropoff_coords_m:
+                    elif object.dropoff_coords_m:
                         msg.has_user_dropoff = True
-                        msg.user_dropoff_position.x = float(brick.dropoff_coords_m[0])
-                        msg.user_dropoff_position.y = float(brick.dropoff_coords_m[1])
-                        # Use the Z coordinate (height) of the detected brick as the table surface height
+                        msg.user_dropoff_position.x = float(object.dropoff_coords_m[0])
+                        msg.user_dropoff_position.y = float(object.dropoff_coords_m[1])
+                        # Use the Z coordinate (height) of the detected object as the table surface height
                         msg.user_dropoff_position.z = pt_base.point.z
                         
                         # Store in Pydantic for internal handling
-                        brick.dropoff_3d = [msg.user_dropoff_position.x, msg.user_dropoff_position.y, msg.user_dropoff_position.z]
+                        object.dropoff_3d = [msg.user_dropoff_position.x, msg.user_dropoff_position.y, msg.user_dropoff_position.z]
 
-                    target_brick_msgs.append(msg)
+                    target_object_msgs.append(msg)
 
                     # --- TF Broadcasting ---
-                    count = brick_counter.get(color, 0)
-                    brick_counter[color] = count + 1
-                    child_frame = f"brick_{color}_{count}"
+                    count = object_counter.get(color, 0)
+                    object_counter[color] = count + 1
+                    child_frame = f"object_{color}_{count}"
                     
                     t = TransformStamped()
                     t.header.stamp = self.get_clock().now().to_msg()
@@ -836,12 +836,12 @@ class GeminiVisionNode(Node):
                     t.transform.translation.y = pt_base.point.y
                     t.transform.translation.z = pt_base.point.z
                     
-                    yaw_rad = math.radians(brick.yaw_degrees)
+                    yaw_rad = math.radians(object.yaw_degrees)
                     t.transform.rotation.z = math.sin(yaw_rad / 2.0)
                     t.transform.rotation.w = math.cos(yaw_rad / 2.0)
                     self.tf_broadcaster.sendTransform(t)
 
-        return target_brick_msgs
+        return target_object_msgs
 
 
 

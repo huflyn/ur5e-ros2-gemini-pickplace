@@ -20,20 +20,20 @@ import tf2_geometry_msgs
 from image_geometry import PinholeCameraModel
 
 # Eigene MSG, SRV und Funktionen
-from brick_interfaces.msg import LegoBrick
-from brick_interfaces.srv import DetectBricks
+from object_interfaces.msg import DetectedObject
+from object_interfaces.srv import DetectObjects
 from color_detection.color_functions import detect_color, process_mask
 
 
-def draw_brick_annotation(cv_image, color_name, xmin, ymin, xmax, ymax, pt_x, pt_y, draw_color=(0, 255, 0)):
+def draw_object_annotation(cv_image, color_name, xmin, ymin, xmax, ymax, pt_x, pt_y, draw_color=(0, 255, 0)):
     """
     Draws a bounding box, center point, and multi-line 3D coordinate text 
-    with high-contrast outlines for a detected brick.
+    with high-contrast outlines for a detected object.
 
     cv_image: The OpenCV image to draw on (BGR format).
-    color_name: The name of the brick color (e.g., "red").
+    color_name: The name of the object color (e.g., "red").
     xmin, ymin, xmax, ymax: Pixel coordinates of the bounding box.
-    pt_x, pt_y: The 3D coordinates of the brick (for annotation).
+    pt_x, pt_y: The 3D coordinates of the object (for annotation).
     draw_color: The color to use for drawing (default is green).
     """
     center_x = (xmin + xmax) // 2
@@ -92,7 +92,7 @@ class ColorDetectorNode(Node):
         self.declare_parameter('color_image_topic', '/camera/color/image_raw')
         self.declare_parameter('camera_frame', 'camera_color_optical_frame')
         self.declare_parameter('robot_base_frame', 'base_link')        
-        self.declare_parameter('brick_center_offset', 0.0) # in m. Offset to reach brick center instead of front face
+        self.declare_parameter('object_center_offset', 0.0) # in m. Offset to reach object center instead of front face
 
         info_topic = self.get_parameter('camera_info_topic').value
         depth_topic = self.get_parameter('depth_image_topic').value
@@ -137,14 +137,14 @@ class ColorDetectorNode(Node):
         self.vis_timer = self.create_timer(1.0 / update_rate_hz, self.annotate_timer_callback)
 
         # State variables for continuous live annotation
-        self.last_brick_annotations = []
+        self.last_object_annotations = []
         self.last_no_depth_annotations = []
         
         # --- Service Server (Multithreaded) ---
         # Isolate the service callback into its own group to prevent blocking the image subscriber
         self.srv_cb_group = MutuallyExclusiveCallbackGroup()
         self.detect_srv = self.create_service(
-            DetectBricks, '/detect_bricks', self.detect_callback,
+            DetectObjects, '/detect_objects', self.detect_callback,
             callback_group=self.srv_cb_group
         )
 
@@ -155,7 +155,7 @@ class ColorDetectorNode(Node):
             "🟢 ColorDetectorNode (Service Node) ready.\n" +
             "👂 Waiting for service call from client...\n" +
             "To test functionality manually, use:\n" +
-            "ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks\n" +
+            "ros2 service call /detect_objects object_interfaces/srv/DetectObjects\n" +
             "(Note: The user_prompt field is ignored in the deterministic OpenCV mode)\n" +
             "="*60
         )
@@ -184,10 +184,10 @@ class ColorDetectorNode(Node):
         try:
             cv_bgr = self.bridge.imgmsg_to_cv2(self.latest_color_msg, "bgr8").copy() # Copy to avoid modifying the original message's data
 
-            # Draw latest known brick detections
-            for ann in self.last_brick_annotations:
+            # Draw latest known object detections
+            for ann in self.last_object_annotations:
                 color, xmin, ymin, xmax, ymax, pt_x, pt_y = ann
-                draw_brick_annotation(cv_bgr, color, xmin, ymin, xmax, ymax, pt_x, pt_y, (255, 255, 255))
+                draw_object_annotation(cv_bgr, color, xmin, ymin, xmax, ymax, pt_x, pt_y, (255, 255, 255))
 
             # Draw "no depth" error markers with red bounding box
             for ann in self.last_no_depth_annotations:
@@ -228,13 +228,13 @@ class ColorDetectorNode(Node):
             self.get_logger().warn(f"TF Error: {e}")
             return None
 
-    def is_duplicate(self, new_point, new_color, existing_bricks, position_threshold=0.02):
-        for brick_msg in existing_bricks:
-            if new_color == brick_msg.color.data:
+    def is_duplicate(self, new_point, new_color, existing_objects, position_threshold=0.02):
+        for object_msg in existing_objects:
+            if new_color == object_msg.color.data:
                 dist = np.sqrt(
-                    (new_point.point.x - brick_msg.position.point.x)**2 +
-                    (new_point.point.y - brick_msg.position.point.y)**2 +
-                    (new_point.point.z - brick_msg.position.point.z)**2
+                    (new_point.point.x - object_msg.position.point.x)**2 +
+                    (new_point.point.y - object_msg.position.point.y)**2 +
+                    (new_point.point.z - object_msg.position.point.z)**2
                 )
                 if dist < position_threshold:
                     return True
@@ -242,9 +242,9 @@ class ColorDetectorNode(Node):
 
     def detect_callback(self, request, response):
         """Triggered by the orchestrator to perform an on-demand scan.
-          ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks
+          ros2 service call /detect_objects object_interfaces/srv/DetectObjects
         """
-        self.get_logger().info("Service /detect_bricks called (Color-Detector).")
+        self.get_logger().info("Service /detect_objects called (Color-Detector).")
 
         if self.latest_color_msg is None or self.latest_depth_msg is None:
             self.get_logger().error("⚠️ NO IMAGES RECEIVED! Make sure Webots is publishing BOTH color and depth topics.")
@@ -278,10 +278,10 @@ class ColorDetectorNode(Node):
         colors = ['green', 'yellow', 'red', 'blue']
         img_h, img_w = cv_color.shape[:2]
         
-        # Add brick width offset to ensure we target the center of the brick rather than the front face
-        brick_center_offset = self.get_parameter('brick_center_offset').value
-        detected_bricks = []
-        new_brick_anns = []
+        # Add object width offset to ensure we target the center of the object rather than the front face
+        object_center_offset = self.get_parameter('object_center_offset').value
+        detected_objects = []
+        new_object_anns = []
         new_no_depth_anns = []
 
         # Find bricks using HSV masks
@@ -326,66 +326,66 @@ class ColorDetectorNode(Node):
                     valid_depth = region[(region > 0) & np.isfinite(region)]
 
                     if valid_depth.size == 0:
-                        self.get_logger().warn(f"No valid depth for {color} brick")
+                        self.get_logger().warn(f"No valid depth for {color} object")
                         new_no_depth_anns.append((color, x, y, x+w, y+h))
                         continue
 
                     # Get the median depth (filters out studs and noise)
                     raw_front_depth = float(np.median(valid_depth))
 
-                    # Apply the offset to reach the physical center of the brick
-                    brick_depth = raw_front_depth + (brick_center_offset * 1000.0)
+                    # Apply the offset to reach the physical center of the object
+                    object_depth = raw_front_depth + (object_center_offset * 1000.0)
                     
                     ray = self.camera_model.projectPixelTo3dRay((center_x, center_y))
-                    transformed_point = self.transform_point(ray[0] * brick_depth, ray[1] * brick_depth, brick_depth)
+                    transformed_point = self.transform_point(ray[0] * object_depth, ray[1] * object_depth, object_depth)
                     
                     if transformed_point is not None:
-                        if not self.is_duplicate(transformed_point, color, detected_bricks):
+                        if not self.is_duplicate(transformed_point, color, detected_objects):
                             
-                            msg = LegoBrick()
+                            msg = DetectedObject()
                             msg.position = transformed_point
                             msg.color.data = color
-                            msg.camera_distance_mm = float(brick_depth)
+                            msg.camera_distance_mm = float(object_depth)
                             msg.yaw_degrees = yaw_degrees
                             msg.bounding_box_px = [x, y, x+w, y+h]
                             
-                            detected_bricks.append(msg)
+                            detected_objects.append(msg)
 
                             # --- Annotation ---
-                            new_brick_anns.append((color, x, y, x+w, y+h, transformed_point.point.x, transformed_point.point.y))
+                            new_object_anns.append((color, x, y, x+w, y+h, transformed_point.point.x, transformed_point.point.y))
 
                             self.get_logger().info(
                                 f"{color:>8s}: X={transformed_point.point.x:.3f}, Y={transformed_point.point.y:.3f}, Z={transformed_point.point.z:.3f}, " + 
-                                f"Aspect Ratio={aspect_ratio:.2f}, Yaw={yaw_degrees:.2f} degrees, Depth={brick_depth:.1f}mm"
+                                f"Aspect Ratio={aspect_ratio:.2f}, Yaw={yaw_degrees:.2f} degrees, Depth={object_depth:.1f}mm"
                             )
         
         # Construct and send response
         response.success = True
         response.message = ""
-        response.bricks = detected_bricks
+        response.bricks = detected_objects
 
         # --- Broadcast TF Frames for RViz ---
         # Iterate through the final list of detected bricks and send a TF for each
-        brick_counter = {}
-        for brick in detected_bricks:
-            color = brick.color.data
+        object_counter = {}
+        for object in detected_objects:
+            color = object.color.data
             
-            # Track counts to create unique TF names (e.g., 'brick_red_0')
-            count = brick_counter.get(color, 0)
-            brick_counter[color] = count + 1
+            # Track counts to create unique TF names (e.g., 'object_red_0')
+            count = object_counter.get(color, 0)
+            object_counter[color] = count + 1
             
             t = TransformStamped()
             t.header.stamp = self.get_clock().now().to_msg()
             t.header.frame_id = self.robot_base_frame
-            t.child_frame_id = f"brick_{color}_{count}"
+            t.child_frame_id = f"object_{color}_{count}"
             
             # Apply 3D position
-            t.transform.translation.x = brick.position.point.x
-            t.transform.translation.y = brick.position.point.y
-            t.transform.translation.z = brick.position.point.z
+            t.transform.translation.x = object.position.point.x
+            t.transform.translation.y = object.position.point.y
+            t.transform.translation.z = object.position.point.z
             
             # Convert yaw (degrees) to quaternion for Z-axis rotation
-            yaw_rad = math.radians(brick.yaw_degrees)
+            yaw_rad = math.radians(object.yaw_degrees)
             t.transform.rotation.x = 0.0
             t.transform.rotation.y = 0.0
             t.transform.rotation.z = math.sin(yaw_rad / 2.0)
@@ -395,10 +395,10 @@ class ColorDetectorNode(Node):
             self.tf_broadcaster.sendTransform(t)
         # ------------------------------------
 
-        self.get_logger().info(f"Returning {len(detected_bricks)} brick(s). Service call complete.")
+        self.get_logger().info(f"Returning {len(detected_objects)} object(s). Service call complete.")
 
         # Update live stream array
-        self.last_brick_annotations = new_brick_anns
+        self.last_object_annotations = new_object_anns
         self.last_no_depth_annotations = new_no_depth_anns
 
         self.get_logger().info(

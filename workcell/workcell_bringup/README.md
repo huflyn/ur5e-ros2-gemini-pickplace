@@ -152,10 +152,10 @@ This calls the active vision service directly to test the object detection and t
 
 ```bash
 # Default call
-ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks
+ros2 service call /detect_objects object_interfaces/srv/DetectObjects
 
 # Custom natural language instruction (Gemini Vision only)
-ros2 service call /detect_bricks brick_interfaces/srv/DetectBricks "{user_prompt: 'Pick the red and blue bricks'}"
+ros2 service call /detect_objects object_interfaces/srv/DetectObjects "{user_prompt: 'Pick the red and blue bricks'}"
 ```
 
 **Using bash shortcuts:**

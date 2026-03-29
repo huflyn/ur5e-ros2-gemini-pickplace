@@ -16,7 +16,7 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>image_geometry</depend>
   
-  <depend>brick_interfaces</depend>
+  <depend>object_interfaces</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
