@@ -777,6 +777,7 @@ class GeminiVisionNode(Node):
                     msg.has_user_dropoff = False
 
                     # --- Robust Depth for Drop-off ---
+                    # --- 1. Visual Drop-off (2D Point provided by Gemini) ---
                     if brick.dropoff_point_2d:
                         drop_depth_mm = get_robust_depth(brick.dropoff_point_2d, cv_depth, img_w, img_h)
 
@@ -805,6 +806,17 @@ class GeminiVisionNode(Node):
                             
                             msg.has_user_dropoff = True
                             msg.user_dropoff_position = drop_base.point
+
+                    # --- 2. Direct Metric Drop-off (Explicit X/Y provided by Gemini) ---
+                    elif brick.dropoff_coords_m:
+                        msg.has_user_dropoff = True
+                        msg.user_dropoff_position.x = float(brick.dropoff_coords_m[0])
+                        msg.user_dropoff_position.y = float(brick.dropoff_coords_m[1])
+                        # Use the Z coordinate (height) of the detected brick as the table surface height
+                        msg.user_dropoff_position.z = pt_base.point.z
+                        
+                        # Store in Pydantic for internal handling
+                        brick.dropoff_3d = [msg.user_dropoff_position.x, msg.user_dropoff_position.y, msg.user_dropoff_position.z]
 
                     target_brick_msgs.append(msg)
 
