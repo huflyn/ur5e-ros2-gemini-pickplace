@@ -192,7 +192,8 @@ def main(args=None):
         logger.info("Shutting down verification script.")
         logger.info("="*50 + "\n")
         trigger_node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok(): 
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

@@ -88,7 +88,8 @@ def main(args=None):
         node.get_logger().info("Tuner stopped.")
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok(): 
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

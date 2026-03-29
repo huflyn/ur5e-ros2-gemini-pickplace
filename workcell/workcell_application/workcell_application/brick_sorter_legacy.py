@@ -351,7 +351,8 @@ def main(args=None):
         logger.info("Application manually stopped.")
     finally:
         brick_sorter_node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok(): 
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
