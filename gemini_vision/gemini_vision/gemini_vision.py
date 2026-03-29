@@ -74,7 +74,8 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
     {
       "bricks": [
         {
-          "label": "<color or object name>",
+          "object_name": "<name of the object, e.g., lego brick, pen, screw>",
+          "label": "<dominant color, e.g., red, blue, green>",
           "box_2d": [ymin, xmin, ymax, xmax],
           "user_dropoff": boolean,
           "dropoff_point_2d": [y, x] | null,
@@ -84,12 +85,13 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
     }
 
     JSON Field Instructions:
-    1. label: Simple colors for Lego bricks, or the object name for non-lego items.
-    2. box_2d: Bounding box of the object. Normalized integers 0-1000.
-    3. user_dropoff: Evaluate this STRICTLY PER INDIVIDUAL OBJECT.
+    1. object_name: The type of object detected.
+    2. label: ONLY the simple dominant color of the object (e.g., "red"). This is crucial for backend routing.
+    3. box_2d: Bounding box of the object. Normalized integers 0-1000.
+    4. user_dropoff: Evaluate this STRICTLY PER INDIVIDUAL OBJECT.
        - Set to true if the user specifies a destination. This destination can be EITHER a VISUAL TARGET visible in the image (e.g., "on the colored areas", "next to the blue block") OR explicit METRIC COORDINATES provided in the text (e.g., "put it at x=0.5, y=0.1").
        - Set to false ONLY if the user asks to pick or sort objects WITHOUT specifying any destination at all (e.g., "pick all red bricks", "sort the bricks by color").
-    4. dropoff_point_2d: 
+    5. dropoff_point_2d: 
        - If user_dropoff is true AND the target is visual, return the dropoff point [y, x] in normalized integers 0-1000.
        - If the target is strictly metric coordinates, or if user_dropoff is false, this MUST be null.
        CRITICAL CONSTRAINT FOR VISUAL DROPOFFS: The drop-off point MUST be located strictly on the flat wooden table surface visible at the bottom of the image. 
@@ -97,7 +99,7 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
        - Look at the y-coordinates of the detected objects resting on the table. Your drop-off y-coordinate must fall within that same horizontal band (typically y > 700).
        - COLLISION AVOIDANCE: Ensure the drop-off point is NOT located on top of or too close to OTHER currently unpicked objects on the table. Find a clear, empty spot within the target area to avoid blocking future picks.
        - GROUPING RULE: If multiple objects belong to the exact same visual target area, use the EXACT SAME center point [y, x] for all of them. Do NOT calculate spatial offsets to place them side-by-side UNLESS the user explicitly instructs you to do so.
-    5. dropoff_coords_m:
+    6. dropoff_coords_m:
        - If user_dropoff is true AND the user provided explicit numerical metric coordinates in the prompt (e.g., "x=0.4, y=0.5"), return them here as [x, y] floats in meters. 
        - Otherwise, this MUST be null.
 
@@ -112,7 +114,8 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
 # --- PYDANTIC MODELS ---
 
 class BrickDetection(BaseModel):
-    label: str = Field(description="Brick color")
+    object_name: str = Field(description="Name/type of the object (e.g., 'lego brick', 'pen')")
+    label: str = Field(description="Dominant color of the object (e.g., 'red', 'blue')")
     box_2d: List[int] = Field(description="[ymin, xmin, ymax, xmax] normalized 0-1000")
     user_dropoff: bool = Field(
         default=False, 
