@@ -27,8 +27,8 @@ def generate_launch_description():
     )
 
     # Paths to the YAML parameter files
-    sim_parameters = os.path.join(bringup_pkg_dir, 'config', 'sim_camera_parameters.yaml')
-    real_parameters = os.path.join(bringup_pkg_dir, 'config', 'real_camera_parameters.yaml')
+    sim_parameters = os.path.join(bringup_pkg_dir, 'config', 'sim_workspace_parameters.yaml')
+    real_parameters = os.path.join(bringup_pkg_dir, 'config', 'real_workspace_parameters.yaml')
 
     # Evaluate which parameter file to load based on use_sim_time
     param_file = PythonExpression([

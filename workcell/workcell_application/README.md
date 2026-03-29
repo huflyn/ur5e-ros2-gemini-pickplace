@@ -20,6 +20,8 @@ This package manages high-level robot control for the Pick-and-Place application
 - [I) Package Structure](#i-package-structure)
 - [II) Workflow of `pick_and_place.py`](#ii-workflow-of-pick_and_placepy)
 - [III) Configuration (YAML)](#iii-configuration-yaml)
+  - [Grasping Heights \& Drop-off Zones](#grasping-heights--drop-off-zones)
+  - [Safe Workspace Boundaries (Sanity Check)](#safe-workspace-boundaries-sanity-check)
 - [IV) Starting the Pick-and-Place Application](#iv-starting-the-pick-and-place-application)
   - [Step 1: Start the Robot and Camera (Real or Simulated)](#step-1-start-the-robot-and-camera-real-or-simulated)
     - [Option A: Simulation (Webots)](#option-a-simulation-webots)
@@ -64,6 +66,10 @@ This node utilizes a hybrid motion planning architecture, seamlessly switching b
 
 # III) Configuration (YAML)
 
+To keep the application flexible and adaptable to different physical environments, the orchestrator relies on YAML parameter files. This allows you to adjust heights, drop-off locations, and safety limits without having to modify or recompile the underlying Python code.
+
+## Grasping Heights & Drop-off Zones
+
 Fallback sorting locations, center offsets, and safe heights are managed via **`config/pick_and_place_parameters.yaml`**. This allows for layout adjustments without modifying the source code. Adjust the parameters based on your specific setup.
 
 ```yaml
@@ -84,6 +90,12 @@ pick_and_place_node:
     dropoff_red: [0.275, 0.39]
     dropoff_green: [0.275, 0.27]
 ```
+
+## Safe Workspace Boundaries (Sanity Check)
+
+To prevent MoveIt collisions and protect the real hardware from invalid coordinates (especially when using AI-calculated drop-offs), this orchestrator implements a strict pre-motion boundary check. 
+
+The physical table limits (`workspace_min_x`, `workspace_max_y`, etc.) and the toggle to enable this safety feature are loaded globally from the **[`workcell_bringup`](../workcell_bringup/README.md#ii-workspace-configuration-yaml)** `sim_workspace_parameters.yaml` and `real_workspace_parameters.yaml` files. If a target coordinate falls outside the physical table plus the allowed tolerance, the robot will safely abort the current item and move to the next one.
 
 ---
 

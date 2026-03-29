@@ -116,12 +116,12 @@ For detailed instructions, please refer to the `README.md` files located inside 
 > [!NOTE]
 > Before running the physical hardware or modifying the workspace layout, you may need to adjust the centralized configuration files. These YAML files allow you to adapt the system to your specific environment without changing the source code.
 
-* **Workspace Layout (`workcell_application`):** Defines the safe hover/grasp heights, brick center offsets, and specific Cartesian drop-off coordinates for the pick-and-place orchestrator.
+* **[Grasping Heights & Drop-off Zones](/workcell/workcell_application/README.md#grasping-heights--drop-off-zones) (`workcell_application`):** Defines the safe hover/grasp heights, brick center offsets, and specific Cartesian drop-off coordinates for the pick-and-place orchestrator.
   * `workcell/workcell_application/config/pick_and_place_parameters.yaml`
-* **Camera & TF Frames (`workcell_bringup`):** Defines the camera topic names and target `tf2` reference frames for both simulation and real hardware.
-  * `workcell/workcell_bringup/config/sim_camera_parameters.yaml`
-  * `workcell/workcell_bringup/config/real_camera_parameters.yaml`
-* **Color Thresholds (`color_detection`):** If you are using the classic HSV vision mode instead of the Gemini AI, this file stores the upper and lower bounds for color masking.
+* **[Workspace Boundaries, Camera & TF Frames](/workcell/workcell_bringup/README.md#ii-workspace-configuration-yaml)  (`workcell_bringup`):** Defines the physical table dimensions (hardware safety limits), camera topic names, and target `tf2` reference frames for both simulation and real hardware.
+  * `workcell/workcell_bringup/config/sim_workspace_parameters.yaml`
+  * `workcell/workcell_bringup/config/real_workspace_parameters.yaml`
+* **[Color Thresholds](/color_detection/README.md#iii-configuration--camera-setup-yaml) (`color_detection`):** If you are using the classic HSV vision mode instead of the Gemini AI, this file stores the upper and lower bounds for color masking.
   * `color_detection/config/hsv_bounds.yaml`
 
 ---

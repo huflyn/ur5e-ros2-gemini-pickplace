@@ -16,7 +16,7 @@ This package detects colored Lego bricks using a camera stream (RGB + Depth). It
 
 - [I) Package Structure](#i-package-structure)
 - [II) Services, Topics \& Custom Messages](#ii-services-topics--custom-messages)
-- [III) Configuration \& Camera Setup (YAML)](#iii-configuration--camera-setup-yaml)
+- [III) Configuration (YAML)](#iii-configuration-yaml)
 - [IV) Launch color\_detector (Service Node)](#iv-launch-color_detector-service-node)
 - [V) Launch color\_detector\_legacy (Topic-based Node)](#v-launch-color_detector_legacy-topic-based-node)
 - [VI) Using the HSV Tuner](#vi-using-the-hsv-tuner)
@@ -59,32 +59,15 @@ int32[] bounding_box_px              # Bounding box array [xmin, ymin, xmax, yma
 
 ---
 
-# III) Configuration & Camera Setup (YAML)
+# III) Configuration (YAML)
 
 The configuration for this node relies on parameter files distributed across two locations to cleanly separate global camera settings from local color thresholds:
 
-  * **`workcell_bringup/config/`** **`sim_camera_parameters.yaml`** & **`real_camera_parameters.yaml`**: These centralized files store the camera topic names and the target `tf2` frames. This allows the entire workcell to easily switch between Webots simulation and real-world hardware.
-  * **`color_detection/config/hsv_bounds.yaml`**: This local file centrally stores the specific HSV color limits for all detected Lego bricks.
+  * **[Global Workspace Parameters](/workcell/workcell_bringup/README.md#ii-workspace-configuration-yaml) (`workcell_bringup`):** Centralized files (`sim_workspace_parameters.yaml` and `real_workspace_parameters.yaml`) that store the camera topic names, the target `tf2` frames, and the workspace boundaries.
+  * **Local Color Parameters (`color_detection`):** The local `hsv_bounds.yaml` file that stores the specific HSV color limits for all detected Lego bricks.
 
 > [!IMPORTANT]
-> Before running the node on a new setup, you must adjust the **camera topics** and the **`tf2` frames** in the respective `workcell_bringup` YAML files, as well as calibrate the **HSV bounds** in the local `hsv_bounds.yaml`.
-
-Example `sim_camera_parameters.yaml` (located in `workcell_bringup/config/`):
-
-```yaml
-/**:
-  ros__parameters:
-    # --- Camera Topics ---
-    camera_info_topic: '/webots_realsense/depth/image_rect_raw/camera_info'
-    depth_image_topic: '/webots_realsense/depth/image_rect_raw/image'
-    color_image_topic: '/webots_realsense/color/image_raw/image_color'
-
-    # Frame of the camera for TF transformations
-    camera_frame: 'd415_sim_optical_frame'
-
-    # Target frame for the 3D coordinates
-    robot_base_frame: 'ur5e_base_link'
-```
+> Before running the node in a new lighting environment, you must calibrate the **HSV bounds** in the local `hsv_bounds.yaml` using the provided tuning tool.
 
 Example `hsv_bounds.yaml` (located in `color_detection/config/`):
 
