@@ -14,7 +14,10 @@
 
 This repository demonstrates how to integrate vision-language models (like Gemini 3.1 Flash-Lite and Gemini Robotics-ER 1.5) with a Universal Robots UR5e manipulator in a ROS 2 Jazzy environment. 
 
-The project features a complete perception-to-action pipeline. It utilizes the Gemini API for advanced spatial reasoning and natural language processing, and MoveIt 2 for hybrid motion planning (OMPL + Pilz LIN/PTP).
+The project features a complete, object-agnostic perception-to-action pipeline. It utilizes the Gemini API for advanced spatial reasoning and natural language processing, and MoveIt 2 for hybrid motion planning (OMPL + Pilz LIN/PTP). 
+
+> [!Note]
+> **Project Test Use Case:** While the ROS 2 backend is designed to be universally applicable to any generic object, our primary test scenario involves sorting colored building blocks (toy bricks). You will see this specific use case reflected in the default AI prompts and examples, but the system can easily be adapted for other items (e.g., pens, screws, or industrial parts) simply by changing the prompt instructions. Of course, the objects should be reasonably sized for the UR5e's payload and gripper capabilities.
 
 https://github.com/user-attachments/assets/ba4a9620-bd2b-4814-b3d8-9d6d37d2f78e
 
@@ -221,7 +224,7 @@ Append the `vision` argument to use classic OpenCV computer vision:
 Once the master launch file has finished its sequence, the robot will move to its `ready` pose and wait in STANDBY mode.
 
 > [!NOTE]
-> If you launched the system in **`legacy`** vision mode (`vision:=legacy`), the robot will not wait for a manual trigger. It will automatically start sorting as soon as bricks appear in the camera's view and match the configured HSV color bounds.
+> If you launched the system in **`legacy`** vision mode (`vision:=legacy`), the robot will not wait for a manual trigger. It will automatically start sorting as soon as objects appear in the camera's view and match the configured HSV color bounds.
 
 For the `gemini` and `hsv` modes, open a **new terminal** to interact with the system. You can trigger actions using standard ROS 2 CLI commands or the convenient bash shortcuts (if you configured them as shown in **[Section IV](#v-workflow-tips-bash-shortcuts)**).
 
