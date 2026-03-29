@@ -75,7 +75,7 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
       "objects": [
         {
           "object_name": "<name of the object, e.g., toy object, pen, screw>",
-          "label": "<dominant color, e.g., red, blue, green>",
+          "label": "<color of the object, e.g., red, blue, green>",
           "box_2d": [ymin, xmin, ymax, xmax],
           "user_dropoff": boolean,
           "dropoff_point_2d": [y, x] | null,
@@ -85,12 +85,12 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
     }
 
     JSON Field Instructions:
-    1. object_name: The type of object detected.
-    2. label: ONLY the simple dominant color of the object (e.g., "red"). This is crucial for backend routing.
+    1. object_name: The type of object detected, no color information
+    2. label: Color information. ONLY the simple dominant color of the object (e.g., "red"). This is crucial for backend routing.
     3. box_2d: Bounding box of the object. Normalized integers 0-1000.
     4. user_dropoff: Evaluate this STRICTLY PER INDIVIDUAL OBJECT.
-       - Set to true if the user specifies a destination. This destination can be EITHER a VISUAL TARGET visible in the image (e.g., "on the colored areas", "next to the blue block") OR explicit METRIC COORDINATES provided in the text (e.g., "put it at x=0.5, y=0.1").
-       - Set to false ONLY if the user asks to pick or sort objects WITHOUT specifying any destination at all (e.g., "pick all red bricks", "sort the blocks by color").
+       - Set to true if the user specifies ANY physical destination, if you can determine it. This includes VISUAL TARGETS (e.g., "on the colored areas", "onto the matching fields", "next to the blue object") OR explicit METRIC COORDINATES (e.g., "put it at x=0.5, y=0.1").
+       - Set to false ONLY if the user gives a general command WITHOUT any destination at all (e.g., "pick all red bricks", "sort the blocks by color").
     5. dropoff_point_2d: 
        - If user_dropoff is true AND the target is visual, return the dropoff point [y, x] in normalized integers 0-1000.
        - If the target is strictly metric coordinates, or if user_dropoff is false, this MUST be null.
@@ -104,7 +104,7 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
        - Otherwise, this MUST be null.
 
     General Instructions:
-    - ONLY SINGLE BRICKS/OBJECTS, no builds or groups or stacks.
+    - ONLY SINGLE OBJECTS, no builds or groups or stacks.
     - SELECTION: Only return objects that match the user's instructions.
     - SEQUENCE: Order the array logically by pick sequence (e.g., top-most or most relevant objects first).
     - LIMIT: Maximum 15 objects per image.
@@ -858,7 +858,8 @@ def main(args=None):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok(): 
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':
