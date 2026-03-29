@@ -214,7 +214,7 @@ class PickAndPlaceNode(Node):
             self.get_logger().error(f"🛑 Detection failed: {result.error_message}")
             return []
 
-        return list(result.bricks)
+        return list(result.objects)
 
     # --- Trigger Callback ---
     def trigger_callback(self, msg):
@@ -416,17 +416,23 @@ def main(args=None):
             # MANUAL TRIGGER (Standby Loop)
             # -----------------------------
             logger.info(
-                "Status:\n" +
-                "="*60 + "\n" +
+                "\n" + "="*60 + "\n" +
                 "🟢 PickAndPlaceNode (Client Node) ready. 🟢\n" +
                 f"🤜 Gripper: {node.gripper_status_str}\n" +
                 f"{node.workspace_safety_str}\n" +
-                "⏸️  STANDBY: Waiting for SCAN trigger.\n\n" +
-                "🅰️  Default Mode - 'Detects all bricks on the table':\n" +
-                "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String\n\n" +
-                "🅱️  User Prompt Mode - add your instructions to the data field:\n" +
-                "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: 'Pick the red object and place it somewhere safe.'}\"\n\n" +
-                "⏹️  To manually STOP the Pick and Place process and return to STANDBY:\n" +
+                "⏸️  STANDBY: Waiting for SCAN trigger.\n" +
+                "-"*60 + "\n" +
+                "🚀 FULL CYCLE TRIGGER (Moves Robot):\n" +
+                "🅰️  Default Mode ('Detect all objects on the table'):\n" +
+                "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String\n" +
+                "🅱️  User Prompt Mode (Custom instructions):\n" +
+                "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: 'Pick the red objects and place them left.'}\"\n\n" +
+                "👁️  VISION TEST ONLY (No Robot Movement):\n" +
+                "🅰️  Default Mode:\n" +
+                "   ros2 service call /detect_objects object_interfaces/srv/DetectObjects\n" +
+                "🅱️  User Prompt Mode:\n" +
+                "   ros2 service call /detect_objects object_interfaces/srv/DetectObjects \"{user_prompt: 'Pick the red objects'}\"\n\n" +
+                "⏹️  EMERGENCY / SOFT STOP (Return to STANDBY):\n" +
                 "   ros2 topic pub --once /pick_and_place/stop std_msgs/msg/Empty\n" +
                 "="*60
             )
@@ -647,8 +653,8 @@ def main(args=None):
         logger.info("Application stopped by user.")
     finally:
         node.destroy_node()
-        rclpy.shutdown()
-
+        if rclpy.ok(): 
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
