@@ -305,6 +305,7 @@ The `workcell_application` package includes several utility scripts for hardware
 
 **Google Gemini**
 - [Google Gemini API](https://ai.google.dev/gemini-api/docs/)
+- [Google Gemini 3](https://ai.google.dev/gemini-api/docs/gemini-3)
 - [Google Gemini Robotics-ER 1.5](https://ai.google.dev/gemini-api/docs/robotics-overview)
 
 ---
