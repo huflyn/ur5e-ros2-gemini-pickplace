@@ -112,9 +112,12 @@ For detailed instructions, please refer to the `README.md` files located inside 
 
 # IV) Global Configuration (YAML)
 
+This project uses YAML files to easily adapt to different setups without requiring any source code changes.
 
 > [!NOTE]
-> Before running the physical hardware or modifying the workspace layout, you may need to adjust the centralized configuration files. These YAML files allow you to adapt the system to your specific environment without changing the source code.
+> **Ready out-of-the-box for Simulation:** The default YAML parameters are fully optimized for the included Webots world and our specific UR5e lab environment.
+> 
+> **Adapting to your Hardware:** To run this project in your own physical environment, adjust the configuration files to match your specific camera topics, workspace boundaries, and drop-off coordinates.
 
 * **[Grasping Heights & Drop-off Zones](/workcell/workcell_application/README.md#grasping-heights--drop-off-zones) (`workcell_application`):** Defines the safe hover/grasp heights, brick center offsets, and specific Cartesian drop-off coordinates for the pick-and-place orchestrator.
   * `workcell/workcell_application/config/pick_and_place_parameters.yaml`
