@@ -4,4 +4,4 @@ string user_prompt  # Optional: Tell Gemini where to place things (e.g., "Put al
 # Response
 bool success
 string message
-LegoBrick[] bricks
+DetectedObject[] objects

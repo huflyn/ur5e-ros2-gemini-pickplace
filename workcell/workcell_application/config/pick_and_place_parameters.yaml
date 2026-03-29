@@ -6,7 +6,7 @@ pick_and_place_node:
     dropoff_height: 0.08 # height to drop bricks from
 
     # Y-Offset
-    brick_center_offset: 0.013 # Offset from front face (reference for camera) to center of brick in meters for better grasping, adjust if needed
+    object_center_offset: 0.013 # Offset from front face (reference for camera) to center of object in meters for better grasping, adjust if needed
 
     # Drop-off coordinates: [X, Y] in meters relative to robot base, adjust if needed
     dropoff_default: [-0.22, 0.31] # Default drop-off if no color-specific position is set

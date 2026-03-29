@@ -35,7 +35,7 @@ This package manages high-level robot control for the Pick-and-Place application
     - [Trigger Option A: Default Mode](#trigger-option-a-default-mode)
     - [Trigger Option B: Custom Prompt Mode - Gemini ONLY](#trigger-option-b-custom-prompt-mode---gemini-only)
     - [Soft Stop (Return to Ready)](#soft-stop-return-to-ready)
-- [V) Starting the legacy Brick Sorter (ROS 1 Port)](#v-starting-the-legacy-brick-sorter-ros-1-port)
+- [V) Starting the legacy Brick Sorter (ROS 1 Port)](#v-starting-the-legacy-object-sorter-ros-1-port)
 - [VI) Usage of `move_to_coords.py`](#vi-usage-of-move_to_coordspy)
 - [VII) Usage of `verify_alignment.py`](#vii-usage-of-verify_alignmentpy)
 
@@ -43,7 +43,7 @@ This package manages high-level robot control for the Pick-and-Place application
 
 # I) Package Structure
 
-* **`pick_and_place.py`**: The main application orchestrator. It handles the state machine, requests vision data via the `/detect_bricks` service, and executes batch pick-and-place trajectories.
+* **`pick_and_place.py`**: The main application orchestrator. It handles the state machine, requests vision data via the `/detect_objects` service, and executes batch pick-and-place trajectories.
 * **`move_to_coords.py`**: A utility script to immediately move the robot to specific XYZ coordinates or a named pose via command-line launch arguments.
 * **`verify_alignment.py`**: A calibration script to manually step the robot through predefined test poses using an interactive ROS topic trigger.
 * **`brick_sorter_legacy.py`**: The old continuous-topic-based ROS 1 port (requires the legacy color detector).
@@ -56,10 +56,10 @@ This package manages high-level robot control for the Pick-and-Place application
 This node utilizes a hybrid motion planning architecture, seamlessly switching between **OMPL** for joint-space travel and the **Pilz Industrial Motion Planner** (LIN/PTP) for strict Cartesian vertical movements. It operates on an on-demand trigger system:
 
 1. **Standby:** The robot waits in the `ready` pose.
-2. **Scan Trigger:** Upon receiving a trigger message on `/pick_and_place/scan`, the node calls the `/detect_bricks` service to get the current table state.
-3. **Batch Processing:** It loops through all detected bricks. For each brick:
+2. **Scan Trigger:** Upon receiving a trigger message on `/pick_and_place/scan`, the node calls the `/detect_objects` service to get the current table state.
+3. **Batch Processing:** It loops through all detected bricks. For each object:
    * **Approach & Grasp:** Moves above the coordinate, descends vertically, and activates the gripper (supports both Webots simulated vacuum and real gripper via UR I/O pin 0).
-   * **Place:** Transports the brick to a custom coordinate (if provided by AI) or a default color-coded drop-off zone, then releases.
+   * **Place:** Transports the object to a custom coordinate (if provided by AI) or a default color-coded drop-off zone, then releases.
 4. **Abort/Reset:** A soft stop can be triggered at any time via `/pick_and_place/stop` to safely abort the batch and return to standby.
 
 ---
@@ -81,7 +81,7 @@ pick_and_place_node:
     dropoff_height: 0.08 # height to drop bricks from
 
     # Y-Offset
-    brick_center_offset: 0.013 # Offset from front face (reference for camera) to center of brick in meters for better grasping, adjust if needed
+    object_center_offset: 0.013 # Offset from front face (reference for camera) to center of object in meters for better grasping, adjust if needed
 
     # Drop-off coordinates: [X, Y] in meters relative to robot base, adjust if needed
     dropoff_default: [-0.22, 0.31] # Default drop-off if no color-specific position is set
@@ -147,7 +147,7 @@ ros2 launch realsense2_camera rs_launch.py depth_module.depth_profile:=1280x720x
 
 ## Step 2: Start a Perception Pipeline (Gemini Vision or Color Detection)
 
-Choose **one** of the following vision nodes to provide the `/detect_bricks` service:
+Choose **one** of the following vision nodes to provide the `/detect_objects` service:
 
 ### Option A: Gemini Vision (AI-Driven)
 
@@ -242,7 +242,7 @@ If you wish to use the old continuous-loop sorting method:
     ros2 launch color_detection color_detector_legacy.launch.py use_sim_time:=true
     ```
 
-3. **Start the legacy brick sorter application:**
+3. **Start the legacy object sorter application:**
 
     ```bash
     ros2 launch workcell_application brick_sorter_legacy.launch.py use_sim_time:=true

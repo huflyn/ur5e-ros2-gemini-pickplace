@@ -9,7 +9,7 @@ Architecture mirrors the proven brick_sorter.py patterns:
   - OMPL for free-space transit
   - Topic-based gripper (Webots) / UR I/O (real HW)
 
-Detection is triggered on-demand via /detect_bricks service
+Detection is triggered on-demand via /detect_objects service
 instead of continuous topic subscription.
 """
 
@@ -24,8 +24,8 @@ from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Bool, Empty, String
 from tf_transformations import quaternion_from_euler
 
-from brick_interfaces.msg import LegoBrick
-from brick_interfaces.srv import DetectBricks
+from object_interfaces.msg import DetectedObject
+from object_interfaces.srv import DetectObjects
 
 from moveit.planning import MoveItPy, PlanRequestParameters
 
@@ -82,7 +82,7 @@ class PickAndPlaceNode(Node):
         self.declare_parameter('use_sim_gripper', False)
         self.declare_parameter('gripper_topic', '/ur5e/vacuum_gripper/turn_on')
 
-        self.declare_parameter('brick_center_offset', 0.0) # Offset from front face to center of brick in meters (for 3D grasping), adjust in pick_and_place_parameters.yaml if needed
+        self.declare_parameter('object_center_offset', 0.0) # Offset from front face to center of object in meters (for 3D grasping), adjust in pick_and_place_parameters.yaml if needed
 
         self.declare_parameter('dropoff_default', [0.27, 0.250]) # adjust in pick_and_place_parameters.yaml if needed
         self.declare_parameter('dropoff_red',    [0.27, 0.450])
@@ -102,7 +102,7 @@ class PickAndPlaceNode(Node):
         self.use_sim_gripper = self.get_parameter('use_sim_gripper').value
         gripper_topic = self.get_parameter('gripper_topic').value
 
-        self.brick_center_offset = self.get_parameter('brick_center_offset').value
+        self.object_center_offset = self.get_parameter('object_center_offset').value
 
         self.dropoffs = {
             'default': self.get_parameter('dropoff_default').value,
@@ -122,7 +122,7 @@ class PickAndPlaceNode(Node):
             self.gripper_status_str = "Real hardware mode (UR I/O pin 0 for Robotiq EPick)"
 
         # --- Vision Service Client ---
-        self.detect_client = self.create_client(DetectBricks, '/detect_bricks')
+        self.detect_client = self.create_client(DetectObjects, '/detect_objects')
 
         # --- Trigger Subscriber ---
         self.start_triggered = False
@@ -187,18 +187,18 @@ class PickAndPlaceNode(Node):
         self.get_logger().info(f"Gripper: {action}")
 
     # --- Vision Service ---
-    def detect_bricks(self, executor, prompt: str) -> list:
+    def detect_objects(self, executor, prompt: str) -> list:
         """
-        Calls /detect_bricks service synchronously.
+        Calls /detect_objects service synchronously.
         """
         if not self.detect_client.wait_for_service(timeout_sec=10.0):
-            self.get_logger().error("🛑 /detect_bricks service not available!")
+            self.get_logger().error("🛑 /detect_objects service not available!")
             return []
 
-        self.get_logger().info("🟢 Calling /detect_bricks service...")
+        self.get_logger().info("🟢 Calling /detect_objects service...")
 
         # Include the current prompt in the service request for Gemini to use in its response
-        req = DetectBricks.Request()
+        req = DetectObjects.Request()
         req.user_prompt = prompt
         future = self.detect_client.call_async(req)
 
@@ -214,7 +214,7 @@ class PickAndPlaceNode(Node):
             self.get_logger().error(f"🛑 Detection failed: {result.error_message}")
             return []
 
-        return list(result.bricks)
+        return list(result.objects)
 
     # --- Trigger Callback ---
     def trigger_callback(self, msg):
@@ -416,17 +416,23 @@ def main(args=None):
             # MANUAL TRIGGER (Standby Loop)
             # -----------------------------
             logger.info(
-                "Status:\n" +
-                "="*60 + "\n" +
+                "\n" + "="*60 + "\n" +
                 "🟢 PickAndPlaceNode (Client Node) ready. 🟢\n" +
                 f"🤜 Gripper: {node.gripper_status_str}\n" +
                 f"{node.workspace_safety_str}\n" +
-                "⏸️  STANDBY: Waiting for SCAN trigger.\n\n" +
-                "🅰️  Default Mode - 'Detects all bricks on the table':\n" +
-                "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: ''}\"\n\n" +
-                "🅱️  User Prompt Mode - add your instructions to the data field:\n" +
-                "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: 'Pick the red brick and place it somewhere safe.'}\"\n\n" +
-                "⏹️  To manually STOP the Pick and Place process and return to STANDBY:\n" +
+                "⏸️  STANDBY: Waiting for SCAN trigger.\n" +
+                "-"*60 + "\n" +
+                "🚀 FULL CYCLE TRIGGER (Moves Robot):\n" +
+                "🅰️  Default Mode ('Detect all objects on the table'):\n" +
+                "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String\n" +
+                "🅱️  User Prompt Mode (Custom instructions):\n" +
+                "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: 'Pick the red objects and place them left.'}\"\n\n" +
+                "👁️  VISION TEST ONLY (No Robot Movement):\n" +
+                "🅰️  Default Mode:\n" +
+                "   ros2 service call /detect_objects object_interfaces/srv/DetectObjects\n" +
+                "🅱️  User Prompt Mode:\n" +
+                "   ros2 service call /detect_objects object_interfaces/srv/DetectObjects \"{user_prompt: 'Pick the red objects'}\"\n\n" +
+                "⏹️  EMERGENCY / SOFT STOP (Return to STANDBY):\n" +
                 "   ros2 topic pub --once /pick_and_place/stop std_msgs/msg/Empty\n" +
                 "="*60
             )
@@ -448,7 +454,7 @@ def main(args=None):
             logger.info("=" * 60)
 
             # Call the vision service to detect bricks, passing the current prompt for Gemini to use in its response
-            bricks = node.detect_bricks(executor, node.current_prompt)
+            bricks = node.detect_objects(executor, node.current_prompt)
             
             # <--- NEU: Die magische Task-Planner Weiche
             if node.current_prompt:
@@ -458,7 +464,7 @@ def main(args=None):
                 logger.info("🅰️  Default Mode active. Sorting all visible bricks.")
                 bricks_sorted = sorted(bricks, key=lambda b: b.camera_distance_mm)
             
-            logger.info(f"🟢 Detected {len(bricks_sorted)} brick(s). Starting Batch Processing!")
+            logger.info(f"🟢 Detected {len(bricks_sorted)} object(s). Starting Batch Processing!")
 
             # ---------------------
             # BATCH PROCESSING LOOP
@@ -469,28 +475,28 @@ def main(args=None):
                 if node.stop_triggered:
                     raise RuntimeError("🛑 STOP trigger received by operator!")
 
-            for i, brick in enumerate(bricks_sorted):
+            for i, object in enumerate(bricks_sorted):
 
-                # check for soft stop at the start of each cycle before processing the next brick
+                # check for soft stop at the start of each cycle before processing the next object
                 if not rclpy.ok() or node.stop_triggered:
                     logger.warn("⚠️  BATCH ABORTED BY OPERATOR! Skipping remaining bricks.")
                     break
 
-                color = brick.color.data
-                bx = brick.position.point.x
-                by = brick.position.point.y + node.brick_center_offset
-                bz = brick.position.point.z
-                yaw = math.radians(brick.yaw_degrees)
+                color = object.color.data
+                bx = object.position.point.x
+                by = object.position.point.y + node.object_center_offset
+                bz = object.position.point.z
+                yaw = math.radians(object.yaw_degrees)
 
                 logger.info("-" * 60)
-                logger.info(f"BATCH {i+1}/{len(bricks_sorted)} | TARGET: {color.upper()} brick")
+                logger.info(f"BATCH {i+1}/{len(bricks_sorted)} | TARGET: {color.upper()} object")
                 logger.info(f"Position : X={bx:.3f}, Y={by:.3f}, Z={bz:.3f}")
                 logger.info("-" * 60)
 
                 # Determine drop-off location
-                if brick.has_user_dropoff:
+                if object.has_user_dropoff:
                     # User drop-off provided by Gemini's vision analysis
-                    target_xy = [brick.user_dropoff_position.x, brick.user_dropoff_position.y]
+                    target_xy = [object.user_dropoff_position.x, object.user_dropoff_position.y]
                     logger.info(f"USER-DEFINED Drop-off for '{color}': X={target_xy[0]:.3f}, Y={target_xy[1]:.3f}")
                 elif color in node.dropoffs:
                     # Fallback to default color-coded drop-offs defined in parameters
@@ -506,14 +512,14 @@ def main(args=None):
                 # 1. Check Pick Coordinates
                 is_pick_safe = node.is_target_safe(bx, by)
                 if not is_pick_safe:
-                    logger.warn(f"⏭️  Skipping {color} brick due to unsafe PICK coordinates: X={bx:.3f}, Y={by:.3f}")
-                    continue  # Skip and move to the next brick
+                    logger.warn(f"⏭️  Skipping {color} object due to unsafe PICK coordinates: X={bx:.3f}, Y={by:.3f}")
+                    continue  # Skip and move to the next object
                 
                 # 2. Check Drop-off Coordinates (only if Pick was safe)
                 is_drop_safe = node.is_target_safe(target_xy[0], target_xy[1])
                 if not is_drop_safe:
-                    logger.warn(f"⏭️  Skipping {color} brick due to unsafe DROP-OFF coordinates: X={target_xy[0]:.3f}, Y={target_xy[1]:.3f}")
-                    continue  # Skip and move to the next brick
+                    logger.warn(f"⏭️  Skipping {color} object due to unsafe DROP-OFF coordinates: X={target_xy[0]:.3f}, Y={target_xy[1]:.3f}")
+                    continue  # Skip and move to the next object
 
                 # --- DEFINE ALL POSES FOR THIS CYCLE ---
                 pose_hover_pick_straight = make_pose(bx, by, node.hover_height, 0.0)
@@ -560,12 +566,12 @@ def main(args=None):
                     check_abort()
 
                     # --- PHASE 4: LIFT (Pilz) ---
-                    # Straight up, keeping yaw to avoid rotating with brick near table
+                    # Straight up, keeping yaw to avoid rotating with object near table
                     logger.info("🟢 PHASE 4: Lift (Pilz)")
                     if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
                         logger.warn("🛑 Pilz failed, trying OMPL fallback...")
                         if not plan_and_execute_ompl(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
-                            raise RuntimeError("🛑 Failed to lift brick")
+                            raise RuntimeError("🛑 Failed to lift object")
 
                     check_abort()
 
@@ -610,7 +616,7 @@ def main(args=None):
                         "Status:"
                         "\n" + "="*60 + "\n" +
                         f"🛑 CYCLE ABORTED: {e}\n" +
-                        "Releasing gripper and skipping to next brick in batch...\n" +
+                        "Releasing gripper and skipping to next object in batch...\n" +
                         "="*60
                     )
 
@@ -647,8 +653,8 @@ def main(args=None):
         logger.info("Application stopped by user.")
     finally:
         node.destroy_node()
-        rclpy.shutdown()
-
+        if rclpy.ok(): 
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

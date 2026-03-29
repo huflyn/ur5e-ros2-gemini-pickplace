@@ -6,7 +6,7 @@ Brick Sorter Node (ROS 2) - Old Version adapted from ROS 1 sorting application (
 Note: The Brick Sorter Legacy only works with Color Detector Legacy (color_detector_legacy.py) and vice versa!
 It does not work with the real hardware (gripper control), only simulated in Webots.
 
-This node subscribes to the detected brick information published by the color detection node,
+This node subscribes to the detected object information published by the color detection node,
 plans pick-and-place trajectories using MoveItPy, and controls the Webots vacuum gripper via a ROS topic.
 The sorting logic is a direct replication of the original ROS 1 application, with improvements in structure and error handling.
 The node also includes an idle/standby behavior when no bricks are detected for a certain period.
@@ -24,7 +24,7 @@ from std_msgs.msg import Bool
 from tf_transformations import quaternion_from_euler
 
 # Correct custom message package
-from brick_interfaces.msg import LegoBrick
+from object_interfaces.msg import DetectedObject
 
 # MoveIt 2 Python API
 from moveit.planning import MoveItPy, PlanRequestParameters
@@ -33,8 +33,8 @@ class BrickSorterNode(Node):
     """Handles ROS 2 background subscriptions and publishers."""
     def __init__(self):
         super().__init__('brick_sorter_node')
-        self.lego_brick_data = None
-        self.accept_new_bricks = True # Flag to control whether we accept new brick data while processing one
+        self.detected_object_data = None
+        self.accept_new_objects = True # Flag to control whether we accept new object data while processing one
 
         # --- Declare Parameters ---
         self.declare_parameter('hover_height', 0.25)
@@ -59,17 +59,17 @@ class BrickSorterNode(Node):
             'blue': self.get_parameter('dropoff_blue').value,
         }
         
-        # Subscriber for brick coordinates
-        self.subscription = self.create_subscription(LegoBrick, '/lego_brick_info', self.brick_callback, 10)
+        # Subscriber for object coordinates
+        self.subscription = self.create_subscription(DetectedObject, '/detected_object_info', self.object_callback, 10)
         
         # Publisher for Webots Vacuum Gripper
         self.gripper_pub = self.create_publisher(Bool, '/ur5e/vacuum_gripper/turn_on', 10)
 
-    def brick_callback(self, msg):
-        # Only accept a new brick if we are not currently processing one
-        if self.accept_new_bricks and self.lego_brick_data is None:
-            self.lego_brick_data = msg
-            self.get_logger().info(f"New '{msg.color.data}' brick accepted at X={msg.position.point.x:.3f}, Y={msg.position.point.y:.3f}, Z={msg.position.point.z:.3f}")
+    def object_callback(self, msg):
+        # Only accept a new object if we are not currently processing one
+        if self.accept_new_objects and self.detected_object_data is None:
+            self.detected_object_data = msg
+            self.get_logger().info(f"New '{msg.color.data}' object accepted at X={msg.position.point.x:.3f}, Y={msg.position.point.y:.3f}, Z={msg.position.point.z:.3f}")
 
     def set_gripper(self, turn_on: bool):
         """Activates or deactivates the Webots vacuum gripper via Topic."""
@@ -179,27 +179,27 @@ def main(args=None):
             # Spin the executor to check for new ROS messages
             executor.spin_once(timeout_sec=0.1)
 
-            # --- Check if a new brick was detected ---
-            if brick_sorter_node.lego_brick_data is not None:
+            # --- Check if a new object was detected ---
+            if brick_sorter_node.detected_object_data is not None:
                 
                 is_idling = False # Reset idle state as we found work
-                brick_sorter_node.accept_new_bricks = False # Sets flag to ignore new bricks while processing the current one
+                brick_sorter_node.accept_new_objects = False # Sets flag to ignore new bricks while processing the current one
 
-                brick = brick_sorter_node.lego_brick_data
-                color = brick.color.data
+                object = brick_sorter_node.detected_object_data
+                color = object.color.data
                 
                 logger.info("="*50)
                 logger.info(f" Starting Pick & Place for: {color.upper()} BRICK")
                 logger.info("-"*50)
-                logger.info(f" * Robot Target   : X = {brick.position.point.x:.3f}, Y = {brick.position.point.y:.3f}, Z = {brick.position.point.z:.3f}")
-                logger.info(f" * Camera Distance: {brick.camera_distance_mm:.1f} mm")
+                logger.info(f" * Robot Target   : X = {object.position.point.x:.3f}, Y = {object.position.point.y:.3f}, Z = {object.position.point.z:.3f}")
+                logger.info(f" * Camera Distance: {object.camera_distance_mm:.1f} mm")
                 logger.info("="*50 + "\n")
 
                 # Check if we have a drop-off location for this color
                 if color not in brick_sorter_node.dropoffs:
-                    logger.error(f"❌ No drop-off location defined for color '{color}'. Skipping brick!")
-                    brick_sorter_node.lego_brick_data = None
-                    brick_sorter_node.accept_new_bricks = True
+                    logger.error(f"❌ No drop-off location defined for color '{color}'. Skipping object!")
+                    brick_sorter_node.detected_object_data = None
+                    brick_sorter_node.accept_new_objects = True
                     last_activity_time = time.time()  # Reset idle timer
                     continue
 
@@ -208,7 +208,7 @@ def main(args=None):
 
                 # --- Pose Definitions ---
 
-                # 1. Hover pose above the brick
+                # 1. Hover pose above the object
                 pose_above = PoseStamped()
                 pose_above.header.frame_id = "ur5e_base_link"
                 pose_above.pose.orientation.x = q_down[0]
@@ -216,13 +216,13 @@ def main(args=None):
                 pose_above.pose.orientation.z = q_down[2]
                 pose_above.pose.orientation.w = q_down[3]
                 
-                pose_above.pose.position.x = brick.position.point.x
-                pose_above.pose.position.y = brick.position.point.y
+                pose_above.pose.position.x = object.position.point.x
+                pose_above.pose.position.y = object.position.point.y
                 pose_above.pose.position.z = brick_sorter_node.hover_height
 
                 # 2. Grasp pose
                 pose_grasp = copy.deepcopy(pose_above)
-                #pose_grasp.pose.position.z = brick.position.point.z + brick_sorter_node.grasp_z_offset # Apply optional Z offset for better grasping
+                #pose_grasp.pose.position.z = object.position.point.z + brick_sorter_node.grasp_z_offset # Apply optional Z offset for better grasping
                 pose_grasp.pose.position.z = 0.0 # static low Z to ensure a good grip, since the perception Z can be noisy. Adjust as needed based on your tests!
 
                 # 3. Hover pose above the drop-off zone
@@ -243,13 +243,13 @@ def main(args=None):
                     logger.info("Phase 1: Approach & Grasp (Pilz LIN)")
                     logger.info("="*50)
                     
-                    # 1. Linear move directly above the brick
+                    # 1. Linear move directly above the object
                     if not plan_and_execute(ur5e, ur5e_arm, logger, pose_above):
                         logger.error("❌ Failed to reach hover pose using OMPL. Aborting!")
                         plan_and_execute(ur5e, ur5e_arm, logger, "ready")
                         continue 
                         
-                    # 2. Linear move down to the brick
+                    # 2. Linear move down to the object
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_grasp):
                         logger.error("❌ Failed to reach grasp pose linearly. Aborting!")
                         plan_and_execute(ur5e, ur5e_arm, logger, "ready") # OMPL back to safe state
@@ -265,14 +265,14 @@ def main(args=None):
                     
                     # 4. Linear retreat straight up
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_above):
-                        logger.error("❌ Failed to lift brick linearly. Dropping and aborting!")
+                        logger.error("❌ Failed to lift object linearly. Dropping and aborting!")
                         brick_sorter_node.set_gripper(turn_on=False)
                         plan_and_execute(ur5e, ur5e_arm, logger, "ready")
                         continue
                     
                     # 5. Transfer to the drop-off hover zone
                     # Try a beautiful straight line first. If it hits a kinematic limit, 
-                    # fall back to OMPL so we don't drop the brick unnecessarily.
+                    # fall back to OMPL so we don't drop the object unnecessarily.
                     if not plan_and_execute_cartesian(ur5e, ur5e_arm, logger, pose_drop_hover):
                         logger.warn("⚠️ LIN transfer failed (Singularity?). Attempting OMPL fallback...")
                         if not plan_and_execute(ur5e, ur5e_arm, logger, pose_drop_hover):
@@ -312,13 +312,13 @@ def main(args=None):
                     # short pause to ensure all movements have settled before we flush the queue and accept new bricks
                     time.sleep(0.5)
                     
-                    # We flush the callback queue to remove any stale brick detections that might have come in while we were processing
+                    # We flush the callback queue to remove any stale object detections that might have come in while we were processing
                     for _ in range(15):
                         executor.spin_once(timeout_sec=0.01)
 
                     # Reset for the next cycle
-                    brick_sorter_node.lego_brick_data = None
-                    brick_sorter_node.accept_new_bricks = True
+                    brick_sorter_node.detected_object_data = None
+                    brick_sorter_node.accept_new_objects = True
                     logger.info("="*50)
                     logger.info("Waiting for the next target...")
                     logger.info("="*50 + "\n")
@@ -351,7 +351,8 @@ def main(args=None):
         logger.info("Application manually stopped.")
     finally:
         brick_sorter_node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok(): 
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
