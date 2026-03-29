@@ -12,7 +12,7 @@
 [gemini-badge]: https://img.shields.io/badge/-GEMINI%20API-7C4DFF?style=flat-square&logo=googlegemini&logoColor=white
 [gemini-link]: https://ai.google.dev/gemini-api/docs
 
-This repository demonstrates how to integrate vision-language models (like Gemini 3.1 Flash Lite and Gemini Robotics-ER 1.5) with a Universal Robots UR5e manipulator in a ROS 2 Jazzy environment. 
+This repository demonstrates how to integrate vision-language models (like Gemini 3.1 Flash-Lite and Gemini Robotics-ER 1.5) with a Universal Robots UR5e manipulator in a ROS 2 Jazzy environment. 
 
 The project features a complete perception-to-action pipeline. It utilizes the Gemini API for advanced spatial reasoning and natural language processing, and MoveIt 2 for hybrid motion planning (OMPL + Pilz LIN/PTP).
 
