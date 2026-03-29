@@ -65,9 +65,9 @@ class PickAndPlaceNode(Node):
             self.safe_max_y = ws_max_y + tolerance
             
             self.workspace_bounds = f"X: [{self.safe_min_x:.2f}, {self.safe_max_x:.2f}], Y: [{self.safe_min_y:.2f}, {self.safe_max_y:.2f}]"
-            self.workspace_safety_str = f"Workspace safety boundaries are ENABLED: {self.workspace_bounds}"
+            self.workspace_safety_str = f"✅ Workspace safety boundaries are ENABLED: {self.workspace_bounds}"
         else:
-            self.workspace_safety_str = "Workspace safety boundaries are DISABLED."
+            self.workspace_safety_str = "⚠️  Workspace safety boundaries are DISABLED."
         self.get_logger().info(self.workspace_safety_str)
 
         # --- Declare Parameters ---
@@ -151,7 +151,7 @@ class PickAndPlaceNode(Node):
             return True
         else:
             self.get_logger().error(
-                f"Safety Abort! Target ({x:.3f}, {y:.3f}) is outside the safe workspace bounds."
+                f"🛑 Safety Abort! Target ({x:.3f}, {y:.3f}) is outside the safe workspace bounds."
             )
             return False
 
@@ -418,7 +418,7 @@ def main(args=None):
             logger.info(
                 "Status:\n" +
                 "="*60 + "\n" +
-                "🟢 PickAndPlaceNode (Client Node) ready.\n" +
+                "🟢 PickAndPlaceNode (Client Node) ready. 🟢\n" +
                 f"🤜 Gripper: {node.gripper_status_str}\n" +
                 f"{node.workspace_safety_str}\n" +
                 "⏸️  STANDBY: Waiting for SCAN trigger.\n\n" +
@@ -473,7 +473,7 @@ def main(args=None):
 
                 # check for soft stop at the start of each cycle before processing the next brick
                 if not rclpy.ok() or node.stop_triggered:
-                    logger.warn("⚠️ BATCH ABORTED BY OPERATOR! Skipping remaining bricks.")
+                    logger.warn("⚠️  BATCH ABORTED BY OPERATOR! Skipping remaining bricks.")
                     break
 
                 color = brick.color.data
@@ -501,18 +501,18 @@ def main(args=None):
                     target_xy = node.dropoffs['default']
 
                 # --- WORKSPACE SAFETY SANITY CHECK ---
-                logger.info("🛡️ Performing safety sanity check on coordinates...")
+                logger.info("🛡️  Performing safety sanity check on coordinates...")
 
                 # 1. Check Pick Coordinates
                 is_pick_safe = node.is_target_safe(bx, by)
                 if not is_pick_safe:
-                    logger.warn(f"⏭️ Skipping {color} brick due to unsafe PICK coordinates: X={bx:.3f}, Y={by:.3f}")
+                    logger.warn(f"⏭️  Skipping {color} brick due to unsafe PICK coordinates: X={bx:.3f}, Y={by:.3f}")
                     continue  # Skip and move to the next brick
                 
                 # 2. Check Drop-off Coordinates (only if Pick was safe)
                 is_drop_safe = node.is_target_safe(target_xy[0], target_xy[1])
                 if not is_drop_safe:
-                    logger.warn(f"⏭️ Skipping {color} brick due to unsafe DROP-OFF coordinates: X={target_xy[0]:.3f}, Y={target_xy[1]:.3f}")
+                    logger.warn(f"⏭️  Skipping {color} brick due to unsafe DROP-OFF coordinates: X={target_xy[0]:.3f}, Y={target_xy[1]:.3f}")
                     continue  # Skip and move to the next brick
 
                 # --- DEFINE ALL POSES FOR THIS CYCLE ---
