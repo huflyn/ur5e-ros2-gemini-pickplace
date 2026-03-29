@@ -40,7 +40,37 @@ class PickAndPlaceNode(Node):
         # Robotiq EPick with URCap
         self.script_pub = self.create_publisher(String, '/urscript_interface/script_command', 10)
 
-        # --- Parameters ---
+        # --- Safe Workspace Boundaries ---
+        # Declare the enable flag (defaults to False if missing)
+        self.declare_parameter('enable_workspace_safety', False)
+        self.safety_enabled = self.get_parameter('enable_workspace_safety').value
+
+        # Only load and calculate bounds if safety is actually enabled
+        if self.safety_enabled:
+            self.declare_parameter('workspace_min_x', 0.0)
+            self.declare_parameter('workspace_max_x', 0.0)
+            self.declare_parameter('workspace_min_y', 0.0)
+            self.declare_parameter('workspace_max_y', 0.0)
+            self.declare_parameter('workspace_safety_tolerance', 0.0)
+
+            ws_min_x = self.get_parameter('workspace_min_x').value
+            ws_max_x = self.get_parameter('workspace_max_x').value
+            ws_min_y = self.get_parameter('workspace_min_y').value
+            ws_max_y = self.get_parameter('workspace_max_y').value
+            tolerance = self.get_parameter('workspace_safety_tolerance').value
+
+            self.safe_min_x = ws_min_x - tolerance
+            self.safe_max_x = ws_max_x + tolerance
+            self.safe_min_y = ws_min_y - tolerance
+            self.safe_max_y = ws_max_y + tolerance
+            
+            self.workspace_bounds = f"X: [{self.safe_min_x:.2f}, {self.safe_max_x:.2f}], Y: [{self.safe_min_y:.2f}, {self.safe_max_y:.2f}]"
+            self.workspace_safety_str = f"Workspace safety boundaries are ENABLED: {self.workspace_bounds}"
+        else:
+            self.workspace_safety_str = "Workspace safety boundaries are DISABLED."
+        self.get_logger().info(self.workspace_safety_str)
+
+        # --- Declare Parameters ---
         self.declare_parameter('base_frame', 'ur5e_base_link')
         self.declare_parameter('tcp_link', 'pisoftgrip_tcp')
         self.declare_parameter('planning_group', 'ur_arm')
@@ -107,6 +137,23 @@ class PickAndPlaceNode(Node):
         self.get_logger().info(f"Base frame:  {self.base_frame}")
         self.get_logger().info(f"TCP link:    {self.tcp_link}")
         self.get_logger().info(f"Drop-offs:   {list(self.dropoffs.keys())}")
+        self.get_logger().info(self.workspace_safety_str)
+
+    # --- Workspace Safety Check Function ---
+    def is_target_safe(self, x, y):
+        """
+        Validates coordinates. If safety is disabled, always returns True.
+        """
+        if not self.safety_enabled:
+            return True
+            
+        if (self.safe_min_x <= x <= self.safe_max_x) and (self.safe_min_y <= y <= self.safe_max_y):
+            return True
+        else:
+            self.get_logger().error(
+                f"Safety Abort! Target ({x:.3f}, {y:.3f}) is outside the safe workspace bounds."
+            )
+            return False
 
     # --- Gripper Control ---
     def set_gripper(self, activate: bool):
@@ -373,6 +420,7 @@ def main(args=None):
                 "="*60 + "\n" +
                 "🟢 PickAndPlaceNode (Client Node) ready.\n" +
                 f"🤜 Gripper: {node.gripper_status_str}\n" +
+                f"{node.workspace_safety_str}\n" +
                 "⏸️  STANDBY: Waiting for SCAN trigger.\n\n" +
                 "🅰️  Default Mode - 'Detects all bricks on the table':\n" +
                 "   ros2 topic pub --once /pick_and_place/scan std_msgs/msg/String \"{data: ''}\"\n\n" +
@@ -452,6 +500,20 @@ def main(args=None):
                     logger.warn(f"No drop-off for '{color}', using 'default'.")
                     target_xy = node.dropoffs['default']
 
+                # --- WORKSPACE SAFETY SANITY CHECK ---
+                logger.info("🛡️ Performing safety sanity check on coordinates...")
+
+                # 1. Check Pick Coordinates
+                is_pick_safe = node.is_target_safe(bx, by)
+                if not is_pick_safe:
+                    logger.warn(f"⏭️ Skipping {color} brick due to unsafe PICK coordinates: X={bx:.3f}, Y={by:.3f}")
+                    continue  # Skip and move to the next brick
+                
+                # 2. Check Drop-off Coordinates (only if Pick was safe)
+                is_drop_safe = node.is_target_safe(target_xy[0], target_xy[1])
+                if not is_drop_safe:
+                    logger.warn(f"⏭️ Skipping {color} brick due to unsafe DROP-OFF coordinates: X={target_xy[0]:.3f}, Y={target_xy[1]:.3f}")
+                    continue  # Skip and move to the next brick
 
                 # --- DEFINE ALL POSES FOR THIS CYCLE ---
                 pose_hover_pick_straight = make_pose(bx, by, node.hover_height, 0.0)
