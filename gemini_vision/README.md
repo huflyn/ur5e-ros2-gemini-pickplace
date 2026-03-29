@@ -12,7 +12,7 @@
 [gemini-link]: https://ai.google.dev/gemini-api/docs
 
 
-This package provides a highly capable, **AI-driven vision system for the pick-and-place application**. It leverages the **Gemini API** (supporting models like Gemini 3 Flash and Gemini Robotics-ER 1.5) to analyze RGB-D camera streams. It can detect specified objects (like Lego bricks), map 2D bounding boxes to 3D spatial coordinates, and interpret complex natural language instructions to dynamically calculate custom drop-off locations on a table surface, if specified.
+This package provides a highly capable, **AI-driven vision system for the pick-and-place application**. It leverages the **Gemini API** (supporting models like Gemini 3 Flash and Gemini Robotics-ER 1.5) to analyze RGB-D camera streams. It can detect specified objects (like building bricks), map 2D bounding boxes to 3D spatial coordinates, and interpret complex natural language instructions to dynamically calculate custom drop-off locations on a table surface, if specified.
 
 ![Screenshot of the gemini_vision node running in Webots simulation, showing detected bricks highlighted with bounding boxes in RViz.](../docs/images/gemini_vision_user-prompt-mode_rviz.png)
 

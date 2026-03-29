@@ -8,7 +8,7 @@
 [ubuntu24-badge]: https://img.shields.io/badge/-UBUNTU%2024%2E04-blue?style=flat-square&logo=ubuntu&logoColor=white
 [ubuntu24]: https://releases.ubuntu.com/noble/
 
-This package detects colored Lego bricks using a camera stream (RGB + Depth). It generates precise bounding boxes by applying configurable HSV color masks and contour detection to the RGB image. By mapping these 2D bounding boxes to the aligned depth map, it calculates the 3D coordinates of each brick relative to the robot's base frame and provides this data to the ROS 2 network.
+This package detects colored objects using a camera stream (RGB + Depth). It generates precise bounding boxes by applying configurable HSV color masks and contour detection to the RGB image. By mapping these 2D bounding boxes to the aligned depth map, it calculates the 3D coordinates of each brick relative to the robot's base frame and provides this data to the ROS 2 network.
 
 ![Screenshot of the annotated image stream by the color detection node in RQT.](../docs/images/color_detector_rqt.png)
 
@@ -64,7 +64,7 @@ int32[] bounding_box_px              # Bounding box array [xmin, ymin, xmax, yma
 The configuration for this node relies on parameter files distributed across two locations to cleanly separate global camera settings from local color thresholds:
 
   * **[Global Workspace Parameters](/workcell/workcell_bringup/README.md#ii-workspace-configuration-yaml) (`workcell_bringup`):** Centralized files (`sim_workspace_parameters.yaml` and `real_workspace_parameters.yaml`) that store the camera topic names, the target `tf2` frames, and the workspace boundaries.
-  * **Local Color Parameters (`color_detection`):** The local `hsv_bounds.yaml` file that stores the specific HSV color limits for all detected Lego bricks.
+  * **Local Color Parameters (`color_detection`):** The local `hsv_bounds.yaml` file that stores the specific HSV color limits for all detected bricks.
 
 > [!IMPORTANT]
 > Before running the node in a new lighting environment, you must calibrate the **HSV bounds** in the local `hsv_bounds.yaml` using the provided tuning tool.

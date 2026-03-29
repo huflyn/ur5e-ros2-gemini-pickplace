@@ -100,7 +100,7 @@ For detailed instructions, please refer to the `README.md` files located inside 
 
   * **[`gemini_vision`](/gemini_vision/README.md)**: The AI perception pipeline. Uses the Gemini API to analyze RGB-D streams, maps bounding boxes to 3D coordinates, and interprets natural language prompts.
   * **[`workcell_application`](/workcell/workcell_application/README.md)**: The core MoveIt 2 orchestrator. Contains the main `pick_and_place.py` state machine and hardware alignment tools.
-  * **[`color_detection`](/color_detection/README.md)**: The alternative classic perception pipeline. Uses OpenCV HSV masking to detect Lego bricks.
+  * **[`color_detection`](/color_detection/README.md)**: The alternative classic perception pipeline. Uses OpenCV HSV masking to detect objects.
   * **[`workcell_bringup`](/workcell/workcell_bringup/README.md)**: Contains centralized YAML parameters for cameras and frames to ensure consistency across the entire workcell.
   * **[`workcell_control`](/workcell/workcell_control/README.md)**: Contains launch files to initiate the connection with the real UR5e hardware via `ur_robot_driver`.
   * **[`workcell_simulation`](/workcell/workcell_simulation/README.md)**: Launch files and worlds for the Webots digital twin environment.
