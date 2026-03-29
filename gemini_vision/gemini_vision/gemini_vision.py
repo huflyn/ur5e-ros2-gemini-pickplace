@@ -254,26 +254,33 @@ def get_robust_depth_multi_frame(self, coords_2d, img_w, img_h,
 
     return float(np.median(depths))
 
+
 def draw_bbox(image, label, ymin, xmin, ymax, xmax, pt_3d=None, color=(255, 140, 72)):
     """Draws a bounding box with label and optional 3D coordinates on the image."""
-    cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 0, 0), 4)
+    # Bounding Box: Black outline (thick), Colored inner line (thin)
+    cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 0, 0), 3)
     cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 1)
 
+    # Center point
     cx, cy = (xmin + xmax) // 2, (ymin + ymax) // 2
     cv2.circle(image, (cx, cy), 4, (0, 0, 0), -1)
     cv2.circle(image, (cx, cy), 2, color, -1)
 
+    # Text styling: White outline, Black inner text
+    text_outline = (255, 255, 255)
+    text_color = (0, 0, 0)
+
     # Label text
     pos1 = (xmin, max(35, ymin - 20))
-    cv2.putText(image, label, pos1, cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 3, cv2.LINE_AA)
-    cv2.putText(image, label, pos1, cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1, cv2.LINE_AA)
+    cv2.putText(image, label, pos1, cv2.FONT_HERSHEY_SIMPLEX, 0.45, text_outline, 3, cv2.LINE_AA)
+    cv2.putText(image, label, pos1, cv2.FONT_HERSHEY_SIMPLEX, 0.45, text_color, 1, cv2.LINE_AA)
 
     # 3D Coordinates text
     if pt_3d:
         coord_text = f"X:{pt_3d[0]:.2f} Y:{pt_3d[1]:.2f}"
         pos2 = (xmin, max(20, ymin - 5))
-        cv2.putText(image, coord_text, pos2, cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 0), 3, cv2.LINE_AA)
-        cv2.putText(image, coord_text, pos2, cv2.FONT_HERSHEY_SIMPLEX, 0.35, color, 1, cv2.LINE_AA)
+        cv2.putText(image, coord_text, pos2, cv2.FONT_HERSHEY_SIMPLEX, 0.35, text_outline, 3, cv2.LINE_AA)
+        cv2.putText(image, coord_text, pos2, cv2.FONT_HERSHEY_SIMPLEX, 0.35, text_color, 1, cv2.LINE_AA)
     else:
         # Fallback if depth is missing
         pos2 = (xmin, max(20, ymin - 5))
@@ -282,31 +289,34 @@ def draw_bbox(image, label, ymin, xmin, ymax, xmax, pt_3d=None, color=(255, 140,
 
 def draw_point(image, label, y, x, color=(72, 255, 140)):
     """Draws a target point marker with a label on the image."""
-    # Draw a crosshair marker (black outline, colored inner)
-    cv2.drawMarker(image, (x, y), (0, 0, 0), markerType=cv2.MARKER_CROSS, markerSize=20, thickness=4)
-    cv2.drawMarker(image, (x, y), color, markerType=cv2.MARKER_CROSS, markerSize=20, thickness=2)
+    # Marker: Black outline (thick), Colored inner line (thin)
+    cv2.drawMarker(image, (x, y), (0, 0, 0), markerType=cv2.MARKER_CROSS, markerSize=20, thickness=3)
+    cv2.drawMarker(image, (x, y), color, markerType=cv2.MARKER_CROSS, markerSize=20, thickness=1)
+
+    # Text styling: White outline, Black inner text
+    text_outline = (255, 255, 255)
+    text_color = (0, 0, 0)
 
     # Draw text label slightly offset from the point
     pos = (x + 10, y - 10)
-    cv2.putText(image, label, pos, cv2.FONT_HERSHEY_SIMPLEX,
-                0.45, (0, 0, 0), 3, cv2.LINE_AA)
-    cv2.putText(image, label, pos, cv2.FONT_HERSHEY_SIMPLEX,
-                0.45, color, 1, cv2.LINE_AA)
+    cv2.putText(image, label, pos, cv2.FONT_HERSHEY_SIMPLEX, 0.45, text_outline, 3, cv2.LINE_AA)
+    cv2.putText(image, label, pos, cv2.FONT_HERSHEY_SIMPLEX, 0.45, text_color, 1, cv2.LINE_AA)
 
 
 def draw_all_annotations(image: np.ndarray, detections: List[ObjectDetection], img_w: int, img_h: int) -> np.ndarray:
     """Draws all bounding boxes and dropoff points on the image."""
     for object in detections:
         object_color = get_color_for_label(object.label)
+        display_text = f"{object.label} {object.object_name}"
 
         # 1. Draw Object Box (jetzt mit 3D-Koordinatenübergabe)
         ymin, xmin, ymax, xmax = normalized_to_pixel(object.box_2d, img_w, img_h)
-        draw_bbox(image, object.label, ymin, xmin, ymax, xmax, pt_3d=object.position_3d, color=object_color)
+        draw_bbox(image, display_text, ymin, xmin, ymax, xmax, pt_3d=object.position_3d, color=object_color)
 
         # 2. Draw Dropoff Point
         if object.dropoff_point_2d is not None:
             py, px = normalized_to_pixel(object.dropoff_point_2d, img_w, img_h)
-            draw_point(image, f"{object.label} dropoff", py, px, color=object_color)
+            draw_point(image, f"{display_text} dropoff", py, px, color=object_color)
 
     return image
 
