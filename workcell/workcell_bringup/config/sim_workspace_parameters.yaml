@@ -3,11 +3,11 @@
     # --- Safe Workspace Boundaries ---
     # Set to 'true' to strictly enforce table boundaries (recommended for real hardware)
     enable_workspace_safety: false
-    # Physical dimensions of the table (in meters relative to robot base)
-    workspace_min_x: -0.40
-    workspace_max_x:  0.40
-    workspace_min_y:  0.15
-    workspace_max_y:  0.60
+    # Physical dimensions of the table (in meters relative to robot base), check robot_base_frame TF in RViz for orientation
+    workspace_min_x: -0.325
+    workspace_max_x:  0.325
+    workspace_min_y: -0.24
+    workspace_max_y:  0.76
     # Allowed tolerance outside the table (e.g. for dropping items off the edge)
     workspace_safety_tolerance: 0.10
 
