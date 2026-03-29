@@ -16,7 +16,7 @@ This package acts as the centralized "glue" for the entire robotic workspace. It
 ---
 
 - [I) Package Structure](#i-package-structure)
-- [II) Global Configuration (YAML)](#ii-global-configuration-yaml)
+- [II) Workspace Configuration (YAML)](#ii-workspace-configuration-yaml)
 - [III) Master Launch Files](#iii-master-launch-files)
   - [Simulation (`sim.launch.py`)](#simulation-simlaunchpy)
     - [Option A: Gemini Vision (Default)](#option-a-gemini-vision-default)
@@ -34,28 +34,40 @@ This package acts as the centralized "glue" for the entire robotic workspace. It
 # I) Package Structure
 
 * **`launch/`**: Contains the master launch files (`sim.launch.py` and `real.launch.py`) that orchestrate the startup sequence using staggered timers.
-* **`config/`**: Contains the centralized `sim_camera_parameters.yaml` and `real_camera_parameters.yaml` files.
+* **`config/`**: Contains the centralized `sim_workspace_parameters.yaml` and `real_workspace_parameters.yaml` files.
 
 ---
 
-# II) Global Configuration (YAML)
+# II) Workspace Configuration (YAML)
 
-To prevent misconfigurations across multiple nodes, all camera topics, and TF target frames are stored centrally in this package. 
+To prevent misconfigurations across multiple nodes, all environment-specific variables are stored centrally in this package. 
 
-Nodes like `gemini_vision` and `color_detection` automatically pull their parameters from these files depending on whether the system is launched in simulation or real hardware mode.
+Nodes like `gemini_vision`, `color_detection`, and `workcell_application` automatically pull their parameters from these files depending on whether the system is launched in simulation or real hardware mode.
 
-Example snippet (`sim_camera_parameters.yaml`):
+Example snippet (`sim_workspace_parameters.yaml`):
+
 ```yaml
 /**:
   ros__parameters:
+    # --- Safe Workspace Boundaries ---
+    # Set to 'true' to strictly enforce table boundaries (recommended for real hardware)
+    enable_workspace_safety: true
+    # Physical dimensions of the table (in meters relative to robot base), check robot_base_frame TF in RViz for orientation
+    workspace_min_x: -0.325
+    workspace_max_x:  0.325
+    workspace_min_y: -0.24
+    workspace_max_y:  0.76
+    # Allowed tolerance outside the table (e.g. for dropping items off the edge)
+    workspace_safety_tolerance: 0.10
+
     # --- Camera Topics ---
     camera_info_topic: '/webots_realsense/depth/image_rect_raw/camera_info'
-    depth_image_topic: '/webots_realsense/depth/image_rect_raw/image'
     color_image_topic: '/webots_realsense/color/image_raw/image_color'
+    depth_image_topic: '/webots_realsense/depth/image_rect_raw/image'
 
+    # --- TF Frames ---
     # Frame of the camera for TF transformations
     camera_frame: 'd415_sim_optical_frame'
-
     # Target frame for the 3D coordinates
     robot_base_frame: 'ur5e_base_link'
 ```

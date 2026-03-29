@@ -69,26 +69,9 @@ Because this node relies on cloud-based AI processing, it requires a valid Googl
 
 ## Camera & Hardware Configuration (YAML)
 
-To maintain consistency, the camera configuration files are centralized in the **`workcell_bringup`** package.
+To maintain consistency, the camera configuration files are centralized in the **`workcell_bringup`** package. Configure the parameters according to your setup, ensuring that the camera topics, TF frames and workspace boundaries match your specific environment (simulation or real hardware).
 
-* **`workcell_bringup/config/`** **`sim_camera_parameters.yaml`** and **`real_camera_parameters.yaml`**: These files store the camera topic names and the target `tf2` frames. This allows the entire workcell to easily switch between Webots simulation and real-world hardware.
-
-Example `sim_camera_parameters.yaml`:
-
-```yaml
-/**:
-  ros__parameters:
-    # --- Camera Topics ---
-    camera_info_topic: '/webots_realsense/depth/image_rect_raw/camera_info'
-    depth_image_topic: '/webots_realsense/depth/image_rect_raw/image'
-    color_image_topic: '/webots_realsense/color/image_raw/image_color'
-
-    # Frame of the camera for TF transformations
-    camera_frame: 'd415_sim_optical_frame'
-
-    # Target frame for the 3D coordinates
-    robot_base_frame: 'ur5e_base_link'
-```
+* **[Global Workspace Parameters](/workcell/workcell_bringup/README.md#ii-workspace-configuration-yaml) (`workcell_bringup`):** Centralized files (`sim_workspace_parameters.yaml` and `real_workspace_parameters.yaml`) that store the camera topic names, the target `tf2` frames, and the workspace boundaries.
 
 ## Gemini Configuration (Python)
 
