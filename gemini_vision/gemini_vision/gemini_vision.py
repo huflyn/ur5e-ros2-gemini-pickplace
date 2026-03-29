@@ -2,7 +2,7 @@
 
 ''' 
 A vision system for a robotic pick-and-place task using the Gemini API.
-Input: RGB image. Output: Detected Lego bricks with bounding boxes, colors, and potential drop-off locations based on user instructions (optional).
+Input: RGB image. Output: Detected bricks with bounding boxes, colors, and potential drop-off locations based on user instructions (optional).
 The node subscribes to camera topics, processes images with Gemini, and returns 3D coordinates for detected bricks.
 '''
 
@@ -68,13 +68,13 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
     The camera is placed directly on the table in front of the robot. The camera's field of view is perfectly horizontal and parallel to the table surface. 
     Because of this perspective, the flat table surface is only visible in the lower portion of the image. Objects that appear higher up in the image are most likely further away in the background or off the table entirely.
 
-    Your job is to analyze the image, detect Lego bricks (and other requested objects), and determine their bounding boxes, colors, and potential drop-off locations based on user instructions.
+    Your job is to analyze the image, detect building blocks (and other requested objects), and determine their bounding boxes, colors, and potential drop-off locations based on user instructions.
 
     Return a JSON list matching this exact schema:
     {
       "bricks": [
         {
-          "object_name": "<name of the object, e.g., lego brick, pen, screw>",
+          "object_name": "<name of the object, e.g., toy brick, pen, screw>",
           "label": "<dominant color, e.g., red, blue, green>",
           "box_2d": [ymin, xmin, ymax, xmax],
           "user_dropoff": boolean,
@@ -90,7 +90,7 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
     3. box_2d: Bounding box of the object. Normalized integers 0-1000.
     4. user_dropoff: Evaluate this STRICTLY PER INDIVIDUAL OBJECT.
        - Set to true if the user specifies a destination. This destination can be EITHER a VISUAL TARGET visible in the image (e.g., "on the colored areas", "next to the blue block") OR explicit METRIC COORDINATES provided in the text (e.g., "put it at x=0.5, y=0.1").
-       - Set to false ONLY if the user asks to pick or sort objects WITHOUT specifying any destination at all (e.g., "pick all red bricks", "sort the bricks by color").
+       - Set to false ONLY if the user asks to pick or sort objects WITHOUT specifying any destination at all (e.g., "pick all red bricks", "sort the blocks by color").
     5. dropoff_point_2d: 
        - If user_dropoff is true AND the target is visual, return the dropoff point [y, x] in normalized integers 0-1000.
        - If the target is strictly metric coordinates, or if user_dropoff is false, this MUST be null.
@@ -114,7 +114,7 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
 # --- PYDANTIC MODELS ---
 
 class BrickDetection(BaseModel):
-    object_name: str = Field(description="Name/type of the object (e.g., 'lego brick', 'pen')")
+    object_name: str = Field(description="Name/type of the object (e.g., 'building brick', 'pen')")
     label: str = Field(description="Dominant color of the object (e.g., 'red', 'blue')")
     box_2d: List[int] = Field(description="[ymin, xmin, ymax, xmax] normalized 0-1000")
     user_dropoff: bool = Field(

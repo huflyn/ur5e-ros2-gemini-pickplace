@@ -3,7 +3,7 @@
 <package format="3">
   <name>color_detection</name>
   <version>0.0.0</version>
-  <description>Vision system for detecting colored Lego bricks using HSV masking and depth projection.</description>
+  <description>Vision system for detecting colored bricks using HSV masking and depth projection.</description>
   <maintainer email="daneceni@gmail.com">daniel</maintainer>
   <license>Apache-2.0</license>
 
