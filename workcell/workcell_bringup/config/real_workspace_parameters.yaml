@@ -2,7 +2,7 @@
   ros__parameters:
     # --- Safe Workspace Boundaries ---
     # Set to 'true' to strictly enforce table boundaries (recommended for real hardware)
-    enable_workspace_safety: false
+    enable_workspace_safety: true
     # Physical dimensions of the table (in meters relative to robot base), check robot_base_frame TF in RViz for orientation
     workspace_min_x: -0.325
     workspace_max_x:  0.325
