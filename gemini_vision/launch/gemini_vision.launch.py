@@ -60,7 +60,7 @@ def generate_launch_description():
             '\nLaunch Arguments:\n',
             '- use_sim_time (default: false): Set to "true" if you use Simulation\n',
             '- model (default: empty): Override the Gemini API model\n',
-            '  Available Models: gemini-3-flash-preview, gemini-3.1-flash-lite-preview, gemini-robotics-er-1.5\n',
+            '  Available Models: gemini-3-flash-preview, gemini-3.1-flash-lite-preview, gemini-robotics-er-1.5-preview\n',
             '  Other models may work but have not been tested\n',
             "="*60
         ]
