@@ -9,11 +9,6 @@ from launch.conditions import LaunchConfigurationEquals
 def generate_launch_description():
 
     # --- Arguments ---
-    robot_ip_arg = DeclareLaunchArgument(
-        'robot_ip',
-        description='IP address of the real UR5e robot'
-    )
-    robot_ip = LaunchConfiguration('robot_ip')
 
     vision_arg = DeclareLaunchArgument(
         'vision',
@@ -48,7 +43,6 @@ def generate_launch_description():
     # UR5e Robot Driver
     robot_driver_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(workcell_ctrl_dir, 'launch', 'start_robot.launch.py')),
-        launch_arguments={'robot_ip': robot_ip}.items()
     )
 
     # Automated Play Trigger for Teach Pendant Robot Program (Wait 10 seconds for driver to boot)
@@ -106,10 +100,9 @@ def generate_launch_description():
     )
 
     # --- Terminal Info ---
-    log_info = LogInfo(msg=["\n=== STARTING REAL HARDWARE WORKCELL ===\nVision Mode: ", vision_mode, "\nRobot IP: ", robot_ip, "\n======================================="])
+    log_info = LogInfo(msg=["\n=== STARTING REAL HARDWARE WORKCELL ===\nVision Mode: ", vision_mode, "\n======================================="])
 
     return LaunchDescription([
-        robot_ip_arg,
         vision_arg,
         log_info,
         realsense_launch,
