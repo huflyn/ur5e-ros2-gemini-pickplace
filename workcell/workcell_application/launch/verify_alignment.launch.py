@@ -23,7 +23,7 @@ def generate_launch_description():
         )
         .robot_description(file_path="config/workcell.urdf.xacro")
         .moveit_cpp(
-            file_path=get_package_share_directory("workcell_application")
+            file_path=get_package_share_directory("workcell_control")
             + "/config/planning_parameters.yaml"
         )
         .to_moveit_configs()

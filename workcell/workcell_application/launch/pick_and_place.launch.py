@@ -17,7 +17,7 @@ def generate_launch_description():
         description='Use simulation (Webots) clock if true, hardware clock if false'
     )
 
-    # 1. Load the MoveIt configuration (Crucial for MoveItPy!)
+    # Load the MoveIt configuration (Crucial for MoveItPy!)
     moveit_config = (
         MoveItConfigsBuilder(
             robot_name="ur5e", package_name="workcell_moveit_config"
@@ -25,7 +25,7 @@ def generate_launch_description():
         .robot_description(file_path="config/workcell.urdf.xacro")
         .moveit_cpp(
             file_path=os.path.join(
-                get_package_share_directory("workcell_application"),
+                get_package_share_directory("workcell_control"),
                 "config",
                 "planning_parameters.yaml"
             )
@@ -33,29 +33,20 @@ def generate_launch_description():
         .to_moveit_configs()
     )
 
-    # 2. Path to your custom drop-off parameters YAML
-    pick_and_place_params_file = os.path.join(
-        get_package_share_directory('workcell_application'),
-        'config',
-        'pick_and_place_parameters.yaml'
-    )
-
-    # 3. Workspace parameters file (sim vs real)
+    # Workspace parameters file (sim vs real)
     workspace_params_file = PathJoinSubstitution([
         FindPackageShare('workcell_bringup'),
         'config',
         PythonExpression(["'sim_workspace_parameters.yaml' if '", use_sim_time, "' == 'true' else 'real_workspace_parameters.yaml'"])
     ])
 
-
-    # 4. Define the main sorting node
+    # Define the main sorting node
     pick_and_place_node = Node(
         package="workcell_application",
         executable="pick_and_place",
         name="pick_and_place_node",
         parameters=[
             moveit_config.to_dict(),      # Loads URDF, SRDF, Kinematics, etc.
-            pick_and_place_params_file,           # Loads your custom drop-off coordinates
             workspace_params_file,                 # Loads workspace safety parameters based on sim vs real
             {
                 "use_sim_time": use_sim_time,
