@@ -82,9 +82,9 @@ class PickAndPlaceNode(Node):
         self.declare_parameter('use_sim_gripper', False)
         self.declare_parameter('gripper_topic', '/ur5e/vacuum_gripper/turn_on')
 
-        self.declare_parameter('object_center_offset', 0.0) # Offset from front face to center of object in meters (for 3D grasping), adjust in pick_and_place_parameters.yaml if needed
+        self.declare_parameter('object_center_offset', 0.0) # Offset from front face to center of object in meters (for 3D grasping), adjust in workcell_bringup *_workspace_parameters.yaml if needed
 
-        self.declare_parameter('dropoff_default', [0.27, 0.250]) # adjust in pick_and_place_parameters.yaml if needed
+        self.declare_parameter('dropoff_default', [0.27, 0.250]) # adjust in workcell_bringup *_workspace_parameters.yaml if needed
         self.declare_parameter('dropoff_red',    [0.27, 0.450])
         self.declare_parameter('dropoff_blue',   [0.27, 0.350])
         self.declare_parameter('dropoff_green',  [-0.27, 0.450])
