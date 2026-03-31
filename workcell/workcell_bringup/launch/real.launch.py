@@ -36,7 +36,9 @@ def generate_launch_description():
             'align_depth.enable': 'true',
             'enable_sync': 'true',
             'spatial_filter.enable': 'true',
-            'pointcloud.enable': 'false'
+            'temporal_filter.enable': 'true',
+            'hole_filling_filter.enable': 'true',
+            'pointcloud.enable': 'true'
         }.items()
     )
 
