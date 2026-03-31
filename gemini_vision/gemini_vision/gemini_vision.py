@@ -508,7 +508,7 @@ class GeminiVisionNode(Node):
                             dy = object.user_dropoff_position.y
                             dropoff_str = f" | User-Drop-off: [X: {dx:.3f}, Y: {dy:.3f}]"
                         else:
-                            dropoff_str = " | Default Drop-off (see pick_and_place_parameters.yaml)"
+                            dropoff_str = " | Default Drop-off (see workcell_bringup *_workspace_parameters.yaml)"
 
                         # Log format: "- Red: [X: 0.123, Y: 0.456, Z: 0.789] | Distance: 500 mm | Drop-off: [X: 0.200, Y: 0.300]"
                         log_msg += f"{object_number} - {color.capitalize()}: [X: {x:.3f}, Y: {y:.3f}, Z: {z:.3f}] | Distance: {distance:.0f} mm{dropoff_str}\n"
