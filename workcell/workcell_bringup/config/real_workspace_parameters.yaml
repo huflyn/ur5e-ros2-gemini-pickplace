@@ -1,6 +1,21 @@
 /**:
   ros__parameters:
     # --------------------------------------
+    # --- Vision System Parameters ---
+    # --------------------------------------
+    # --- Camera Topics ---
+    camera_info_topic: '/camera/d415/color/camera_info'
+    color_image_topic: '/camera/d415/color/image_raw'
+    depth_image_topic: '/camera/d415/aligned_depth_to_color/image_raw'
+    # --- TF Frames ---
+    # Frame of the camera for TF transformations
+    camera_frame: 'd415_color_optical_frame'
+    # Target frame for the 3D coordinates
+    robot_base_frame: 'ur5e_base_link'
+    # --------------------------------------
+
+
+    # --------------------------------------
     # --- Safe Workspace Boundaries ---
     # --------------------------------------
     # --- Safe Workspace Boundaries ---
@@ -13,21 +28,6 @@
     workspace_max_y:  0.76
     # workspace_safety_tolerance: in [m], allowed tolerance outside the table (e.g. for dropping items off the edge)
     workspace_safety_tolerance: 0.10
-    # --------------------------------------
-
-
-    # --------------------------------------
-    # --- Vision System Parameters ---
-    # --------------------------------------
-    # --- Camera Topics ---
-    camera_info_topic: '/camera/d415/color/camera_info'
-    color_image_topic: '/camera/d415/color/image_raw'
-    depth_image_topic: '/camera/d415/aligned_depth_to_color/image_raw'
-    # --- TF Frames ---
-    # Frame of the camera for TF transformations
-    camera_frame: 'd415_color_optical_frame'
-    # Target frame for the 3D coordinates
-    robot_base_frame: 'ur5e_base_link'
     # --------------------------------------
 
 
