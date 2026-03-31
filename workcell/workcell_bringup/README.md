@@ -47,7 +47,7 @@ To prevent misconfigurations across multiple nodes, all environment-specific var
 > [!NOTE]
 > **Environment Adaptation:** The default coordinates (workspace boundaries, drop-off positions, and grasping heights) in these files are tailored to our specific lab setup. If you are deploying this on a different physical table or a modified Webots world, you **must** adjust these values to prevent MoveIt collisions or missed grasps!
 
-Nodes in the packages `gemini_vision`, `color_detection`, and `workcell_application` automatically pull their parameters from these files depending on whether the system is launched in simulation or real hardware mode.
+Nodes in the packages [`gemini_vision`](/gemini_vision/README.md#iv-configuration-camera-and-gemini), [`color_detection`](/color_detection/README.md#iii-configuration--camera-setup-yaml), and [`workcell_application`](/workcell/workcell_application/README.md#iii-configuration-yaml) automatically pull their parameters from these files depending on whether the system is launched in simulation or real hardware mode.
 
 Example snippet (`sim_workspace_parameters.yaml`):
 
@@ -66,6 +66,24 @@ Example snippet (`sim_workspace_parameters.yaml`):
     camera_frame: 'd415_sim_optical_frame'
     # Target frame for the 3D coordinates
     robot_base_frame: 'ur5e_base_link'
+    # --------------------------------------
+
+
+    # --------------------------------------
+    # --- HSV Color Thresholds ---
+    # --------------------------------------
+    # HSV thresholds [h, s, v] for color segmentation, adjust if needed for different lighting conditions or camera settings
+    hsv_red_lower: [0, 145, 100]
+    hsv_red_upper: [10, 255, 255]
+
+    hsv_yellow_lower: [16, 128, 117]
+    hsv_yellow_upper: [53, 255, 255]
+
+    hsv_green_lower: [28, 143, 0]
+    hsv_green_upper: [73, 255, 255]
+
+    hsv_blue_lower: [86, 168, 175]
+    hsv_blue_upper: [147, 255, 255]
     # --------------------------------------
 
 

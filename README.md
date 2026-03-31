@@ -120,13 +120,11 @@ This project uses YAML files to easily adapt to different setups without requiri
 > [!NOTE]
 > **Ready out-of-the-box for Simulation:** The default YAML parameters are fully optimized for the included Webots world and our specific UR5e lab environment.
 > 
-> **Adapting to your Hardware:** To run this project in your own physical environment, adjust the configuration files to match your specific camera topics, workspace boundaries, and drop-off coordinates.
+> **Adapting to your Hardware:** To run this project in your own physical environment, adjust the configuration files to match your specific camera topics, workspace boundaries, and color thresholds.
 
-* **[Centralized Workspace Parameters](/workcell/workcell_bringup/README.md#ii-workspace-configuration-yaml) (`workcell_bringup`):** Acts as the single source of truth for the entire robotic workspace. It defines the safe hover/grasp heights, Cartesian drop-off coordinates, physical table dimensions (hardware safety limits), camera topic names, and target `tf2` reference frames for both simulation and real hardware modes.
+**[Centralized Workspace Parameters](/workcell/workcell_bringup/README.md#ii-workspace-configuration-yaml) (`workcell_bringup`):** Acts as the single source of truth for the entire robotic workspace. It defines the safe hover/grasp heights, Cartesian drop-off coordinates, physical table dimensions (hardware safety limits), OpenCV HSV color thresholds, camera topic names, and target `tf2` reference frames for both simulation and real hardware modes.
   * `workcell/workcell_bringup/config/sim_workspace_parameters.yaml`
   * `workcell/workcell_bringup/config/real_workspace_parameters.yaml`
-* **[Color Thresholds](/color_detection/README.md#iii-configuration-yaml) (`color_detection`):** If you are using the classic HSV vision mode instead of the Gemini AI, this file stores the upper and lower bounds for the OpenCV color masking.
-  * `color_detection/config/hsv_bounds.yaml`
 
 ---
 

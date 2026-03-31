@@ -16,7 +16,7 @@ This package detects colored objects using a camera stream (RGB + Depth). It gen
 
 - [I) Package Structure](#i-package-structure)
 - [II) Services, Topics \& Custom Messages](#ii-services-topics--custom-messages)
-- [III) Configuration (YAML)](#iii-configuration-yaml)
+- [III) Configuration \& Camera Setup (YAML)](#iii-configuration--camera-setup-yaml)
 - [IV) Launch color\_detector (Service Node)](#iv-launch-color_detector-service-node)
 - [V) Launch color\_detector\_legacy (Topic-based Node)](#v-launch-color_detector_legacy-topic-based-node)
 - [VI) Using the HSV Tuner](#vi-using-the-hsv-tuner)
@@ -59,22 +59,37 @@ int32[] bounding_box_px              # Bounding box array [xmin, ymin, xmax, yma
 
 ---
 
-# III) Configuration (YAML)
+# III) Configuration & Camera Setup (YAML)
 
-The configuration for this node relies on parameter files distributed across two locations to cleanly separate global camera settings from local color thresholds:
-
-  * **[Global Workspace Parameters](/workcell/workcell_bringup/README.md#ii-workspace-configuration-yaml) (`workcell_bringup`):** Centralized files (`sim_workspace_parameters.yaml` and `real_workspace_parameters.yaml`) that store the camera topic names, the target `tf2` frames, and the workspace boundaries.
-  * **Local Color Parameters (`color_detection`):** The local `hsv_bounds.yaml` file that stores the specific HSV color limits to be applied in the OpenCV processing to create color masks for the pick-and-place task.
+To seamlessly switch between Webots simulation and real-world hardware, and to handle the drastically different lighting conditions, all parameters are managed centrally in the [workcell_bringup package](../workcell/workcell_bringup/README.md#ii-workspace-configuration-yaml).
 
 > [!IMPORTANT]
-> Before running the node in a new lighting environment, you must calibrate the **HSV bounds** in the local `hsv_bounds.yaml` using the provided tuning tool.
+> Before running the node in a new lighting environment, you must calibrate the **HSV color bounds** using the provided tuning tool.
 
-Example `hsv_bounds.yaml` (located in `color_detection/config/`):
+Snippet from `sm_workspace_parameters.yaml` (adjust the values for your environment!):
 
 ```yaml
-color_detector_node:
+/**:
   ros__parameters:
+    # --------------------------------------
+    # --- Vision System Parameters ---
+    # --------------------------------------
+    # --- Camera Topics ---
+    camera_info_topic: '/webots_realsense/depth/image_rect_raw/camera_info'
+    color_image_topic: '/webots_realsense/color/image_raw/image_color'
+    depth_image_topic: '/webots_realsense/depth/image_rect_raw/image'
+    # --- TF Frames ---
+    # Frame of the camera for TF transformations
+    camera_frame: 'd415_sim_optical_frame'
+    # Target frame for the 3D coordinates
+    robot_base_frame: 'ur5e_base_link'
+    # --------------------------------------
+
+
+    # --------------------------------------
     # --- HSV Color Thresholds ---
+    # --------------------------------------
+    # HSV thresholds [h, s, v] for color segmentation, adjust if needed for different lighting conditions or camera settings
     hsv_red_lower: [0, 145, 100]
     hsv_red_upper: [10, 255, 255]
 
@@ -86,6 +101,9 @@ color_detector_node:
 
     hsv_blue_lower: [86, 168, 175]
     hsv_blue_upper: [147, 255, 255]
+    # --------------------------------------
+
+    ...
 ```
 
 ---

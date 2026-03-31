@@ -8,6 +8,8 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     pkg_dir = get_package_share_directory('color_detection')
+    bringup_pkg_dir = get_package_share_directory('workcell_bringup')
+
 
     # Create LaunchConfiguration variable
     use_sim_time = LaunchConfiguration('use_sim_time')
@@ -19,10 +21,10 @@ def generate_launch_description():
         description='Set to true to use Webots simulation topics and clock'
     )
 
+    
     # Paths to the YAML parameter files
-    sim_parameters = os.path.join(pkg_dir, 'config', 'sim_parameters.yaml')
-    real_parameters = os.path.join(pkg_dir, 'config', 'real_parameters.yaml')
-    hsv_bounds = os.path.join(pkg_dir, 'config', 'hsv_bounds.yaml')
+    sim_parameters = os.path.join(bringup_pkg_dir, 'config', 'sim_workspace_parameters.yaml')
+    real_parameters = os.path.join(bringup_pkg_dir, 'config', 'real_workspace_parameters.yaml')
 
     # Evaluate which parameter file to load based on use_sim_time
     param_file = PythonExpression([
@@ -33,11 +35,10 @@ def generate_launch_description():
     hsv_tuner_node = Node(
         package='color_detection',
         executable='hsv_tuner',
-        name='color_detector_node', # Keeps the namespace so YAMLs map correctly
+        name='hsv_tuner_node', # Keeps the namespace so YAMLs map correctly
         output='screen',
         parameters=[
             param_file, 
-            hsv_bounds,
             {'use_sim_time': use_sim_time} # Crucial: pass the simulation time flag
         ]
     )

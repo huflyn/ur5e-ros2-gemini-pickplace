@@ -23,7 +23,7 @@ This package provides a highly capable, **AI-driven vision system for the pick-a
 - [III) Services, Topics \& Custom Messages](#iii-services-topics--custom-messages)
 - [IV) Configuration (Camera and Gemini)](#iv-configuration-camera-and-gemini)
   - [Camera \& Hardware Configuration (YAML)](#camera--hardware-configuration-yaml)
-  - [Gemini Configuration (Python)](#gemini-configuration-python)
+  - [Gemini Configuration (Python Script)](#gemini-configuration-python-script)
 - [V) Start Gemini Vision](#v-start-gemini-vision)
   - [Launch the Node](#launch-the-node)
   - [Override the Gemini Model](#override-the-gemini-model)
@@ -73,7 +73,29 @@ To maintain consistency, the camera configuration files are centralized in the *
 
 * **[Global Workspace Parameters](/workcell/workcell_bringup/README.md#ii-workspace-configuration-yaml) (`workcell_bringup`):** Centralized files (`sim_workspace_parameters.yaml` and `real_workspace_parameters.yaml`) that store the camera topic names, the target `tf2` frames, and the workspace boundaries.
 
-## Gemini Configuration (Python)
+Snippet from `sim_workspace_parameters.yaml` (adjust the values for your environment!):
+
+```yaml
+/**:
+  ros__parameters:
+    # --------------------------------------
+    # --- Vision System Parameters ---
+    # --------------------------------------
+    # --- Camera Topics ---
+    camera_info_topic: '/webots_realsense/depth/image_rect_raw/camera_info'
+    color_image_topic: '/webots_realsense/color/image_raw/image_color'
+    depth_image_topic: '/webots_realsense/depth/image_rect_raw/image'
+    # --- TF Frames ---
+    # Frame of the camera for TF transformations
+    camera_frame: 'd415_sim_optical_frame'
+    # Target frame for the 3D coordinates
+    robot_base_frame: 'ur5e_base_link'
+    # --------------------------------------
+
+    ...
+```
+
+## Gemini Configuration (Python Script)
 
 While you can override the AI model temporarily via launch arguments, the default behavior of the vision system is configured directly at the top of the **`gemini_vision.py`** script. 
 

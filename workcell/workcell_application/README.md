@@ -22,7 +22,7 @@ This package manages high-level robot control for the Pick-and-Place application
 - [III) Configuration (YAML)](#iii-configuration-yaml)
   - [Grasping Heights \& Drop-off Zones](#grasping-heights--drop-off-zones)
   - [Safe Workspace Boundaries (Sanity Check)](#safe-workspace-boundaries-sanity-check)
-  - [YAML Snippet Example:](#yaml-snippet-example)
+  - [YAML Snippet](#yaml-snippet)
 - [IV) Starting the Pick-and-Place Application](#iv-starting-the-pick-and-place-application)
   - [Step 1: Start the Robot and Camera (Real or Simulated)](#step-1-start-the-robot-and-camera-real-or-simulated)
     - [Option A: Simulation (Webots)](#option-a-simulation-webots)
@@ -87,12 +87,12 @@ To prevent collisions outside the workspace and protect the hardware from invali
 
 The physical table limits (`workspace_min_x`, `workspace_max_y`, etc.) and the toggle to enable this safety feature are also loaded globally from the aforementioned `*_workspace_parameters.yaml` files. If a target coordinate falls outside the physical table limits plus an allowed tolerance, the robot will safely abort the current item and move on to the next one.
 
-## YAML Snippet Example:
+## YAML Snippet
 
 ```yaml
 /**:
   ros__parameters:
-    
+
     ...
 
     # --------------------------------------
