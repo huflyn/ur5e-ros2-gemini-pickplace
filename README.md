@@ -19,7 +19,20 @@ The project features a complete, object-agnostic perception-to-action pipeline. 
 > [!Note]
 > **Project Test Use Case:** While the ROS 2 backend is designed to be universally applicable to any generic object, our primary test scenario involves sorting colored building blocks (toy bricks). You will see this specific use case reflected in the default AI prompts and examples, but the system can easily be adapted for other items (e.g., pens, screws, or industrial parts) simply by changing the prompt instructions. Of course, the objects should be reasonably sized for the UR5e's payload and gripper capabilities.
 
-https://github.com/user-attachments/assets/ba4a9620-bd2b-4814-b3d8-9d6d37d2f78e
+
+### Demo Webots Simulation
+
+[YouTube Video](https://youtu.be/hopADUj7RHA)
+
+https://github.com/user-attachments/assets/91ca37ed-1761-46df-897e-12c23e609267
+
+
+### Demo Real UR5e
+
+[YouTube Video](https://youtu.be/esVi4Wpt5Ac)
+
+https://github.com/user-attachments/assets/7c450f00-618c-4e0f-a409-265ef9e3335d
+
 
 ---
 
