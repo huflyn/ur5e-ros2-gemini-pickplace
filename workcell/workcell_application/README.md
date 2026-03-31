@@ -22,6 +22,7 @@ This package manages high-level robot control for the Pick-and-Place application
 - [III) Configuration (YAML)](#iii-configuration-yaml)
   - [Grasping Heights \& Drop-off Zones](#grasping-heights--drop-off-zones)
   - [Safe Workspace Boundaries (Sanity Check)](#safe-workspace-boundaries-sanity-check)
+  - [YAML Snippet Example:](#yaml-snippet-example)
 - [IV) Starting the Pick-and-Place Application](#iv-starting-the-pick-and-place-application)
   - [Step 1: Start the Robot and Camera (Real or Simulated)](#step-1-start-the-robot-and-camera-real-or-simulated)
     - [Option A: Simulation (Webots)](#option-a-simulation-webots)
@@ -35,7 +36,7 @@ This package manages high-level robot control for the Pick-and-Place application
     - [Trigger Option A: Default Mode](#trigger-option-a-default-mode)
     - [Trigger Option B: Custom Prompt Mode - Gemini ONLY](#trigger-option-b-custom-prompt-mode---gemini-only)
     - [Soft Stop (Return to Ready)](#soft-stop-return-to-ready)
-- [V) Starting the legacy Brick Sorter (ROS 1 Port)](#v-starting-the-legacy-object-sorter-ros-1-port)
+- [V) Starting the legacy Brick Sorter (ROS 1 Port)](#v-starting-the-legacy-brick-sorter-ros-1-port)
 - [VI) Usage of `move_to_coords.py`](#vi-usage-of-move_to_coordspy)
 - [VII) Usage of `verify_alignment.py`](#vii-usage-of-verify_alignmentpy)
 
@@ -68,34 +69,72 @@ This node utilizes a hybrid motion planning architecture, seamlessly switching b
 
 To keep the application flexible and adaptable to different physical environments, the orchestrator relies on YAML parameter files. This allows you to adjust heights, drop-off locations, and safety limits without having to modify or recompile the underlying Python code.
 
+To prevent misconfigurations across multiple nodes, all environment-specific variables are stored centrally in the [workcell_bringup package](/workcell/workcell_bringup/README.md#ii-workspace-configuration-yaml) in two separate YAML files:
+
+- `sim_workspace_parameters.yaml`: For simulation mode (Webots)
+- `real_workspace_parameters.yaml`: For real hardware mode (UR5e)
+
+> [!IMPORTANT]
+> **Lab Setup Variations:** The physical dimensions of your workspace (table limits, drop-off coordinates, heights) are NOT hardcoded here. You must calibrate them for your specific environment in the centralized `sim/real_workspace_parameters.yaml` located in the `workcell_bringup` package.
+
 ## Grasping Heights & Drop-off Zones
 
-Fallback sorting locations, center offsets, and safe heights are managed via **`config/pick_and_place_parameters.yaml`**. This allows for layout adjustments without modifying the source code. Adjust the parameters based on your specific setup.
+Fallback sorting locations, center offsets, and safe approach/grasping heights are defined within these central workspace parameter files. This allows you to fine-tune the robot's physical interactions and hardware bin layouts for either the real or simulated environment seamlessly.
+
+## Safe Workspace Boundaries (Sanity Check)
+
+To prevent collisions outside the workspace and protect the hardware from invalid coordinates (especially when using dynamic, AI-calculated drop-offs from Gemini), this orchestrator implements a strict pre-motion boundary check. 
+
+The physical table limits (`workspace_min_x`, `workspace_max_y`, etc.) and the toggle to enable this safety feature are also loaded globally from the aforementioned `*_workspace_parameters.yaml` files. If a target coordinate falls outside the physical table limits plus an allowed tolerance, the robot will safely abort the current item and move on to the next one.
+
+## YAML Snippet Example:
 
 ```yaml
-pick_and_place_node:
+/**:
   ros__parameters:
-    # Z-Heights
-    hover_height: 0.295 # safe height for moving above the table and bricks between pick and place positions
-    grasp_height: 0.001 # 0.00 = table surface, might detect collisions (moveit) if set too low
-    dropoff_height: 0.08 # height to drop bricks from
+    
+    ...
 
-    # Y-Offset
-    object_center_offset: 0.013 # Offset from front face (reference for camera) to center of object in meters for better grasping, adjust if needed
+    # --------------------------------------
+    # --- Safe Workspace Boundaries ---
+    # --------------------------------------
+    # --- Safe Workspace Boundaries ---
+    # enable_workspace_safety: set to 'true' to strictly enforce table boundaries for generated drop positions (recommended)
+    enable_workspace_safety: true
+    # workspace_*_*: in [m], physical dimensions of the table (relative to robot base), check robot_base_frame TF in RViz for orientation
+    workspace_min_x: -0.325
+    workspace_max_x:  0.325
+    workspace_min_y: -0.24
+    workspace_max_y:  0.76
+    # workspace_safety_tolerance: in [m], allowed tolerance outside the table (e.g. for dropping items off the edge)
+    workspace_safety_tolerance: 0.10
+    # --------------------------------------
 
-    # Drop-off coordinates: [X, Y] in meters relative to robot base, adjust if needed
-    dropoff_default: [-0.22, 0.31] # Default drop-off if no color-specific position is set
+
+    # --------------------------------------
+    # --- Pick and Place Parameters ---
+    # --------------------------------------    
+    # --- Z-Heights ---
+    # hover_height: in [m], safe collision-free height for moving above the table and bricks between pick and place positions
+    # grasp_height: in [m], height for grasping objects, 0.00 = table surface, might detect collisions (moveit) if set too low
+    # dropoff_height: in [m], height to drop bricks from, must be collision-free for the drop-off position
+    hover_height: 0.2
+    grasp_height: 0.001
+    dropoff_height: 0.08
+    # --- Object Positioning Offset ---
+    # object_center_offset: in [m], y-offset from objects front face (reference for depth sensor) to center of object in meters for better grasping, adjust if needed
+    object_center_offset: 0.013 # Offset 
+
+    # --- Drop-off ---
+    # Default drop-off if no color-specific position is set
+    # dropoff_<color>: [X, Y] in meters relative to robot base for specific color, adjust if needed
+    dropoff_default: [-0.22, 0.31]
     dropoff_blue: [-0.205, 0.475]
     dropoff_yellow: [0.275, 0.5]
     dropoff_red: [0.275, 0.39]
     dropoff_green: [0.275, 0.27]
+    # --------------------------------------
 ```
-
-## Safe Workspace Boundaries (Sanity Check)
-
-To prevent MoveIt collisions and protect the real hardware from invalid coordinates (especially when using AI-calculated drop-offs), this orchestrator implements a strict pre-motion boundary check. 
-
-The physical table limits (`workspace_min_x`, `workspace_max_y`, etc.) and the toggle to enable this safety feature are loaded globally from the **[`workcell_bringup`](../workcell_bringup/README.md#ii-workspace-configuration-yaml)** `sim_workspace_parameters.yaml` and `real_workspace_parameters.yaml` files. If a target coordinate falls outside the physical table plus the allowed tolerance, the robot will safely abort the current item and move to the next one.
 
 ---
 

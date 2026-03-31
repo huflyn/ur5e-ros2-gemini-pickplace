@@ -40,36 +40,74 @@ This package acts as the centralized "glue" for the entire robotic workspace. It
 
 # II) Workspace Configuration (YAML)
 
-To prevent misconfigurations across multiple nodes, all environment-specific variables are stored centrally in this package. 
+To prevent misconfigurations across multiple nodes, all environment-specific variables are stored centrally in this package in two separate YAML files:
+- `sim_workspace_parameters.yaml`: For simulation mode (Webots)
+- `real_workspace_parameters.yaml`: For real hardware mode (UR5e)
 
-Nodes like `gemini_vision`, `color_detection`, and `workcell_application` automatically pull their parameters from these files depending on whether the system is launched in simulation or real hardware mode.
+> [!NOTE]
+> **Environment Adaptation:** The default coordinates (workspace boundaries, drop-off positions, and grasping heights) in these files are tailored to our specific lab setup. If you are deploying this on a different physical table or a modified Webots world, you **must** adjust these values to prevent MoveIt collisions or missed grasps!
+
+Nodes in the packages `gemini_vision`, `color_detection`, and `workcell_application` automatically pull their parameters from these files depending on whether the system is launched in simulation or real hardware mode.
 
 Example snippet (`sim_workspace_parameters.yaml`):
 
 ```yaml
 /**:
   ros__parameters:
-    # --- Safe Workspace Boundaries ---
-    # Set to 'true' to strictly enforce table boundaries (recommended for real hardware)
-    enable_workspace_safety: true
-    # Physical dimensions of the table (in meters relative to robot base), check robot_base_frame TF in RViz for orientation
-    workspace_min_x: -0.325
-    workspace_max_x:  0.325
-    workspace_min_y: -0.24
-    workspace_max_y:  0.76
-    # Allowed tolerance outside the table (e.g. for dropping items off the edge)
-    workspace_safety_tolerance: 0.10
-
+    # --------------------------------------
+    # --- Vision System Parameters ---
+    # --------------------------------------
     # --- Camera Topics ---
     camera_info_topic: '/webots_realsense/depth/image_rect_raw/camera_info'
     color_image_topic: '/webots_realsense/color/image_raw/image_color'
     depth_image_topic: '/webots_realsense/depth/image_rect_raw/image'
-
     # --- TF Frames ---
     # Frame of the camera for TF transformations
     camera_frame: 'd415_sim_optical_frame'
     # Target frame for the 3D coordinates
     robot_base_frame: 'ur5e_base_link'
+    # --------------------------------------
+
+
+    # --------------------------------------
+    # --- Safe Workspace Boundaries ---
+    # --------------------------------------
+    # --- Safe Workspace Boundaries ---
+    # enable_workspace_safety: set to 'true' to strictly enforce table boundaries for generated drop positions (recommended)
+    enable_workspace_safety: true
+    # workspace_*_*: in [m], physical dimensions of the table (relative to robot base), check robot_base_frame TF in RViz for orientation
+    workspace_min_x: -0.325
+    workspace_max_x:  0.325
+    workspace_min_y: -0.24
+    workspace_max_y:  0.76
+    # workspace_safety_tolerance: in [m], allowed tolerance outside the table (e.g. for dropping items off the edge)
+    workspace_safety_tolerance: 0.10
+    # --------------------------------------
+
+
+    # --------------------------------------
+    # --- Pick and Place Parameters ---
+    # --------------------------------------    
+    # --- Z-Heights ---
+    # hover_height: in [m], safe collision-free height for moving above the table and bricks between pick and place positions
+    # grasp_height: in [m], height for grasping objects, 0.00 = table surface, might detect collisions (moveit) if set too low
+    # dropoff_height: in [m], height to drop bricks from, must be collision-free for the drop-off position
+    hover_height: 0.2
+    grasp_height: 0.001
+    dropoff_height: 0.08
+    # --- Object Positioning Offset ---
+    # object_center_offset: in [m], y-offset from objects front face (reference for depth sensor) to center of object in meters for better grasping, adjust if needed
+    object_center_offset: 0.013 # Offset 
+
+    # --- Drop-off ---
+    # Default drop-off if no color-specific position is set
+    # dropoff_<color>: [X, Y] in meters relative to robot base for specific color, adjust if needed
+    dropoff_default: [-0.22, 0.31]
+    dropoff_blue: [-0.205, 0.475]
+    dropoff_yellow: [0.275, 0.5]
+    dropoff_red: [0.275, 0.39]
+    dropoff_green: [0.275, 0.27]
+    # --------------------------------------
 ```
 
 ---

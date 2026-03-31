@@ -122,12 +122,10 @@ This project uses YAML files to easily adapt to different setups without requiri
 > 
 > **Adapting to your Hardware:** To run this project in your own physical environment, adjust the configuration files to match your specific camera topics, workspace boundaries, and drop-off coordinates.
 
-* **[Grasping Heights & Drop-off Zones](/workcell/workcell_application/README.md#grasping-heights--drop-off-zones) (`workcell_application`):** Defines the safe hover/grasp heights, object center offsets, and specific Cartesian drop-off coordinates for the pick-and-place orchestrator.
-  * `workcell/workcell_application/config/pick_and_place_parameters.yaml`
-* **[Workspace Boundaries, Camera & TF Frames](/workcell/workcell_bringup/README.md#ii-workspace-configuration-yaml)  (`workcell_bringup`):** Defines the physical table dimensions (hardware safety limits), camera topic names, and target `tf2` reference frames for both simulation and real hardware.
+* **[Centralized Workspace Parameters](/workcell/workcell_bringup/README.md#ii-workspace-configuration-yaml) (`workcell_bringup`):** Acts as the single source of truth for the entire robotic workspace. It defines the safe hover/grasp heights, Cartesian drop-off coordinates, physical table dimensions (hardware safety limits), camera topic names, and target `tf2` reference frames for both simulation and real hardware modes.
   * `workcell/workcell_bringup/config/sim_workspace_parameters.yaml`
   * `workcell/workcell_bringup/config/real_workspace_parameters.yaml`
-* **[Color Thresholds](/color_detection/README.md#iii-configuration--camera-setup-yaml) (`color_detection`):** If you are using the classic HSV vision mode instead of the Gemini AI, this file stores the upper and lower bounds for color masking.
+* **[Color Thresholds](/color_detection/README.md#iii-configuration-yaml) (`color_detection`):** If you are using the classic HSV vision mode instead of the Gemini AI, this file stores the upper and lower bounds for the OpenCV color masking.
   * `color_detection/config/hsv_bounds.yaml`
 
 ---
