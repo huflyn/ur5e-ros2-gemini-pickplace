@@ -200,18 +200,18 @@ class PickAndPlaceNode(Node):
         # Include the current prompt in the service request for Gemini to use in its response
         req = DetectObjects.Request()
         req.user_prompt = prompt
-        future = self.detect_client.call_async(req)
+        call_client = self.detect_client.call_async(req)
 
-        while rclpy.ok() and not future.done():
+        while rclpy.ok() and not call_client.done():
             time.sleep(0.1)
 
-        result = future.result()
+        result = call_client.result()
         if result is None:
             self.get_logger().error("🛑 Service call returned None!")
             return []
 
         if not result.success:
-            self.get_logger().error(f"🛑 Detection failed: {result.error_message}")
+            self.get_logger().error(f"🛑 Detection failed: {result.message}")
             return []
 
         return list(result.objects)
