@@ -72,21 +72,21 @@ GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
 
     Return a JSON list matching this exact schema:
     {
-      "objects": [
+        "objects": [
         {
-          "object_name": "<name of the object, e.g., toy object, pen, screw>",
-          "label": "<color of the object, e.g., red, blue, green>",
-          "box_2d": [ymin, xmin, ymax, xmax],
-          "user_dropoff": boolean,
-          "dropoff_point_2d": [y, x] | null,
-          "dropoff_coords_m": [x, y] | null
+            "object_name": "<name>",
+            "color": "<color>",
+            "box_2d": [ymin, xmin, ymax, xmax],
+            "user_dropoff": boolean,
+            "dropoff_point_2d": [y, x] | null,
+            "dropoff_coords_m": [x, y] | null
         }
       ]
     }
 
     JSON Field Instructions:
-    1. object_name: The type of object detected, no color information
-    2. label: Color information. ONLY the simple dominant color of the object (e.g., "red"). This is crucial for backend routing.
+    1. object_name: The name of the object. STRICTLY use only a single word (e.g., "brick", "pen", "screw", "car", "candy", etc.).
+    2. color: The color of the object (e.g., "red", "blue", "green", etc.).
     3. box_2d: Bounding box of the object. Normalized integers 0-1000.
     4. user_dropoff: Evaluate this STRICTLY PER INDIVIDUAL OBJECT.
        - Set to true if the user specifies ANY physical destination, if you can determine it. This includes VISUAL TARGETS (e.g., "on the colored areas", "onto the matching fields", "next to the blue object") OR explicit METRIC COORDINATES (e.g., "put it at x=0.5, y=0.1").
