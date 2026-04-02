@@ -40,6 +40,7 @@ https://github.com/user-attachments/assets/7c450f00-618c-4e0f-a409-265ef9e3335d
 - [II) Installation and Setup](#ii-installation-and-setup)
   - [ROS 2 Packages and Tools](#ros-2-packages-and-tools)
   - [Google Gemini API and SDK](#google-gemini-api-and-sdk)
+  - [PolyScope 5 Setup (UR5e \& EPick)](#polyscope-5-setup-ur5e--epick)
 - [III) Workspace Overview](#iii-workspace-overview)
 - [IV) Global Configuration (YAML)](#iv-global-configuration-yaml)
 - [V) Workflow Tips (Bash Shortcuts)](#v-workflow-tips-bash-shortcuts)
@@ -71,11 +72,9 @@ https://github.com/user-attachments/assets/7c450f00-618c-4e0f-a409-265ef9e3335d
 
 # II) Installation and Setup
 
-To make sure all components of this workspace function correctly, you need to install and set up the required ROS 2 packages, the Google GenAI SDK, and configure access to the Gemini API.
+To make sure all components of this workspace function correctly, you need to install and set up the required ROS 2 packages, the Google GenAI SDK and Gemini API, and configure the Robot Program in PolyScope 5 (teach pendant).
 
 ## ROS 2 Packages and Tools
-
-**Instructions:** [INSTALL.md](INSTALL.md)
 
 - [ros2_control](https://control.ros.org/jazzy/doc/getting_started/getting_started.html)
 - [Universal Robots ROS2 Driver](https://docs.universal-robots.com/Universal_Robots_ROS_Documentation/doc/ur_robot_driver/ur_robot_driver/doc/installation/installation.html)
@@ -84,11 +83,15 @@ To make sure all components of this workspace function correctly, you need to in
 - [Realsense ROS Wrapper](https://github.com/realsenseai/realsense-ros)
 - [Webots](https://docs.ros.org/en/jazzy/Tutorials/Advanced/Simulators/Webots/Installation-Ubuntu.html)
 
+**Instructions:** [INSTALL.md](/INSTALL.md)
+
 ## Google Gemini API and SDK
 
-**Instructions:** [GEMINI_API.md](GEMINI_API.md)
+**Instructions:** [GEMINI_API.md](/GEMINI_API.md)
 
-- [Google Gen AI SDK](https://ai.google.dev/gemini-api/docs/quickstart)
+## PolyScope 5 Setup (UR5e & EPick)
+
+**Instructions:** [POLYSCOPE5_SETUP.md](/POLYSCOPE5_SETUP.md)
 
 ---
 
