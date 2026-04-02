@@ -1,21 +1,25 @@
 # Install ROS 2 Drivers and Tools <!-- omit from toc -->
 
-[![jazzy][jazzy-badge]][jazzy]
-[![ubuntu24][ubuntu24-badge]][ubuntu24]
+[![jazzy][jazzy-badge]][jazzy-link]
+[![ubuntu24][ubuntu24-badge]][ubuntu24-link]
+[![gemini][gemini-badge]][gemini-link]
 
-[jazzy-badge]: https://img.shields.io/badge/-JAZZY-orange?style=flat-square&logo=ros
-[jazzy]: https://docs.ros.org/en/jazzy/index.html
+[jazzy-badge]: https://img.shields.io/badge/-ROS%202%20JAZZY-orange?style=flat-square&logo=ros&logoColor=white
+[jazzy-link]: https://docs.ros.org/en/jazzy/index.html
 [ubuntu24-badge]: https://img.shields.io/badge/-UBUNTU%2024%2E04-blue?style=flat-square&logo=ubuntu&logoColor=white
-[ubuntu24]: https://releases.ubuntu.com/noble/
+[ubuntu24-link]: https://releases.ubuntu.com/noble/
+[gemini-badge]: https://img.shields.io/badge/-GEMINI%20API-7C4DFF?style=flat-square&logo=googlegemini&logoColor=white
+[gemini-link]: https://ai.google.dev/gemini-api/docs
+
+In order to run all packages in this workspace, you need to have the necessary ROS 2 drivers and tools installed for controlling the robot and processing sensor data. Below are the instructions for installing these components on Ubuntu 24.04 with ROS 2 Jazzy.
 
 - [ros2\_control (Docs)](#ros2_control-docs)
 - [Universal Robots ROS2 Driver (Docs, GitHub)](#universal-robots-ros2-driver-docs-github)
 - [MoveIt 2 (Docs)](#moveit-2-docs)
 - [ROS Wrapper for RealSense™ Cameras (GitHub)](#ros-wrapper-for-realsense-cameras-github)
-- [Google Gen AI SDK (Docs)](#google-gen-ai-sdk-docs)
-- [Optional: Webots (Docs)](#optional-webots-docs)
+- [Webots (Docs)](#webots-docs)
 
-In order to run all packages in this workspace, you need to have the necessary ROS 2 drivers and tools installed for controlling the robot, processing sensor data, and integrating with the Google Gemini API. Below are the instructions for installing these components on Ubuntu 24.04 with ROS 2 Jazzy.
+---
 
 # ros2_control ([Docs](https://control.ros.org/jazzy/index.html))
 
@@ -25,6 +29,7 @@ The ros2_control is a framework for real-time control of robots using ROS 2.
 sudo apt install ros-jazzy-ros2-control ros-jazzy-ros2-controllers
 ```
 
+---
 
 # Universal Robots ROS2 Driver ([Docs](https://docs.universal-robots.com/Universal_Robots_ROS_Documentation/index.html), [GitHub](https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver/tree/jazzy))
 
@@ -34,6 +39,7 @@ The ROS 2 driver packages for Universal Robots manipulators to control a Univers
 sudo apt install ros-jazzy-ur
 ```
 
+---
 
 # MoveIt 2 ([Docs](https://moveit.ai/install-moveit2/binary/))
 
@@ -49,6 +55,8 @@ sudo apt install ros-jazzy-rmw-cyclonedds-cpp
 # You may want to add this to ~/.bashrc to source it automatically
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 ```
+
+---
 
 # ROS Wrapper for RealSense™ Cameras ([GitHub](https://github.com/realsenseai/realsense-ros))
 
@@ -110,19 +118,9 @@ Please choose only one option from the 3 options below (in order to prevent mult
 
 </details>
 
+---
 
-# Google Gen AI SDK ([Docs](https://ai.google.dev/gemini-api/docs/quickstart))
-
-Google Gen AI Python SDK provides an interface for developers to integrate Google's generative models into their Python applications
-
-Using Python 3.9+, install the google-genai package using the following pip command:
-
-```bash
-pip install -q -U google-genai
-```
-
-
-# Optional: Webots ([Docs](https://docs.ros.org/en/jazzy/Tutorials/Advanced/Simulators/Webots/Installation-Ubuntu.html#installation-ubuntu))
+# Webots ([Docs](https://docs.ros.org/en/jazzy/Tutorials/Advanced/Simulators/Webots/Installation-Ubuntu.html#installation-ubuntu))
 
 This is optional, but if you want to use the Webots simulation of the workcell, you need to install Webots and the ``webots_ros2`` package.
 
@@ -134,6 +132,7 @@ This is optional, but if you want to use the Webots simulation of the workcell, 
     ```bash
     sudo apt-get install ros-jazzy-webots-ros2
     ```
+
 ---
 
-Back to [README.md](README.md#install-ros-2-drivers-and-tools)
+Back to [II) Installation and Setup](/README.md#ii-installation-and-setup)

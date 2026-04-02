@@ -4,18 +4,25 @@
 [gemini-badge]: https://img.shields.io/badge/-GEMINI%20API-7C4DFF?style=flat-square&logo=googlegemini&logoColor=white
 [gemini-link]: https://ai.google.dev/gemini-api/docs
 
-- [Step 1: Create Gemini API Key (Docs)](#step-1-create-gemini-api-key-docs)
-- [Step 2: Google GenAI SDK Installation (Docs)](#step-2-google-genai-sdk-installation-docs)
-- [Step 3: Setting the API key as an environment variable (Docs)](#step-3-setting-the-api-key-as-an-environment-variable-docs)
-- [Step 4: Make your first request (Docs)](#step-4-make-your-first-request-docs)
-- [Models Overview](#models-overview)
+These instructions will guide you through setting up the Google Gen AI SDK and Gemini API, which we use in our project to enable advanced language understanding and reasoning capabilities for our robotic system.
 
+Official documentattion: [Gemini API](https://ai.google.dev/gemini-api/docs/quickstart)
 
-# Step 1: Create Gemini API Key ([Docs](https://ai.google.dev/gemini-api/docs/api-key))
+---
 
-To use the Gemini API, you need an API key. Create and manage your keys in [*Google AI Studio*](https://aistudio.google.com/app/apikey).
+- [I) Google Gen AI SDK](#i-google-gen-ai-sdk)
+- [II) Google Gemini API Setup and Usage](#ii-google-gemini-api-setup-and-usage)
+  - [Step 1: Create Gemini API Key (Docs)](#step-1-create-gemini-api-key-docs)
+  - [Step 2: Google GenAI SDK Installation (Docs)](#step-2-google-genai-sdk-installation-docs)
+  - [Step 3: Setting the API key as an environment variable (Docs)](#step-3-setting-the-api-key-as-an-environment-variable-docs)
+  - [Step 4: Make your first request (Docs)](#step-4-make-your-first-request-docs)
+- [III) Models Overview](#iii-models-overview)
 
-# Step 2: Google GenAI SDK Installation ([Docs](https://ai.google.dev/gemini-api/docs/quickstart))
+---
+
+# I) Google Gen AI SDK
+
+Google Gen AI Python SDK provides an interface for developers to integrate Google's generative models into their Python applications
 
 Using Python 3.9+, install the google-genai package using the following pip command:
 
@@ -23,7 +30,25 @@ Using Python 3.9+, install the google-genai package using the following pip comm
 pip install -q -U google-genai
 ```
 
-# Step 3: Setting the API key as an environment variable ([Docs](https://ai.google.dev/gemini-api/docs/api-key#set-api-env-var))
+---
+
+# II) Google Gemini API Setup and Usage
+
+To use the Gemini API, you need to create an API key, set it as an environment variable, and then you can make requests to the API using the Google GenAI SDK. Follow the steps below to get started:
+
+## Step 1: Create Gemini API Key ([Docs](https://ai.google.dev/gemini-api/docs/api-key))
+
+To use the Gemini API, you need an API key. Create and manage your keys in [*Google AI Studio*](https://aistudio.google.com/app/apikey).
+
+## Step 2: Google GenAI SDK Installation ([Docs](https://ai.google.dev/gemini-api/docs/quickstart))
+
+Using Python 3.9+, install the google-genai package using the following pip command:
+
+```bash
+pip install -q -U google-genai
+```
+
+## Step 3: Setting the API key as an environment variable ([Docs](https://ai.google.dev/gemini-api/docs/api-key#set-api-env-var))
 
 Bash is a common Linux and macOS terminal configuration. You can check if you have a configuration file for it by running the following command:
 
@@ -64,7 +89,7 @@ It should print your API key.
 > 
 > Your API key is like a password that allows access to your Google Cloud resources. Keep it secure and do not share it publicly or commit it to version control systems. If you believe your API key has been compromised, revoke it immediately in the Google AI Studio and generate a new one.
 
-# Step 4: Make your first request ([Docs](https://ai.google.dev/gemini-api/docs/quickstart#make-first-request))
+## Step 4: Make your first request ([Docs](https://ai.google.dev/gemini-api/docs/quickstart#make-first-request))
 
 Here is a simple example of how to use the Google GenAI SDK to make a request to the Gemini API with the Gemini 2.5 Flash model:
 
@@ -99,10 +124,9 @@ If everything is set up correctly, you should see a response from the Gemini 3 F
 Yes, I'm here! How can I assist you today?
 ```
 
+---
 
-
-
-# Models Overview
+# III) Models Overview
 
 The Gemini API provides access to a range of powerful language models, each designed for specific use cases, and with different request limits (you can see your current usage and limits in [Google AI Studio](https://aistudio.google.com/app/rate-limit)).
 
@@ -118,4 +142,4 @@ Following models are recommended for this project (description from official Gem
 
 ---
 
-Back to [README.md](README.md#setup-google-gemini-api)
+Back to [II) Installation and Setup](/README.md#ii-installation-and-setup)
