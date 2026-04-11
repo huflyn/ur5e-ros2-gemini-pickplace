@@ -7,10 +7,7 @@ from launch_ros.actions import Node
 
 # Keep in sync with LM_STUDIO_MODELS in lm_studio_vision.py
 AVAILABLE_MODELS = [
-    "google/gemma-4-e2b",        # [0]  5.95 GB, Q8
-    "google/gemma-4-e4b",        # [1]  6.33 GB, Q8
-    "google/gemma-4-26b-a4b",    # [2] 17.99 GB, Q4
-    "qwen/qwen3.5-9b",           # [3] 10.45 GB, Q8
+    "google/gemma-4-e4b",                   # [0]  6.33 GB, Q8
 ]
 
 
