@@ -45,10 +45,7 @@ import base64
 # ---------------------------------------------------------------------------
 
 LM_STUDIO_MODELS = [
-    "google/gemma-4-e2b",        # [0]  5.95 GB, Q8
-    "google/gemma-4-e4b",        # [1]  6.33 GB, Q8
-    "google/gemma-4-26b-a4b",    # [2] 17.99 GB, Q4
-    "qwen/qwen3.5-9b",           # [3] 10.45 GB, Q8
+    "google/gemma-4-e4b",                   # [0]  6.33 GB, Q8
 ]
 LM_STUDIO_MODEL = LM_STUDIO_MODELS[0]  # ← Default hier wechseln
 
@@ -558,8 +555,8 @@ class LmStudioVisionNode(Node):
         self,
         img_bytes: bytes,
         user_prompt: Optional[str] = None
-    ) -> Optional[List[ObjectDetection]]:
-        """Sends image + prompt to LM Studio and parses the JSON response."""
+        ) -> Optional[List[ObjectDetection]]:
+
         start       = time.time()
         prompt_text = build_prompt(user_prompt)
 
@@ -568,7 +565,6 @@ class LmStudioVisionNode(Node):
         else:
             self.get_logger().info("🅰️  Default Mode")
 
-        # Base64-encode the JPEG
         image_b64 = base64.b64encode(img_bytes).decode("utf-8")
         image_url = f"data:image/jpeg;base64,{image_b64}"
 
@@ -578,14 +574,13 @@ class LmStudioVisionNode(Node):
                 "role": "user",
                 "content": [
                     {"type": "image_url",
-                     "image_url": {"url": image_url}},
+                    "image_url": {"url": image_url}},
                     {"type": "text",
-                     "text": prompt_text},
+                    "text": prompt_text},
                 ],
             },
         ]
 
-        # Structured JSON output (LM Studio ≥ 0.3)
         response_format = {
             "type": "json_schema",
             "json_schema": {
@@ -602,15 +597,42 @@ class LmStudioVisionNode(Node):
                 model=self.lm_studio_model,
                 messages=messages,
                 temperature=LM_STUDIO_TEMPERATURE,
-                # max_tokens intentionally omitted → model maximum is used
                 response_format=response_format,
             )
 
-            raw_text = resp.choices[0].message.content
+            msg = resp.choices[0].message
+
+            # --- Primär: content ---
+            raw_text = msg.content or ""
+
+            # --- Fallback: reasoning_content (Qwen3, DeepSeek-R1, etc.) ---
+            # Reasoning-Modelle schreiben bei strukturierter Ausgabe das JSON
+            # in reasoning_content, content bleibt leer
+            if not raw_text.strip():
+                reasoning = getattr(msg, 'reasoning_content', None) or ""
+                if reasoning.strip():
+                    self.get_logger().info(
+                        "ℹ️  Reasoning model detected: JSON found in "
+                        "reasoning_content (content was empty)"
+                    )
+                    raw_text = reasoning
+                else:
+                    self.get_logger().error(
+                        f"🔴 Model returned empty response.\n"
+                        f"   Model:         {self.lm_studio_model}\n"
+                        f"   finish_reason: {resp.choices[0].finish_reason}\n"
+                        f"   content:           {msg.content!r}\n"
+                        f"   reasoning_content: {reasoning!r}\n"
+                        "   → Is a vision-capable model loaded in LM Studio?"
+                    )
+                    return None
+
             self.get_logger().info(
-                f"\n{'=' * 60}\nAnswer:\n{raw_text}\n{'=' * 60}")
+                f"\n{'=' * 60}\nAnswer:\n{raw_text}\n{'=' * 60}"
+            )
             self.get_logger().info(
-                f"⏱️  Processing time: {time.time() - start:.2f}s")
+                f"⏱️  Processing time: {time.time() - start:.2f}s"
+            )
 
             result = DetectionResult.model_validate_json(raw_text)
             return result.objects
@@ -626,7 +648,8 @@ class LmStudioVisionNode(Node):
 
         except openai.BadRequestError as e:
             self.get_logger().error(
-                f"🔴 BadRequest – model may not support vision input: {e}"
+                f"🔴 BadRequest: {e}\n"
+                f"   → Does '{self.lm_studio_model}' support vision input?"
             )
             return None
 
