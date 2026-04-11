@@ -16,6 +16,14 @@
 
 
     # --------------------------------------
+    # --- Local VLM (LM Studio) Setup ---
+    # --------------------------------------
+    # IP-Address and Port of the LM Studio API, adjust if needed (e.g. if running on a different machine or using a different port)
+    lm_studio_host: "192.168.178.69"
+    lm_studio_port: 1234
+
+
+    # --------------------------------------
     # --- HSV Color Thresholds ---
     # --------------------------------------
     # HSV thresholds [h, s, v] for color segmentation, adjust if needed for different lighting conditions or camera settings
