@@ -6,7 +6,8 @@
 
 This package is an **experimental "drop-in replacement"** for the `gemini_vision` package. It enables AI-driven object detection completely locally, offline, and privacy-friendly using locally hosted Vision-Language Models (VLMs) via [LM Studio](https://lmstudio.ai/).
 
-> **Note:** This is an experimental feature branch intended primarily for scientific evaluation purposes (e.g., latency and architecture comparisons between cloud AI and edge AI). It is not integrated into the main branch and may be revised or removed in the future as the technology evolves.
+> [!CAUTION]
+> This is an experimental feature branch intended primarily for scientific evaluation purposes (e.g., response comparisons between cloud AI and edge AI). It is not integrated into the main branch and may be revised or removed in the future.
 
 ---
 
