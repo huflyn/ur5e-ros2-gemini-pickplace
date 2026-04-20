@@ -45,7 +45,7 @@ from typing import List, Optional
 GEMINI_MODELS = [
     "gemini-3-flash-preview",
     "gemini-3.1-flash-lite-preview",
-    "gemini-robotics-er-1.5-preview"
+    "gemini-robotics-er-1.6-preview"
 ]
 GEMINI_MODEL = GEMINI_MODELS[1] # Set your default model here
 
@@ -53,9 +53,6 @@ GEMINI_THINKING_LEVELS = ["minimal", "low", "medium", "high"] # Gemini 3 Flash d
 GEMINI_THINKING_LEVEL_DEFAULT = GEMINI_THINKING_LEVELS[2] # Change this to switch thinking levels, for complex user prompts medium (2) or high (3) is recommended, for the simple default prompt minimal (0) works fine and is faster (using Gemini 3.1 Flash-Lite Preview)
 GEMINI_THINKING_LEVEL_3FLASH = GEMINI_THINKING_LEVELS[3] # Dedicated thinking level for Gemini 3 Flash
 GEMINI_THINKING_LEVEL_31FLASHLITE = GEMINI_THINKING_LEVELS[2] # Dedicated thinking level for Gemini 3.1 Flash-Lite
-
-
-GEMINI_THINKING_BUDGET = -1 # Gemini Robotics-ER 1.5 uses thinking_budget (default: -1 for dynamic thinking) instead of thinking_level, set to 0 for no thinking, range: 0 to 24576
 
 GEMINI_DEFAULT_PROMPT = textwrap.dedent("""\
     Detect all bricks on the table
@@ -635,13 +632,11 @@ class GeminiVisionNode(Node):
         
         # --- Thinking Config Selection Logic ---
 
-        # 1. Specific Config for Gemini Robotics-ER 1.5 (uses thinking_budget instead of thinking_level)
-        if "gemini-robotics-er-1.5" in self.gemini_model:
+        # 1. Specific Config for Gemini Robotics-ER 1.6
+        if "gemini-robotics-er" in self.gemini_model:
             current_thinking_config = types.ThinkingConfig(
-                thinking_budget=GEMINI_THINKING_BUDGET,
                 include_thoughts=True
             )
-            self.get_logger().info(f"Using thinking_budget={GEMINI_THINKING_BUDGET} for model {self.gemini_model}")
             
         # 2. Specific Config for Gemini 3 Family (supporting thinking_level)
         elif "gemini-3" in self.gemini_model: 
