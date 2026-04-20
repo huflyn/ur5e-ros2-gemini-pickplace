@@ -12,7 +12,7 @@
 [gemini-link]: https://ai.google.dev/gemini-api/docs
 
 
-This package provides a highly capable, **AI-driven vision system for the pick-and-place application**. It leverages the **Gemini API** (supporting models like Gemini 3 Flash and Gemini Robotics-ER 1.5) to analyze RGB-D camera streams. It can detect specified objects (like building bricks), map 2D bounding boxes to 3D spatial coordinates, and interpret complex natural language instructions to dynamically calculate custom drop-off locations on a table surface, if specified.
+This package provides a highly capable, **AI-driven vision system for the pick-and-place application**. It leverages the **Gemini API** (supporting models like Gemini 3 Flash and Gemini Robotics-ER 1.6) to analyze RGB-D camera streams. It can detect specified objects (like building bricks), map 2D bounding boxes to 3D spatial coordinates, and interpret complex natural language instructions to dynamically calculate custom drop-off locations on a table surface, if specified.
 
 ![Screenshot of the gemini_vision node running in Webots simulation, showing detected bricks highlighted with bounding boxes in RViz.](../docs/images/gemini_vision_user-prompt-mode_rviz.png)
 
@@ -107,13 +107,13 @@ You can permanently change the default model, adjust the "thinking" levels (whic
 GEMINI_MODELS = [
     "gemini-3-flash-preview",
     "gemini-3.1-flash-lite-preview",
-    "gemini-robotics-er-1.5-preview"
+    "gemini-robotics-er-1.6-preview"
 ]
 GEMINI_MODEL = GEMINI_MODELS[2] # Set your default model here
 
 # Thinking levels determine the reasoning depth for Gemini 3 models.
 GEMINI_THINKING_LEVEL_DEFAULT = GEMINI_THINKING_LEVELS[2]
-GEMINI_THINKING_BUDGET = -1 # For Robotics-ER 1.5
+GEMINI_THINKING_BUDGET = -1 # For Robotics-ER 1.6
 
 # Prompts define what the AI looks for and how it formats the output
 GEMINI_DEFAULT_PROMPT = textwrap.dedent("""...""")
@@ -228,7 +228,7 @@ For this project, the following models are recommended for experimentation (desc
 | --- | --- | :---: | :---: | :---: |
 | [gemini-3-flash-preview](https://ai.google.dev/gemini-api/docs/models/gemini-3-flash-preview) | The best model in the world for multimodal understanding, and our most powerful agentic and vibe-coding model yet, delivering richer visuals and deeper interactivity, all built on a foundation of state-of-the-art reasoning. | 20 | December 2025 | January 2025 |
 | [gemini-3.1-flash-lite-preview](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite-preview) | Our most cost-efficient multimodal model, offering the fastest performance for high-frequency, lightweight tasks. Gemini 3.1 Flash-Lite is best for high-volume agentic tasks, simple data extraction, and extremely low-latency applications where budget and speed are the primary constraints. | 500 | March 2026 | January 2025 |
-| [gemini-robotics-er-1.5-preview](https://ai.google.dev/gemini-api/docs/models/gemini-robotics-er-1.5-preview) | Gemini Robotics-ER 1.5 is a vision-language model (VLM) that brings Gemini's agentic capabilities to robotics. It's designed for advanced reasoning in the physical world, allowing robots to interpret complex visual data, perform spatial reasoning, and plan actions from natural language commands. | 20 | September 2025 | January 2025 |
+| [gemini-robotics-er-1.6-preview](https://ai.google.dev/gemini-api/docs/models/gemini-robotics-er-1.6-preview) | Gemini Robotics-ER 1.6 is a vision-language model (VLM) that brings Gemini's agentic capabilities to robotics. It's designed for advanced reasoning in the physical world, allowing robots to interpret complex visual data, perform spatial reasoning, and plan actions from natural language commands. | 20 | September 2025 | January 2025 |
 
 [^1]: Information from March 2026, please refer to the official [Gemini API Models documentation](https://ai.google.dev/gemini-api/docs/models) for the most up-to-date information on available models and their capabilities.
 
