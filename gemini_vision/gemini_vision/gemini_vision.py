@@ -650,7 +650,6 @@ class GeminiVisionNode(Node):
                 elif self.gemini_model == "gemini-3.1-flash-lite-preview":
                     current_thinking_level = GEMINI_THINKING_LEVEL_31FLASHLITE
                 else:
-                    # Fallback für zukünftige Gemini 3 Modelle
                     current_thinking_level = GEMINI_THINKING_LEVEL_DEFAULT 
                     
             current_thinking_config = types.ThinkingConfig(
@@ -743,108 +742,112 @@ class GeminiVisionNode(Node):
             # --- Robust Depth for Object ---
             depth_mm = get_robust_depth(object.box_2d, cv_depth, img_w, img_h)
             
-            if depth_mm is not None:
-                z = (depth_mm / 1000.0) + self.object_center_offset
+            # Skip this object entirely if no valid depth is found at the object's location
+            if depth_mm is None:
+                self.get_logger().warn(
+                    f"🔴 No valid depth found for object '{color}'. Skipping the object completely."
+                )
+                continue
+
+            z = (depth_mm / 1000.0) + self.object_center_offset
+            
+            if 0.03 < z <= self.max_depth_m:
+                # 2D Center to 3D Ray projection
+                cx = np.clip((xmin + xmax) // 2, 0, img_w - 1)
+                cy = np.clip((ymin + ymax) // 2, 0, img_h - 1)
+                ray = self.camera_model.projectPixelTo3dRay((cx, cy))
+                scale = z / ray[2]
                 
-                if 0.03 < z <= self.max_depth_m:
-                    # 2D Center to 3D Ray projection
-                    cx = np.clip((xmin + xmax) // 2, 0, img_w - 1)
-                    cy = np.clip((ymin + ymax) // 2, 0, img_h - 1)
-                    ray = self.camera_model.projectPixelTo3dRay((cx, cy))
-                    scale = z / ray[2]
+                # Create Point in Camera Frame
+                pt_cam = PointStamped()
+                pt_cam.header.frame_id = self.camera_frame
+                pt_cam.point.x = ray[0] * scale
+                pt_cam.point.y = ray[1] * scale
+                pt_cam.point.z = z
+
+                # Transform to Robot Base Frame
+                pt_base = do_transform_point(pt_cam, tf_cam_to_base)
+                
+                # Store in Pydantic for drawing
+                object.position_3d = [pt_base.point.x, pt_base.point.y, pt_base.point.z]
+                
+                # --- Debug ---
+                self.get_logger().info(
+                    f"DEBUG {color}: pixel=({cx},{cy}), "
+                    f"ray=({ray[0]:.4f},{ray[1]:.4f},{ray[2]:.4f}), "
+                    f"scale={scale:.4f}, "
+                    f"cam=({ray[0]*scale:.4f},{ray[1]*scale:.4f},{z:.4f}), "
+                    f"base=({pt_base.point.x:.4f},{pt_base.point.y:.4f},{pt_base.point.z:.4f})"
+                )
+
+                # --- Build ROS Message ---
+                msg = DetectedObject()
+                msg.color.data = color
+                msg.position = pt_base
+                msg.camera_distance_mm = z * 1000.0
+                msg.yaw_degrees = object.yaw_degrees
+                msg.bounding_box_px = [ymin, xmin, ymax, xmax]
+                msg.has_user_dropoff = False
+
+                # --- Robust Depth for Drop-off ---
+                # --- 1. Visual Drop-off (2D Point provided by Gemini) ---
+                if object.dropoff_point_2d:
+                    drop_depth_mm = get_robust_depth(object.dropoff_point_2d, cv_depth, img_w, img_h)
+
+                    # Skip the entire object if the dropoff pixel has no valid depth
+                    if drop_depth_mm is None:
+                        self.get_logger().warn(
+                            f"🔴 No depth at dropoff for '{color}'. Skipping the object completely."
+                        )
+                        continue
+
+                    drop_z = drop_depth_mm / 1000.0
+                    dy, dx = normalized_to_pixel(object.dropoff_point_2d, img_w, img_h)
+                    drop_ray = self.camera_model.projectPixelTo3dRay((dx, dy))
+                    scale = drop_z / drop_ray[2]
                     
-                    # Create Point in Camera Frame
-                    pt_cam = PointStamped()
-                    pt_cam.header.frame_id = self.camera_frame
-                    pt_cam.point.x = ray[0] * scale
-                    pt_cam.point.y = ray[1] * scale
-                    pt_cam.point.z = z
-
-                    # Transform to Robot Base Frame
-                    pt_base = do_transform_point(pt_cam, tf_cam_to_base)
+                    drop_cam = PointStamped()
+                    drop_cam.header.frame_id = self.camera_frame
+                    drop_cam.point.x = drop_ray[0] * scale
+                    drop_cam.point.y = drop_ray[1] * scale
+                    drop_cam.point.z = drop_z
                     
-                    # Store in Pydantic for drawing
-                    object.position_3d = [pt_base.point.x, pt_base.point.y, pt_base.point.z]
+                    drop_base = do_transform_point(drop_cam, tf_cam_to_base)
+                    object.dropoff_3d = [drop_base.point.x, drop_base.point.y, drop_base.point.z]
                     
-                    # --- Debug ---
-                    self.get_logger().info(
-                        f"DEBUG {color}: pixel=({cx},{cy}), "
-                        f"ray=({ray[0]:.4f},{ray[1]:.4f},{ray[2]:.4f}), "
-                        f"scale={scale:.4f}, "
-                        f"cam=({ray[0]*scale:.4f},{ray[1]*scale:.4f},{z:.4f}), "
-                        f"base=({pt_base.point.x:.4f},{pt_base.point.y:.4f},{pt_base.point.z:.4f})"
-                    )
+                    msg.has_user_dropoff = True
+                    msg.user_dropoff_position = drop_base.point
 
-                    # --- Build ROS Message ---
-                    msg = DetectedObject()
-                    msg.color.data = color
-                    msg.position = pt_base
-                    msg.camera_distance_mm = z * 1000.0
-                    msg.yaw_degrees = object.yaw_degrees
-                    msg.bounding_box_px = [ymin, xmin, ymax, xmax]
-                    msg.has_user_dropoff = False
-
-                    # --- Robust Depth for Drop-off ---
-                    # --- 1. Visual Drop-off (2D Point provided by Gemini) ---
-                    if object.dropoff_point_2d:
-                        drop_depth_mm = get_robust_depth(object.dropoff_point_2d, cv_depth, img_w, img_h)
-
-                        # Fallback to object depth if dropoff pixel has no depth
-                        if drop_depth_mm is None:
-                            self.get_logger().warn(
-                                f"No depth at dropoff for '{color}'. Using object depth as fallback."
-                            )
-                            drop_depth_mm = depth_mm
-    
-
-                        if drop_depth_mm is not None:
-                            drop_z = drop_depth_mm / 1000.0
-                            dy, dx = normalized_to_pixel(object.dropoff_point_2d, img_w, img_h)
-                            drop_ray = self.camera_model.projectPixelTo3dRay((dx, dy))
-                            scale = drop_z / drop_ray[2]
-                            
-                            drop_cam = PointStamped()
-                            drop_cam.header.frame_id = self.camera_frame
-                            drop_cam.point.x = drop_ray[0] * scale
-                            drop_cam.point.y = drop_ray[1] * scale
-                            drop_cam.point.z = drop_z
-                            
-                            drop_base = do_transform_point(drop_cam, tf_cam_to_base)
-                            object.dropoff_3d = [drop_base.point.x, drop_base.point.y, drop_base.point.z]
-                            
-                            msg.has_user_dropoff = True
-                            msg.user_dropoff_position = drop_base.point
-
-                    # --- 2. Direct Metric Drop-off (Explicit X/Y provided by Gemini) ---
-                    elif object.dropoff_coords_m:
-                        msg.has_user_dropoff = True
-                        msg.user_dropoff_position.x = float(object.dropoff_coords_m[0])
-                        msg.user_dropoff_position.y = float(object.dropoff_coords_m[1])
-                        # Use the Z coordinate (height) of the detected object as the table surface height
-                        msg.user_dropoff_position.z = pt_base.point.z
-                        
-                        # Store in Pydantic for internal handling
-                        object.dropoff_3d = [msg.user_dropoff_position.x, msg.user_dropoff_position.y, msg.user_dropoff_position.z]
-
-                    target_object_msgs.append(msg)
-
-                    # --- TF Broadcasting ---
-                    count = object_counter.get(color, 0)
-                    object_counter[color] = count + 1
-                    child_frame = f"object_{color}_{count}"
+                # --- 2. Direct Metric Drop-off (Explicit X/Y provided by Gemini) ---
+                elif object.dropoff_coords_m:
+                    msg.has_user_dropoff = True
+                    msg.user_dropoff_position.x = float(object.dropoff_coords_m[0])
+                    msg.user_dropoff_position.y = float(object.dropoff_coords_m[1])
+                    # Use the Z coordinate (height) of the detected object as the table surface height
+                    msg.user_dropoff_position.z = pt_base.point.z
                     
-                    t = TransformStamped()
-                    t.header.stamp = self.get_clock().now().to_msg()
-                    t.header.frame_id = self.robot_base_frame
-                    t.child_frame_id = child_frame
-                    t.transform.translation.x = pt_base.point.x
-                    t.transform.translation.y = pt_base.point.y
-                    t.transform.translation.z = pt_base.point.z
-                    
-                    yaw_rad = math.radians(object.yaw_degrees)
-                    t.transform.rotation.z = math.sin(yaw_rad / 2.0)
-                    t.transform.rotation.w = math.cos(yaw_rad / 2.0)
-                    self.tf_broadcaster.sendTransform(t)
+                    # Store in Pydantic for internal handling
+                    object.dropoff_3d = [msg.user_dropoff_position.x, msg.user_dropoff_position.y, msg.user_dropoff_position.z]
+
+                target_object_msgs.append(msg)
+
+                # --- TF Broadcasting ---
+                count = object_counter.get(color, 0)
+                object_counter[color] = count + 1
+                child_frame = f"object_{color}_{count}"
+                
+                t = TransformStamped()
+                t.header.stamp = self.get_clock().now().to_msg()
+                t.header.frame_id = self.robot_base_frame
+                t.child_frame_id = child_frame
+                t.transform.translation.x = pt_base.point.x
+                t.transform.translation.y = pt_base.point.y
+                t.transform.translation.z = pt_base.point.z
+                
+                yaw_rad = math.radians(object.yaw_degrees)
+                t.transform.rotation.z = math.sin(yaw_rad / 2.0)
+                t.transform.rotation.w = math.cos(yaw_rad / 2.0)
+                self.tf_broadcaster.sendTransform(t)
 
         return target_object_msgs
 
