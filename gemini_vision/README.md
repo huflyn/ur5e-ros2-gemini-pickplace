@@ -117,7 +117,7 @@ GEMINI_THINKING_BUDGET = -1 # For Robotics-ER 1.6
 
 # Prompts define what the AI looks for and how it formats the output
 GEMINI_DEFAULT_PROMPT = textwrap.dedent("""...""")
-GEMINI_SYSTEM_PROMPT = textwrap.dedent("""...""")
+GEMINI_SYSTEM_INSTRUCTION = textwrap.dedent("""...""")
 ```
 
 ---

@@ -58,7 +58,7 @@ GEMINI_DEFAULT_PROMPT = textwrap.dedent("""\
     Detect all bricks on the table
 """)
 
-GEMINI_SYSTEM_PROMPT = textwrap.dedent("""\
+GEMINI_SYSTEM_INSTRUCTION = textwrap.dedent("""\
     You are a vision system for a robotic pick-and-place task.
 
     SCENE CONTEXT:
@@ -686,7 +686,7 @@ class GeminiVisionNode(Node):
                 model=self.gemini_model,
                 contents=[prompt, image_part],
                 config=types.GenerateContentConfig(
-                    system_instruction=GEMINI_SYSTEM_PROMPT,
+                    system_instruction=GEMINI_SYSTEM_INSTRUCTION,
                     response_mime_type="application/json",
                     response_json_schema=DetectionResult.model_json_schema(),
                     temperature=current_temperature,
