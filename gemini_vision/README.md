@@ -32,7 +32,7 @@ This package provides a highly capable, **AI-driven vision system for the pick-a
   - [Terminal Logs](#terminal-logs)
   - [RViz2 Visualization (Recommended)](#rviz2-visualization-recommended)
   - [RQT Image View (Alternative)](#rqt-image-view-alternative)
-- [VIII) Models Overview\[^1\]](#viii-models-overview1)
+- [VIII) Models Overview](#viii-models-overview)
 
 ---
 
@@ -218,17 +218,17 @@ rqt
 
 ---
 
-# VIII) Models Overview[^1]
+# VIII) Models Overview
 
 The Gemini API provides access to a range of powerful language models, each designed for specific use cases, and with different request limits (you can see your current usage and limits in [Google AI Studio](https://aistudio.google.com/app/rate-limit)).
 
 For this project, the following models are recommended for experimentation (descriptions adapted from the official Gemini API [Model Overview](https://ai.google.dev/gemini-api/docs/models)):
 
-| Model | Description | RPD (Free tier) | Latest Update* |
+| Model | Description | RPD (Free tier) | Release Date |
 | --- | --- | :---: | :---: |
-| [gemini-3-flash-preview](https://ai.google.dev/gemini-api/docs/models/gemini-3-flash-preview) | The best model in the world for multimodal understanding, and our most powerful agentic and vibe-coding model yet, delivering richer visuals and deeper interactivity, all built on a foundation of state-of-the-art reasoning. | 20 | December 2025 |
-| [gemini-3.1-flash-lite-preview](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite-preview) | Our most cost-efficient multimodal model, offering the fastest performance for high-frequency, lightweight tasks. Gemini 3.1 Flash-Lite is best for high-volume agentic tasks, simple data extraction, and extremely low-latency applications where budget and speed are the primary constraints. | 500 | March 2026 |
-| [gemini-robotics-er-1.6-preview](https://ai.google.dev/gemini-api/docs/models/gemini-robotics-er-1.6-preview) | Gemini Robotics-ER 1.6 is a vision-language model (VLM) that brings Gemini's agentic capabilities to robotics. It's designed for advanced reasoning in the physical world, allowing robots to interpret complex visual data, perform spatial reasoning, and plan actions from natural language commands. | 20 | December 2025 |
+| [gemini-robotics-er-1.6-preview](https://ai.google.dev/gemini-api/docs/models/gemini-robotics-er-1.6-preview) | Gemini Robotics-ER 1.6 is a vision-language model (VLM) that brings Gemini's agentic capabilities to robotics. It's designed for advanced reasoning in the physical world, allowing robots to interpret complex visual data, perform spatial reasoning, and plan actions from natural language commands. | 20 | April 2026 |
+| [gemini-3-flash-preview](https://ai.google.dev/gemini-api/docs/models/gemini-3-flash-preview) | The best model in the world for multimodal understanding, and Google's most powerful agentic and vibe-coding model yet, delivering richer visuals and deeper interactivity, all built on a foundation of state-of-the-art reasoning. | 20 | December 2025 |
+| [gemini-3.1-flash-lite-preview](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite-preview) | Google's most cost-efficient multimodal model, offering the fastest performance for high-frequency, lightweight tasks. Gemini 3.1 Flash-Lite is best for high-volume agentic tasks, simple data extraction, and extremely low-latency applications where budget and speed are the primary constraints. | 500 | March 2026 |
 
 **Information from April 2026, please refer to the official [Gemini API Models documentation](https://ai.google.dev/gemini-api/docs/models) for the most up-to-date information on available models and their capabilities.*
 
