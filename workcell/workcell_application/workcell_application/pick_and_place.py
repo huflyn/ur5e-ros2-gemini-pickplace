@@ -456,7 +456,7 @@ def main(args=None):
             # Call the vision service to detect bricks, passing the current prompt for Gemini to use in its response
             bricks = node.detect_objects(executor, node.current_prompt)
             
-            # <--- NEU: Die magische Task-Planner Weiche
+            # Sort bricks based on the presence of a user prompt. If a prompt is provided, rely on Gemini's selection and sequence. If no prompt, sort by camera distance.
             if node.current_prompt:
                 logger.info("🅱️  User Prompt Mode active. Using Gemini's selection and sequence.")
                 bricks_sorted = bricks # Gemini is responsible for both selecting which bricks to pick and the order in which to pick them, based on the custom prompt provided by the user.
