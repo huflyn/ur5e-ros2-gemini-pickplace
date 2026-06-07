@@ -52,7 +52,7 @@ GEMINI_MODEL = GEMINI_MODELS[1] # Set your default model here
 GEMINI_THINKING_LEVELS = ["minimal", "low", "medium", "high"] # Gemini 3 Flash default: high / Gemini 3.1 Flash-Lite default: minimal
 GEMINI_THINKING_LEVEL_DEFAULT = GEMINI_THINKING_LEVELS[3] # Change this to switch thinking levels, for complex user prompts medium (2) or high (3) is recommended, for the simple default prompt minimal (0) works fine and is faster (using Gemini 3.1 Flash-Lite Preview)
 GEMINI_THINKING_LEVEL_3FLASH = GEMINI_THINKING_LEVELS[3] # Dedicated thinking level for Gemini 3 Flash, high (3) is default for this model
-GEMINI_THINKING_LEVEL_31FLASHLITE = GEMINI_THINKING_LEVELS[2] # Dedicated thinking level for Gemini 3.1 Flash-Lite, minimal (0) is default for this model
+GEMINI_THINKING_LEVEL_31FLASHLITE = GEMINI_THINKING_LEVELS[0] # Dedicated thinking level for Gemini 3.1 Flash-Lite, minimal (0) is default for this model
 
 GEMINI_DEFAULT_PROMPT = textwrap.dedent("""\
     Detect all bricks on the table
