@@ -536,7 +536,7 @@ def main(args=None):
                 try:
                     check_abort()
 
-                    # --- PHASE 1: APPROACH + ORIENT (OMPL) ---
+                    # --- PHASE 1: APPROACH + ORIENT ---
                     # OMPL plans free-space motion including yaw rotation
                     # Rotation happens safely at hover height, not near the table
                     logger.info("🟢 PHASE 1: Approach + orient (OMPL)")
@@ -548,7 +548,7 @@ def main(args=None):
                     check_abort()
                     escape_pose = pose_hover_pick_straight
 
-                    # --- PHASE 2: DESCEND (Pilz) ---
+                    # --- PHASE 2: DESCEND ---
                     # Pure vertical descent, yaw is already set
                     logger.info("🟢 PHASE 2: Descend to grasp (Pilz)")
                     if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_grasp, tcp_link):
@@ -565,7 +565,7 @@ def main(args=None):
 
                     check_abort()
 
-                    # --- PHASE 4: LIFT (Pilz) ---
+                    # --- PHASE 4: LIFT ---
                     # Straight up, keeping yaw to avoid rotating with object near table
                     logger.info("🟢 PHASE 4: Lift (Pilz)")
                     if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_hover_pick_oriented, tcp_link):
@@ -585,7 +585,7 @@ def main(args=None):
                     check_abort()
                     escape_pose = pose_hover_drop
 
-                    # --- PHASE 6: LOWER (Pilz) ---
+                    # --- PHASE 6: LOWER ---
                     logger.info("🟢 PHASE 6: Lower to drop-off (Pilz)")
                     if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_drop, tcp_link):
                         logger.warn("🛑 Pilz failed, trying OMPL fallback...")
@@ -601,7 +601,7 @@ def main(args=None):
 
                     check_abort()
 
-                    # --- PHASE 8: RETREAT (Pilz) ---
+                    # --- PHASE 8: RETREAT ---
                     logger.info("🟢 PHASE 8: Retreat (Pilz)")
                     if not plan_and_execute_pilz(ur5e, ur5e_arm, logger, pose_hover_drop, tcp_link):
                         logger.warn("🛑 Pilz failed, trying OMPL fallback...")
