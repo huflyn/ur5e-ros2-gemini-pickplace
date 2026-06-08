@@ -49,6 +49,7 @@ GEMINI_MODELS = [
 ]
 GEMINI_MODEL = GEMINI_MODELS[1] # Set your default model here
 
+GEMINI_TEMPERATURE = 1.0 # Default temperature, recommended to keep it at 1.0, can be adjusted based on user needs (e.g., lower for more deterministic results, higher for more creative interpretations)
 GEMINI_THINKING_LEVELS = ["minimal", "low", "medium", "high"] # Gemini 3 Flash default: high / Gemini 3.1 Flash-Lite default: minimal
 GEMINI_THINKING_LEVEL_DEFAULT = GEMINI_THINKING_LEVELS[3] # Change this to switch thinking levels, for complex user prompts medium (2) or high (3) is recommended, for the simple default prompt minimal (0) works fine and is faster (using Gemini 3.1 Flash-Lite Preview)
 GEMINI_THINKING_LEVEL_3FLASH = GEMINI_THINKING_LEVELS[3] # Dedicated thinking level for Gemini 3 Flash, high (3) is default for this model
@@ -191,11 +192,11 @@ def get_robust_depth(coords_2d: List[int], cv_depth: np.ndarray,
     """
     if len(coords_2d) == 4:
         ymin, xmin, ymax, xmax = normalized_to_pixel(coords_2d, img_w, img_h)
-        # ✅ FIX: Division durch 2, nicht 4!
+
         cx = (xmin + xmax) // 2
         cy = (ymin + ymax) // 2
 
-        # ✅ Adaptive Region: 30% der BBox-Größe, aber min 3, max 20
+        # Adaptive Region: 30% der BBox-Größe, aber min 3, max 20
         box_w = xmax - xmin
         box_h = ymax - ymin
         half_w = max(3, min(20, int(box_w * 0.15)))
@@ -225,31 +226,6 @@ def get_robust_depth(coords_2d: List[int], cv_depth: np.ndarray,
         return None
 
     return float(np.median(valid_depth))
-
-def get_robust_depth_multi_frame(self, coords_2d, img_w, img_h, 
-                                  num_frames=5, delay=0.05):
-    """Sammelt Depth über mehrere Frames für Zuverlässigkeit."""
-    depths = []
-    for _ in range(num_frames):
-        if self.latest_depth_msg is None:
-            continue
-
-        if self.latest_depth_msg.encoding == '32FC1':
-            cv_depth = self.bridge.imgmsg_to_cv2(
-                self.latest_depth_msg, "32FC1") * 1000.0
-        else:
-            cv_depth = self.bridge.imgmsg_to_cv2(
-                self.latest_depth_msg, "16UC1").astype(np.float32)
-
-        d = get_robust_depth(coords_2d, cv_depth, img_w, img_h)
-        if d is not None:
-            depths.append(d)
-        time.sleep(delay)
-
-    if not depths:
-        return None
-
-    return float(np.median(depths))
 
 
 def draw_bbox(image, label, ymin, xmin, ymax, xmax, pt_3d=None, color=(255, 140, 72)):
@@ -570,24 +546,6 @@ class GeminiVisionNode(Node):
 
     # --- HELPER FUNCTIONS ---
 
-    def _prepare_image_for_gemini(self, ros_msg: Image) -> bytes:
-        """ROS Image → JPEG Bytes"""
-        # 1. Convert ROS message to OpenCV (RGB)
-        image_rgb = self.bridge.imgmsg_to_cv2(ros_msg, 'rgb8')
-
-        # 2. Convert NumPy array to PIL
-        pil = PILImage.fromarray(image_rgb)
-
-
-        # 3. Convert PIL Image to Bytes (JPEG) with high quality
-        img_byte_arr = io.BytesIO()
-        pil.save(img_byte_arr, format='JPEG', quality=95)
-
-        # 4. Extract byte data into a distinct variable before returning
-        image_bytes = img_byte_arr.getvalue()
-
-        return image_bytes
-
     def _prepare_image_for_gemini_cv(self, ros_msg: Image) -> bytes:
         """ROS Image → OpenCV → JPEG Bytes (High Performance)."""
         
@@ -627,9 +585,7 @@ class GeminiVisionNode(Node):
         """Calls the Gemini API with the image and prompt, returns list of detections."""
         start = time.time()
         prompt = build_prompt(user_prompt)
-        
-        current_temperature = 1.0 # Default temperature, recommended to keep it at 1.0, can be adjusted based on user needs (e.g., lower for more deterministic results, higher for more creative interpretations)
-        
+                
         # --- Thinking Config Selection Logic ---
 
         # 1. Specific Config for Gemini Robotics-ER 1.6
@@ -689,7 +645,7 @@ class GeminiVisionNode(Node):
                     system_instruction=GEMINI_SYSTEM_INSTRUCTION,
                     response_mime_type="application/json",
                     response_json_schema=DetectionResult.model_json_schema(),
-                    temperature=current_temperature,
+                    temperature=GEMINI_TEMPERATURE,
                     thinking_config=current_thinking_config,
                 ),
             )
