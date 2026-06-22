@@ -11,12 +11,14 @@ WorldInfo {
   basicTimeStep 20
 }
 Viewpoint {
-  orientation -0.20390015084167679 -0.08090206186485131 0.9756431647240487 3.8802951088517874
-  position 3.993040622619082 3.9025150898261263 2.216996509680509
+  orientation 0.27127327057754835 0.1490368617921224 -0.9508936988419453 2.1787394750035745
+  position 2.5381458296514667 2.878752695410592 2.158145915037018
 }
 TexturedBackground {
+  texture "factory"
 }
 TexturedBackgroundLight {
+  luminosity 0.5
   castShadows FALSE
 }
 DEF scene Pose {
@@ -64,6 +66,7 @@ DEF scene Pose {
                 Shape {
                   appearance PBRAppearance {
                     baseColor 0.964706 0.380392 0.317647
+                    roughness 1
                     metalness 0
                   }
                   geometry DEF plate Box {
@@ -80,6 +83,7 @@ DEF scene Pose {
                 Shape {
                   appearance PBRAppearance {
                     baseColor 0.384314 0.627451 0.917647
+                    roughness 1
                     metalness 0
                   }
                   geometry DEF plate Box {
@@ -96,6 +100,7 @@ DEF scene Pose {
                 Shape {
                   appearance PBRAppearance {
                     baseColor 0.341176 0.890196 0.537255
+                    roughness 1
                     metalness 0
                   }
                   geometry DEF plate Box {
@@ -112,6 +117,7 @@ DEF scene Pose {
                 Shape {
                   appearance PBRAppearance {
                     baseColor 0.972549 0.894118 0.360784
+                    roughness 1
                     metalness 0
                   }
                   geometry DEF plate Box {
@@ -143,14 +149,38 @@ DEF scene Pose {
       name "wall"
       boundingObject USE wall
     }
+    DEF wall Solid {
+      translation -5.87811e-06 1.05 1.25
+      rotation 0 0 1 1.5708
+      children [
+        Shape {
+          appearance Appearance {
+            material Material {
+              ambientIntensity 0.7
+            }
+            texture ImageTexture {
+              url [
+                "../meshes/scan01.png"
+              ]
+            }
+          }
+          geometry DEF wall Box {
+            size 0.01 1.6 0.9
+          }
+        }
+      ]
+      name "wall(1)"
+      boundingObject USE wall
+    }
     DEF table Solid {
       translation 0 0 0.575
       children [
         Shape {
           appearance PBRAppearance {
-            baseColor 0.709804 0.513726 0.352941
+            baseColor 0.87 0.7 0.55
             baseColorMap ImageTexture {
             }
+            roughness 0.6
             metalness 0
             textureTransform TextureTransform {
               rotation 1.57
@@ -1742,19 +1772,18 @@ DEF bricks Pose {
           children [
             Klemmbaustein_4x2 {
               translation 0 -0.03 0
-              rotation 0 0 1 1.309
+              rotation 0 0 1 -0.523595307179586
               name "Klemmbaustein_4x2(4)"
               color 0 0.333333 0
             }
             Klemmbaustein_4x2 {
               translation 0 0.09 0
-              rotation 0 0 1 0.523599
+              rotation 0 0 1 1.5708
               name "Klemmbaustein_4x2(5)"
               color 1 0.666667 0
             }
             Klemmbaustein_4x2 {
               translation 0 -0.09 0
-              rotation 0 0 1 2.61799
               name "Klemmbaustein_4x2(6)"
               color 0 0 1
             }
@@ -1770,25 +1799,23 @@ DEF bricks Pose {
           children [
             Klemmbaustein_4x2 {
               translation 0 -0.03 0
-              rotation 0 0 1 2.0944
               name "Klemmbaustein_4x2(2)"
               color 0 0.333333 0
             }
             Klemmbaustein_4x2 {
               translation 0 0.09 0
-              rotation 0 0 1 -2.8797953071795863
               name "Klemmbaustein_4x2(3)"
               color 1 0.666667 0
             }
             Klemmbaustein_4x2 {
               translation 0 -0.09 0
-              rotation 0 0 1 1.5708
+              rotation 0 0 1 0.785398
               name "Klemmbaustein_4x2(1)"
               color 0 0 1
             }
             Klemmbaustein_4x2 {
               translation 0 0.03 0
-              rotation 0 0 -1 -1.0472053071795866
+              rotation 0 0 1 -0.785395307179586
             }
           ]
         }
@@ -1798,17 +1825,32 @@ DEF bricks Pose {
           children [
             Klemmbaustein_4x2 {
               translation 0 -0.06 0
-              rotation 0 0 1 2.8798
+              rotation 0 0 1 -1.3089953071795861
               name "Klemmbaustein_4x2(8)"
               color 0.141176 0.121569 0.192157
             }
             Klemmbaustein_4x2 {
-              translation 0 0.0454929 0
-              rotation 0 0 -1 1.8326
+              translation 0 0.04 0
+              rotation 0 0 1 0.261799
               name "Klemmbaustein_4x2(9)"
               color 0.964706 0.960784 0.956863
             }
           ]
+        }
+      ]
+    }
+  ]
+}
+DEF Object Pose {
+  children [
+    DEF robot_mount Pose {
+      translation 0.24 0 0
+      children [
+        DEF dog Pose {
+          translation 0.66 0.12 0
+        }
+        DEF cat Pose {
+          translation 0.66 -0.12 0
         }
       ]
     }
