@@ -5,7 +5,7 @@ package_name = 'workcell_simulation'
 data_files = []
 data_files.append(('share/ament_index/resource_index/packages', ['resource/' + package_name]))
 data_files.append(('share/' + package_name + '/launch', glob('launch/*launch.py')))
-data_files.append(('share/' + package_name + '/worlds', ['worlds/workcell.wbt']))
+data_files.append(('share/' + package_name + '/worlds', glob('worlds/*.wbt')))
 data_files.append(('share/' + package_name + '/protos', glob('protos/*')))
 data_files.append(('share/' + package_name + '/meshes', glob('meshes/*')))
 data_files.append(('share/' + package_name + '/textures', glob('textures/*')))

@@ -17,12 +17,25 @@ def generate_launch_description():
     ros2_controllers_yaml_dir = get_package_share_directory('workcell_moveit_config')
 
     use_sim_time = LaunchConfiguration('use_sim_time')
+    world_config = LaunchConfiguration('world')
 
     use_sim_time_arg = DeclareLaunchArgument(
         'use_sim_time',
         default_value='true',
         description='Use simulation (Webots) clock if true, hardware clock if false'
     )
+
+    world_arg = DeclareLaunchArgument(
+        'world',
+        default_value='workcell.wbt',
+        description='Name of the Webots world file to load from the worlds directory'
+    )
+
+    world_path = PathJoinSubstitution([
+        package_dir,
+        'worlds',
+        world_config
+    ])
 
     # ===== 1) URDFs verarbeiten (xacro → XML-String) =====
 
@@ -63,9 +76,9 @@ def generate_launch_description():
         parameters=[{'use_sim_time': use_sim_time}]
     )
 
-    # Webots starten
+    # Start Webots using the dynamic world path
     webots = WebotsLauncher(
-        world=os.path.join(package_dir, 'worlds', 'workcell.wbt'),
+        world=world_path,
         ros2_supervisor=True
     )
 
@@ -91,6 +104,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         use_sim_time_arg,
+        world_arg,
         robot_state_publisher,
         webots,
         webots._supervisor,
